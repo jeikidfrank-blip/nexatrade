@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#090d12" />
+    <meta
+      name="description"
+      content="NexaTrade is a simulated market dashboard for exploring prices, charts, and demo trades."
+    />
+    <title>NexaTrade — Markets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="auth-gate" id="auth-gate">
+      <section class="auth-card" aria-labelledby="auth-title">
+        <a class="brand auth-brand" href="#" aria-label="NexaTrade home">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>nexa<span class="brand-light">trade</span></span>
+        </a>
+        <div class="auth-eyebrow"><span class="eyebrow-line"></span>SECURE ACCOUNT ACCESS</div>
+        <h1 id="auth-title">Welcome back<span class="title-period">.</span></h1>
+        <p class="auth-description">Sign in or create a NexaTrade account to continue.</p>
+        <div class="auth-tabs" aria-label="Account access">
+          <button type="button" class="auth-tab active" data-auth-mode="signin">Sign in</button>
+          <button type="button" class="auth-tab" data-auth-mode="signup">Sign up</button>
+        </div>
+        <form id="auth-form" novalidate>
+          <label class="auth-field" id="auth-name-field" hidden>
+            <span>FULL NAME</span>
+            <input id="auth-name" type="text" autocomplete="name" placeholder="Your name" />
+          </label>
+          <label class="auth-field" id="auth-phone-field" hidden>
+            <span>PHONE NUMBER <small>Optional</small></span>
+            <input id="auth-phone" type="tel" autocomplete="tel" placeholder="+1 555 000 0000" />
+          </label>
+          <label class="auth-field">
+            <span>EMAIL ADDRESS</span>
+            <input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com" required />
+          </label>
+          <label class="auth-field">
+            <span>PASSWORD <small>8 characters minimum</small></span>
+            <input id="auth-password" type="password" autocomplete="current-password" minlength="8" placeholder="At least 8 characters" required />
+          </label>
+          <label class="auth-field" id="auth-confirm-field" hidden>
+            <span>CONFIRM PASSWORD</span>
+            <input id="auth-confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" />
+          </label>
+          <p class="auth-error" id="auth-error" role="alert" hidden></p>
+          <p class="auth-message" id="auth-message" role="status" hidden></p>
+          <button class="auth-submit" id="auth-submit" type="submit">Sign in <span>→</span></button>
+        </form>
+        <p class="auth-notice">Accounts are securely managed by Supabase. Email confirmation may be required. Never put a service-role key in this website.</p>
+      </section>
+    </main>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#" aria-label="NexaTrade home">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>nexa<span class="brand-light">trade</span></span>
+        </a>
+
+        <div class="sidebar-label">MENU</div>
+        <nav class="primary-nav" id="primary-nav" aria-label="Main navigation">
+          <button class="nav-link active" data-view="Trade"><span class="nav-icon">↗</span>Trade</button>
+          <button class="nav-link" data-view="Markets"><span class="nav-icon">⌁</span>Markets</button>
+          <button class="nav-link" data-view="History"><span class="nav-icon">▤</span>History</button>
+          <button class="nav-link" data-view="Withdrawal History"><span class="nav-icon">↙</span>Withdrawal History</button>
+        </nav>
+
+        <div class="sidebar-label watchlist-label">
+          <span>WATCHLIST</span>
+          <button class="icon-button add-watch" id="add-watch" aria-label="Add the current market to watchlist">+</button>
+        </div>
+        <div class="watchlist" id="watchlist"></div>
+
+        <div class="sidebar-bottom">
+          <div class="demo-card">
+            <span class="demo-pulse"></span>
+            <div>
+              <strong>Demo environment</strong>
+              <span>Simulated market data</span>
+            </div>
+          </div>
+          <button class="nav-link help-link" id="help-button"><span class="nav-icon">?</span>Help centre</button>
+          <button type="button" class="nav-link profile-menu-button" id="profile-button" aria-expanded="false" aria-controls="profile-details">
+            <span class="nav-icon">●</span>Profile
+          </button>
+          <div class="user-card" id="profile-details" hidden>
+            <div class="avatar">N</div>
+            <div class="user-copy">
+              <strong id="user-name">Demo trader</strong>
+              <span id="user-email">Demo account</span>
+              <span id="user-phone">Phone not provided</span>
+            </div>
+            <button type="button" class="sign-out-button" id="sign-out" title="Sign out"><span class="sign-out-label">Sign out</span><span class="sign-out-icon" aria-hidden="true">↪</span></button>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="breadcrumb">
+            <button type="button" class="menu-toggle" id="menu-toggle" aria-label="Open navigation menu" aria-controls="primary-nav" aria-expanded="false">
+              <span></span><span></span><span></span>
+            </button>
+            <span>NexaTrade</span><span class="crumb-slash">/</span><strong id="page-title">Trade</strong>
+          </div>
+          <div class="topbar-actions">
+            <span class="market-status"><i></i> Demo feed active</span>
+            <button class="icon-button notification-button" id="notifications-button" aria-label="Notifications">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
+              <span class="notification-dot"></span>
+            </button>
+            <button class="button button-outline add-funds" id="open-funds" aria-label="Add funds">＋ <span>Add funds</span></button>
+          </div>
+        </header>
+
+        <div class="page-body">
+          <section class="view-panel active" id="trade-view" data-view-panel="Trade">
+          <section class="welcome-row">
+            <div>
+              <div class="eyebrow"><span class="eyebrow-line"></span>WEDNESDAY, NOVEMBER 18</div>
+              <h1>Trade<span class="title-period">.</span></h1>
+              <p class="welcome-subtitle">Explore markets and place simulated trades.</p>
+            </div>
+            <div class="account-overview">
+              <div class="account-switch" role="group" aria-label="Account type">
+                <button type="button" class="account-tab active" id="demo-account-tab" data-account-mode="demo">Demo</button>
+                <button type="button" class="account-tab" id="real-account-tab" data-account-mode="real">Real <span>Locked</span></button>
+              </div>
+              <div class="balance-card">
+                <div class="balance-label" id="balance-label">DEMO ACCOUNT BALANCE <span class="info-tip" title="Simulated funds only">i</span></div>
+                <div class="balance-value" id="balance-value">$10,000.00</div>
+                <div class="balance-actions">
+                  <button type="button" id="balance-deposit">Deposit</button>
+                  <button type="button" id="balance-withdraw">Withdraw</button>
+                </div>
+                <p class="account-status" id="account-status">Simulated funds · $10,000 starting balance</p>
+              </div>
+            </div>
+          </section>
+
+          <div class="dashboard-grid">
+            <section class="panel chart-panel">
+              <div class="panel-heading chart-heading">
+                <div class="selected-market">
+                  <div class="selected-coin-icon" id="selected-coin-icon">Au</div>
+                  <div class="market-title">
+                    <h2 id="chart-market-name">Gold</h2>
+                    <select class="market-select" id="market-select" aria-label="Select market">
+                      <option value="XAU">XAU / USD</option>
+                      <option value="EUR">EUR / USD</option>
+                      <option value="GBP">GBP / USD</option>
+                    </select>
+                    <span class="instrument-label">Spot market <span class="instrument-dot"></span> USD</span>
+                  </div>
+                  <button class="favorite-button" id="favorite-button" aria-label="Toggle current market favorite">☆</button>
+                </div>
+                <div class="chart-toolbar">
+                  <div class="timeframes" aria-label="Chart timeframe">
+                    <button class="timeframe active" data-timeframe="1min">1 min</button>
+                    <button class="timeframe" data-timeframe="5min">5 min</button>
+                    <button class="timeframe" data-timeframe="15min">15 min</button>
+                  </div>
+                  <button class="chart-menu" id="chart-menu" aria-label="Chart display options">⌗</button>
+                </div>
+              </div>
+              <div class="chart-price-row">
+                  <div><strong id="chart-price">$4,055.30</strong><span class="chart-price-change positive" id="chart-change">+$15.00 (+0.37%)</span></div>
+                  <div class="chart-range"><span>24H HIGH <strong id="chart-high">$4,094.64</strong></span><span>24H LOW <strong id="chart-low">$4,016.37</strong></span></div>
+              </div>
+              <div class="chart-container">
+                <div class="chart-y-labels" id="chart-y-labels"></div>
+                <canvas id="candlestick-chart" aria-label="Interactive simulated candlestick price chart"></canvas>
+                <div class="chart-x-labels"><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span></div>
+                <div class="chart-tooltip" id="chart-tooltip"></div>
+              </div>
+              <div class="chart-legend"><span><i class="legend-candle-up"></i> Bullish</span><span><i class="legend-candle-down"></i> Bearish</span><span class="chart-disclaimer">Illustrative demo chart · not investment advice</span></div>
+            </section>
+
+            <aside class="panel order-panel">
+              <div class="panel-heading order-heading"><div><h2>Quick trade</h2><span id="order-mode-description">4-second demo trade · 1:1 payout</span></div><span class="demo-tag" id="order-mode-tag">DEMO</span></div>
+              <div class="order-market-label">MARKET <span>Market order <span class="market-order-dot"></span></span></div>
+              <div class="order-instrument">
+                <span class="order-coin" id="order-coin">Au</span>
+                <div><strong id="order-market-name">XAU / USD</strong><span id="order-market-price">$4,055.30</span></div>
+                <span class="order-market-live"><i></i>Demo</span>
+              </div>
+              <label class="amount-label" for="trade-amount">AMOUNT <span>USD</span></label>
+              <div class="amount-input-wrap"><span>$</span><input id="trade-amount" type="number" min="10" step="10" value="100" inputmode="decimal" aria-label="Trade amount in US dollars" /></div>
+              <div class="amount-presets"><button data-amount="50">$50</button><button data-amount="100">$100</button><button data-amount="250">$250</button><button data-amount="500">$500</button></div>
+              <div class="order-summary">
+                <div><span id="available-balance-label">Available demo balance</span><strong id="available-balance">$10,000.00</strong></div>
+                <div><span>Estimated position</span><strong id="estimated-position">0.024659 XAU</strong></div>
+                <div><span>Simulated fee <span class="info-tip" title="Estimated demo fee">i</span></span><strong id="estimated-fee">$0.00</strong></div>
+              </div>
+              <div class="trade-actions">
+                <button class="trade-submit buy-submit trade-action" id="buy-trade" aria-label="Buy the selected market">Buy XAU <span>↗</span></button>
+                <button class="trade-submit sell-submit trade-action" id="sell-trade" aria-label="Sell the selected market">Sell XAU <span>↘</span></button>
+              </div>
+              <section class="trade-result" id="trade-result" aria-live="polite" hidden>
+                <div class="trade-result-heading">
+                  <strong class="result-status" id="result-status">Executing trade</strong>
+                  <span id="result-timer">4s</span>
+                </div>
+                <p id="result-message">Your demo trade is being processed.</p>
+                <div class="execution-progress"><span id="execution-progress"></span></div>
+                <div class="result-prices">
+                  <span>Entry <strong id="result-entry">—</strong></span>
+                  <span>Exit <strong id="result-exit">—</strong></span>
+                  <span>Result <strong id="result-pnl">—</strong></span>
+                </div>
+              </section>
+              <p class="order-disclaimer" id="order-disclaimer">Demo only. Orders do not reach an exchange.</p>
+              <div class="sentiment">
+                <div class="sentiment-heading"><strong>Market sentiment</strong><span>XAU / USD</span></div>
+                <div class="sentiment-bar"><span class="sentiment-buy-bar" id="sentiment-buy-bar"></span><span class="sentiment-sell-bar" id="sentiment-sell-bar"></span></div>
+                <div class="sentiment-values"><span><i class="sentiment-green"></i><strong id="sentiment-buy">64%</strong> buyers</span><span><i class="sentiment-red"></i><strong id="sentiment-sell">36%</strong> sellers</span></div>
+              </div>
+            </aside>
+          </div>
+          </section>
+
+          <section class="view-panel" id="markets-view" data-view-panel="Markets" hidden>
+            <div class="view-heading">
+              <div><h1>Markets<span class="title-period">.</span></h1><p>Gold, EUR/USD, and GBP/USD price snapshots.</p></div>
+            </div>
+            <section class="market-strip" aria-label="FX and gold markets">
+              <article class="market-stat">
+                <div class="stat-heading"><span class="coin-icon gold">Au</span><span>GOLD</span><span class="stat-symbol">XAU / USD</span></div>
+                <div class="stat-main"><strong id="xau-price">$4,055.30</strong><span class="change positive" id="xau-change">+0.37%</span></div>
+                <div class="sparkline-wrap"><span>24H TREND</span><canvas class="sparkline" id="spark-xau" aria-label="Gold 24-hour price trend"></canvas></div>
+              </article>
+              <article class="market-stat">
+                <div class="stat-heading"><span class="coin-icon euro">€</span><span>EURO</span><span class="stat-symbol">EUR / USD</span></div>
+                <div class="stat-main"><strong id="eur-price">1.1642</strong><span class="change positive" id="eur-change">+0.12%</span></div>
+                <div class="sparkline-wrap"><span>24H TREND</span><canvas class="sparkline" id="spark-eur" aria-label="Euro US dollar 24-hour price trend"></canvas></div>
+              </article>
+              <article class="market-stat">
+                <div class="stat-heading"><span class="coin-icon pound">£</span><span>POUND</span><span class="stat-symbol">GBP / USD</span></div>
+                <div class="stat-main"><strong id="gbp-price">1.3370</strong><span class="change positive" id="gbp-change">+0.18%</span></div>
+                <div class="sparkline-wrap"><span>24H TREND</span><canvas class="sparkline" id="spark-gbp" aria-label="Pound US dollar 24-hour price trend"></canvas></div>
+              </article>
+              <article class="market-stat market-strip-meta">
+                <div class="live-feed"><span class="live-dot"></span> MARKET FEED <span class="feed-live">SIM</span></div>
+                <div class="feed-value">Prices update automatically</div>
+                <div class="feed-caption">Simulated data · <span id="last-updated">just now</span></div>
+              </article>
+            </section>
+          </section>
+
+          <section class="view-panel" id="history-view" data-view-panel="History" hidden>
+            <div class="view-heading">
+              <div><h1>History<span class="title-period">.</span></h1><p>Review completed simulated trades and their results.</p></div>
+            </div>
+          <section class="panel positions-panel">
+            <div class="panel-heading positions-heading">
+              <div class="positions-title"><h2 id="positions-title">Completed trades</h2><span class="position-count" id="position-count">0</span></div>
+              <div class="positions-actions"><span class="demo-tag">SIMULATED</span><button class="text-button" id="view-all-positions">View history <span>↗</span></button></div>
+            </div>
+            <div class="positions-table-wrap">
+              <table class="positions-table">
+                <thead><tr><th>MARKET</th><th>TYPE</th><th>AMOUNT</th><th>ENTRY PRICE</th><th id="mark-price-heading">MARK PRICE</th><th id="pnl-heading">UNREALIZED P&amp;L</th><th></th></tr></thead>
+                <tbody id="positions-body"><tr class="empty-row"><td colspan="7"><span class="empty-icon">⌁</span><strong>No open positions yet</strong><span>Place a demo trade to see it here.</span></td></tr></tbody>
+              </table>
+            </div>
+          </section>
+          </section>
+          <section class="view-panel" id="withdrawal-history-view" data-view-panel="Withdrawal History" hidden>
+            <div class="view-heading">
+              <div><h1>Withdrawal history<span class="title-period">.</span></h1><p>Review completed withdrawals from your demo balance.</p></div>
+            </div>
+            <section class="panel positions-panel">
+              <div class="panel-heading positions-heading">
+                <div class="positions-title"><h2>Completed withdrawals</h2><span class="position-count" id="withdrawal-count">0</span></div>
+                <span class="demo-tag">DEMO</span>
+              </div>
+              <div class="positions-table-wrap">
+                <table class="history-table">
+                  <thead><tr><th>DATE</th><th>ACCOUNT</th><th>AMOUNT</th><th>BALANCE AFTER</th><th>STATUS</th></tr></thead>
+                  <tbody id="withdrawal-history-body"><tr class="empty-row"><td colspan="5"><span class="empty-icon">↙</span><strong>No withdrawals yet</strong><span>Completed demo withdrawals will appear here.</span></td></tr></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+          <footer class="page-footer"><span>© 2026 NexaTrade</span><span><i class="footer-dot"></i> Simulated environment · Prices are illustrative and may not reflect live markets</span><a href="#" id="disclaimer-link">Risk disclaimer</a></footer>
+        </div>
+      </main>
+    </div>
+
+    <button type="button" class="menu-backdrop" id="menu-backdrop" aria-label="Close navigation menu" hidden></button>
+    <div class="toast-region" id="toast-region" aria-live="polite"></div>
+    <div class="modal-backdrop" id="funds-modal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="funds-title">
+        <button class="modal-close" id="close-funds" aria-label="Close dialog">×</button>
+        <div class="modal-mark">＋</div>
+        <h2 id="funds-title">Deposit demo funds</h2>
+        <p id="funds-description">Add simulated funds to your demo balance. No real money is involved.</p>
+        <div class="funds-amount-field" id="funds-amount-field">
+          <label for="funds-amount">AMOUNT IN USD</label>
+          <div class="amount-input-wrap modal-amount"><span>$</span><input id="funds-amount" type="number" min="100" step="100" value="1000" /></div>
+        </div>
+        <button class="trade-submit buy-submit" id="confirm-funds">Deposit demo funds <span>→</span></button>
+      </section>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
