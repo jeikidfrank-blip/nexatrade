@@ -71,7 +71,6 @@
           <button class="nav-link active" data-view="Trade"><span class="nav-icon">↗</span>Trade</button>
           <button class="nav-link" data-view="Markets"><span class="nav-icon">⌁</span>Markets</button>
           <button class="nav-link" data-view="History"><span class="nav-icon">▤</span>History</button>
-          <button class="nav-link" data-view="Withdrawal History"><span class="nav-icon">↙</span>Withdrawal History</button>
         </nav>
 
         <div class="sidebar-label watchlist-label">
@@ -118,7 +117,7 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
               <span class="notification-dot"></span>
             </button>
-            <button class="button button-outline add-funds" id="open-funds" aria-label="Add funds">＋ <span>Add funds</span></button>
+            <button class="button button-outline add-funds" id="open-funds" aria-label="Add simulated demo funds">＋ <span>Add funds</span></button>
           </div>
         </header>
 
@@ -136,11 +135,10 @@
                 <button type="button" class="account-tab" id="real-account-tab" data-account-mode="real">Real <span>Locked</span></button>
               </div>
               <div class="balance-card">
-                <div class="balance-label" id="balance-label">DEMO ACCOUNT BALANCE <span class="info-tip" title="Simulated funds only">i</span></div>
+                <div class="balance-label" id="balance-label">SIMULATED DEMO BALANCE <span class="info-tip" title="Simulated funds only">i</span></div>
                 <div class="balance-value" id="balance-value">$10,000.00</div>
                 <div class="balance-actions">
                   <button type="button" id="balance-deposit">Deposit</button>
-                  <button type="button" id="balance-withdraw">Withdraw</button>
                 </div>
                 <p class="account-status" id="account-status">Simulated funds · $10,000 starting balance</p>
               </div>
@@ -186,7 +184,7 @@
             </section>
 
             <aside class="panel order-panel">
-              <div class="panel-heading order-heading"><div><h2>Quick trade</h2><span id="order-mode-description">4-second demo trade · 1:1 payout</span></div><span class="demo-tag" id="order-mode-tag">DEMO</span></div>
+              <div class="panel-heading order-heading"><div><h2>Quick trade</h2><span id="order-mode-description">Simulated market position</span></div><span class="demo-tag" id="order-mode-tag">DEMO</span></div>
               <div class="order-market-label">MARKET <span>Market order <span class="market-order-dot"></span></span></div>
               <div class="order-instrument">
                 <span class="order-coin" id="order-coin">Au</span>
@@ -195,10 +193,14 @@
               </div>
               <label class="amount-label" for="trade-amount">AMOUNT <span>USD</span></label>
               <div class="amount-input-wrap"><span>$</span><input id="trade-amount" type="number" min="10" step="10" value="100" inputmode="decimal" aria-label="Trade amount in US dollars" /></div>
+              <div class="trade-risk-fields">
+                <label for="stop-loss-price">STOP LOSS <input id="stop-loss-price" type="number" step="any" inputmode="decimal" /></label>
+                <label for="take-profit-price">TAKE PROFIT <input id="take-profit-price" type="number" step="any" inputmode="decimal" /></label>
+              </div>
               <div class="amount-presets"><button data-amount="50">$50</button><button data-amount="100">$100</button><button data-amount="250">$250</button><button data-amount="500">$500</button></div>
               <div class="order-summary">
-                <div><span id="available-balance-label">Available demo balance</span><strong id="available-balance">$10,000.00</strong></div>
-                <div><span>Estimated position</span><strong id="estimated-position">0.024659 XAU</strong></div>
+                <div><span id="available-balance-label">Available simulated funds</span><strong id="available-balance">$10,000.00</strong></div>
+                <div><span>Position size</span><strong id="estimated-position">0.024659 XAU</strong></div>
                 <div><span>Simulated fee <span class="info-tip" title="Estimated demo fee">i</span></span><strong id="estimated-fee">$0.00</strong></div>
               </div>
               <div class="trade-actions">
@@ -207,14 +209,13 @@
               </div>
               <section class="trade-result" id="trade-result" aria-live="polite" hidden>
                 <div class="trade-result-heading">
-                  <strong class="result-status" id="result-status">Executing trade</strong>
-                  <span id="result-timer">4s</span>
+                  <strong class="result-status" id="result-status">Position opened</strong>
+                  <span>SIMULATED</span>
                 </div>
-                <p id="result-message">Your demo trade is being processed.</p>
-                <div class="execution-progress"><span id="execution-progress"></span></div>
+                <p id="result-message">Your simulated position has been opened.</p>
                 <div class="result-prices">
                   <span>Entry <strong id="result-entry">—</strong></span>
-                  <span>Exit <strong id="result-exit">—</strong></span>
+                  <span>Stop / Take <strong id="result-exit">—</strong></span>
                   <span>Result <strong id="result-pnl">—</strong></span>
                 </div>
               </section>
@@ -258,7 +259,7 @@
 
           <section class="view-panel" id="history-view" data-view-panel="History" hidden>
             <div class="view-heading">
-              <div><h1>History<span class="title-period">.</span></h1><p>Review completed simulated trades and their results.</p></div>
+              <div><h1>History<span class="title-period">.</span></h1><p>Review simulated positions and demo deposits.</p></div>
             </div>
           <section class="panel positions-panel">
             <div class="panel-heading positions-heading">
@@ -267,28 +268,22 @@
             </div>
             <div class="positions-table-wrap">
               <table class="positions-table">
-                <thead><tr><th>MARKET</th><th>TYPE</th><th>AMOUNT</th><th>ENTRY PRICE</th><th id="mark-price-heading">MARK PRICE</th><th id="pnl-heading">UNREALIZED P&amp;L</th><th></th></tr></thead>
-                <tbody id="positions-body"><tr class="empty-row"><td colspan="7"><span class="empty-icon">⌁</span><strong>No open positions yet</strong><span>Place a demo trade to see it here.</span></td></tr></tbody>
+                <thead><tr><th>MARKET</th><th>TYPE</th><th>POSITION SIZE</th><th>ENTRY PRICE</th><th>STOP LOSS</th><th>TAKE PROFIT</th><th id="mark-price-heading">MARK PRICE</th><th id="pnl-heading">UNREALIZED P&amp;L</th><th></th></tr></thead>
+                <tbody id="positions-body"><tr class="empty-row"><td colspan="9"><span class="empty-icon">⌁</span><strong>No open positions yet</strong><span>Place a simulated trade to see it here.</span></td></tr></tbody>
               </table>
             </div>
           </section>
-          </section>
-          <section class="view-panel" id="withdrawal-history-view" data-view-panel="Withdrawal History" hidden>
-            <div class="view-heading">
-              <div><h1>Withdrawal history<span class="title-period">.</span></h1><p>Review completed withdrawals from your demo balance.</p></div>
+          <section class="panel positions-panel transaction-panel">
+            <div class="panel-heading positions-heading">
+              <div class="positions-title"><h2>Demo deposits</h2><span class="demo-tag">SIMULATED FUNDS</span></div>
             </div>
-            <section class="panel positions-panel">
-              <div class="panel-heading positions-heading">
-                <div class="positions-title"><h2>Completed withdrawals</h2><span class="position-count" id="withdrawal-count">0</span></div>
-                <span class="demo-tag">DEMO</span>
-              </div>
-              <div class="positions-table-wrap">
-                <table class="history-table">
-                  <thead><tr><th>DATE</th><th>ACCOUNT</th><th>AMOUNT</th><th>BALANCE AFTER</th><th>STATUS</th></tr></thead>
-                  <tbody id="withdrawal-history-body"><tr class="empty-row"><td colspan="5"><span class="empty-icon">↙</span><strong>No withdrawals yet</strong><span>Completed demo withdrawals will appear here.</span></td></tr></tbody>
-                </table>
-              </div>
-            </section>
+            <div class="positions-table-wrap">
+              <table class="history-table">
+                <thead><tr><th>DATE</th><th>TRANSACTION</th><th>AMOUNT</th><th>BALANCE AFTER</th><th>TYPE</th></tr></thead>
+                <tbody id="demo-transactions-body"><tr class="empty-row"><td colspan="5"><span class="empty-icon">＋</span><strong>No demo deposits yet</strong><span>Simulated demo top-ups will appear here.</span></td></tr></tbody>
+              </table>
+            </div>
+          </section>
           </section>
           <footer class="page-footer"><span>© 2026 NexaTrade</span><span><i class="footer-dot"></i> Simulated environment · Prices are illustrative and may not reflect live markets</span><a href="#" id="disclaimer-link">Risk disclaimer</a></footer>
         </div>
@@ -304,7 +299,7 @@
         <h2 id="funds-title">Deposit demo funds</h2>
         <p id="funds-description">Add simulated funds to your demo balance. No real money is involved.</p>
         <div class="funds-amount-field" id="funds-amount-field">
-          <label for="funds-amount">AMOUNT IN USD</label>
+          <label for="funds-amount">SIMULATED AMOUNT IN USD</label>
           <div class="amount-input-wrap modal-amount"><span>$</span><input id="funds-amount" type="number" min="100" step="100" value="1000" /></div>
         </div>
         <button class="trade-submit buy-submit" id="confirm-funds">Deposit demo funds <span>→</span></button>

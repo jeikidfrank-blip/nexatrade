@@ -143,7 +143,6 @@ h1 { margin-top: 9px; font-family: var(--font-display); font-size: 27px; line-he
 .balance-card { min-width: 0; }
 .balance-actions { display: flex; gap: 7px; margin-top: 8px; }
 .balance-actions button { min-height: 27px; flex: 1; border: 1px solid #2a473e; border-radius: 4px; background: #14251f; color: #75d8b6; font-size: 9px; font-weight: 600; cursor: pointer; }
-.balance-actions button:last-child { border-color: #4a3035; background: #25191c; color: #ef858b; }
 .balance-actions button:hover { filter: brightness(1.15); }
 .balance-actions button:disabled { cursor: not-allowed; opacity: .55; }
 .account-status { margin-top: 8px; color: #788493; font-size: 8px; line-height: 1.4; }
@@ -230,6 +229,11 @@ h1 { margin-top: 9px; font-family: var(--font-display); font-size: 27px; line-he
 .order-market-live i { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
 .amount-label { margin-top: 14px; }
 .amount-label > span { color: #697684; font-weight: 400; letter-spacing: 0; }
+.trade-risk-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+.trade-risk-fields label { display: grid; gap: 5px; color: #7f8c99; font-size: 7px; font-weight: 600; letter-spacing: .55px; }
+.trade-risk-fields input { width: 100%; min-width: 0; height: 31px; padding: 0 7px; border: 1px solid #26313b; border-radius: 4px; outline: 0; background: #0d131a; color: #cbd4dc; font-size: 9px; }
+.trade-risk-fields input:focus { border-color: #448575; }
+.trade-risk-fields input:disabled { opacity: .55; }
 .amount-input-wrap { display: flex; align-items: center; gap: 6px; min-height: 36px; margin-top: 7px; padding: 0 10px; border: 1px solid #26313b; border-radius: 5px; background: #0d131a; color: #8794a2; }
 .amount-input-wrap:focus-within { border-color: #448575; }
 .amount-input-wrap input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: #e8edf2; font-family: var(--font-display); font-size: 12px; font-weight: 600; }
@@ -281,6 +285,7 @@ h1 { margin-top: 9px; font-family: var(--font-display); font-size: 27px; line-he
 .sentiment-red { background: var(--red); }
 
 .positions-panel { padding: 15px 17px 0; }
+.transaction-panel { margin-top: 14px; }
 .positions-heading { margin-bottom: 12px; }
 .positions-title { display: flex; align-items: center; gap: 8px; }
 .positions-heading h2 { font-size: 12px; }

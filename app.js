@@ -14,16 +14,15 @@ const state = {
   accountMode: "demo",
   positions: [],
   history: [],
-  withdrawalHistory: [],
+  demoDeposits: [],
   watchlist: ["XAU", "EUR", "GBP"],
   showingHistory: false,
   chartStyle: "candle",
   candles: [],
-  pendingTrade: null,
   isSubmittingTrade: false,
-  fundsAction: "deposit",
-  executionInterval: null,
-  executionTimeout: null,
+  defaultRiskValues: null,
+  quoteErrorNotified: false,
+  marketQuoteLoading: false,
   initialized: false,
   marketUpdateInterval: null,
   sentimentInterval: null,
@@ -303,6 +302,9 @@ function renderChart() {
   $("#order-coin").style.background = `${market.color}24`;
   $("#order-market-name").textContent = market.symbol;
   $("#order-market-price").textContent = formatExactPrice(market, market.price);
+  if (!state.defaultRiskValues || state.defaultRiskValues.marketId !== market.id) {
+    setRiskDefaults("buy", market);
+  }
   $(".sentiment-heading > span").textContent = market.symbol;
   if ($("#buy-trade").dataset.market !== market.id) {
     $("#buy-trade").innerHTML = `Buy ${market.id} <span>↗</span>`;
@@ -339,84 +341,101 @@ function renderAccountMode() {
   $(".account-overview").classList.toggle("is-real", !isDemo);
   $$(".account-tab").forEach((button) => button.classList.toggle("active", button.dataset.accountMode === state.accountMode));
   $("#balance-label").innerHTML = isDemo
-    ? 'DEMO ACCOUNT BALANCE <span class="info-tip" title="Simulated funds only">i</span>'
+    ? 'SIMULATED DEMO BALANCE <span class="info-tip" title="Simulated funds only">i</span>'
     : "REAL ACCOUNT STATUS";
   $("#account-status").textContent = isDemo
     ? "Simulated funds · $10,000 starting balance"
     : "Provider setup pending · No real funds accepted";
   $("#account-status").classList.toggle("is-locked", !isDemo);
   $("#order-mode-description").textContent = isDemo
-    ? "4-second demo trade · 1:1 payout"
+    ? "Simulated position · server-priced execution"
     : "Real-money trading unavailable until provider setup";
   $("#order-mode-tag").textContent = isDemo ? "DEMO" : "LOCKED";
-  $("#available-balance-label").textContent = isDemo ? "Available demo balance" : "Real balance";
+  $("#available-balance-label").textContent = isDemo ? "Available simulated funds" : "Real balance";
   $("#order-disclaimer").textContent = isDemo
     ? "Demo only. Orders do not reach an exchange."
     : "Real trading is locked. No live orders or funds are connected.";
   $("#trade-amount").disabled = !isDemo;
+  $("#stop-loss-price").disabled = !isDemo;
+  $("#take-profit-price").disabled = !isDemo;
   $$(".amount-presets button").forEach((button) => { button.disabled = !isDemo; });
-  $$(".trade-action").forEach((button) => { button.disabled = !isDemo || state.isSubmittingTrade || Boolean(state.pendingTrade); });
-  $("#balance-deposit").textContent = "Deposit";
-  $("#balance-withdraw").textContent = "Withdraw";
+  $$(".trade-action").forEach((button) => { button.disabled = !isDemo || state.isSubmittingTrade; });
+  $$(".close-position").forEach((button) => { button.disabled = !isDemo || state.isSubmittingTrade; });
   renderBalance();
   updateOrderEstimate();
 }
 
-async function loadDemoBalance(userId) {
-  let { data, error } = await supabaseClient
+function setRiskDefaults(side, market) {
+  const stop = side === "buy" ? market.price * 0.99 : market.price * 1.01;
+  const take = side === "buy" ? market.price * 1.02 : market.price * 0.98;
+  const precision = market.price < 10 ? 4 : 2;
+  const values = { marketId: market.id, side, stop: stop.toFixed(precision), take: take.toFixed(precision) };
+  $("#stop-loss-price").value = values.stop;
+  $("#take-profit-price").value = values.take;
+  state.defaultRiskValues = values;
+}
+
+async function loadDemoBalance() {
+  const { data, error } = await supabaseClient
     .from("demo_accounts")
     .select("balance")
-    .eq("user_id", userId)
+    .eq("user_id", state.userId)
     .maybeSingle();
   if (error) throw error;
-
   if (!data) {
-    const { error: insertError } = await supabaseClient
-      .from("demo_accounts")
-      .insert({ user_id: userId, balance: 10000 });
-    if (insertError && insertError.code !== "23505") throw insertError;
-
-    const result = await supabaseClient
-      .from("demo_accounts")
-      .select("balance")
-      .eq("user_id", userId)
-      .maybeSingle();
-    data = result.data;
-    error = result.error;
+    throw new Error("The demo account was not created. Run the Supabase setup script and try again.");
   }
-
-  if (error) throw error;
-  const balance = Number(data && data.balance);
+  const balance = Number(data.balance);
   if (!Number.isFinite(balance) || balance < 0) {
     throw new Error("The demo account balance is missing or invalid.");
   }
   return balance;
 }
 
-async function persistDemoBalance(previousBalance) {
-  try {
-    const { data, error } = await supabaseClient
-      .from("demo_accounts")
-      .update({ balance: state.balance })
-      .eq("user_id", state.userId)
-      .select("balance")
-      .maybeSingle();
-    if (error) throw error;
-    if (!data) throw new Error("No demo account balance was updated.");
-    const savedBalance = Number(data.balance);
-    if (!Number.isFinite(savedBalance) || savedBalance < 0) {
-      throw new Error("Supabase returned an invalid demo balance.");
-    }
-    state.balance = savedBalance;
-    renderBalance();
-    return true;
-  } catch (error) {
-    state.balance = previousBalance;
-    renderBalance();
-    const message = getErrorMessage(error, "Supabase request failed.");
-    toast(`Could not save your demo balance: ${message}`, true);
-    return false;
-  }
+function mapPositionRow(row) {
+  return {
+    id: row.id,
+    marketId: row.market,
+    side: row.side,
+    amount: Number(row.amount),
+    quantity: Number(row.quantity),
+    entryPrice: Number(row.entry_price),
+    stopLoss: Number(row.stop_loss),
+    takeProfit: Number(row.take_profit),
+    entryFee: Number(row.entry_fee),
+    exitPrice: row.exit_price === null ? null : Number(row.exit_price),
+    pnl: row.pnl === null ? null : Number(row.pnl),
+    status: row.status,
+    openedAt: row.opened_at,
+    closedAt: row.closed_at,
+  };
+}
+
+async function loadDemoPositions() {
+  const { data, error } = await supabaseClient
+    .from("demo_positions")
+    .select("id,market,side,amount,quantity,entry_price,stop_loss,take_profit,entry_fee,exit_price,pnl,status,opened_at,closed_at")
+    .eq("user_id", state.userId)
+    .order("opened_at", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  const positions = (data || []).map(mapPositionRow);
+  state.positions = positions.filter((position) => position.status === "open");
+  state.history = positions.filter((position) => position.status === "closed");
+  renderPositions();
+}
+
+async function loadDemoDeposits() {
+  const { data, error } = await supabaseClient
+    .from("demo_transactions")
+    .select("id,amount,balance_after,created_at")
+    .eq("user_id", state.userId)
+    .eq("transaction_type", "deposit")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) throw error;
+  state.demoDeposits = data || [];
+  renderDemoDeposits();
 }
 
 function renderPositions() {
@@ -431,7 +450,7 @@ function renderPositions() {
   if (!positions.length) {
     const row = document.createElement("tr");
     row.className = "empty-row";
-    row.innerHTML = `<td colspan="7"><span class="empty-icon">⌁</span><strong>${state.showingHistory ? "No closed trades yet" : "No open positions yet"}</strong><span>${state.showingHistory ? "Closed demo trades will appear here." : "Place a demo trade to see it here."}</span></td>`;
+    row.innerHTML = `<td colspan="9"><span class="empty-icon">⌁</span><strong>${state.showingHistory ? "No closed trades yet" : "No open positions yet"}</strong><span>${state.showingHistory ? "Closed simulated trades will appear here." : "Place a simulated trade to see it here."}</span></td>`;
     body.append(row);
     return;
   }
@@ -439,50 +458,53 @@ function renderPositions() {
   positions.slice().reverse().forEach((position) => {
     const market = marketById(position.marketId);
     const currentPrice = market.price;
-    const rawPnl = (currentPrice - position.entryPrice) / position.entryPrice * position.amount * (position.side === "buy" ? 1 : -1);
-    const pnl = state.showingHistory ? position.pnl : rawPnl - position.fee;
+    const rawPnl = (currentPrice - position.entryPrice) * position.quantity * (position.side === "buy" ? 1 : -1);
+    const pnl = state.showingHistory ? position.pnl : rawPnl - position.entryFee - position.quantity * currentPrice * 0.001;
+    const quantityPrecision = market.price < 10 ? 4 : 6;
     const row = document.createElement("tr");
     row.innerHTML = `
       <td><span class="position-market"><span class="watch-coin coin-${market.iconClass}">${market.icon}</span><span class="position-market-copy"><strong>${market.id} / USD</strong><span>${market.name}</span></span></span></td>
       <td><span class="side-pill ${position.side}">${position.side === "buy" ? "BUY / LONG" : "SELL / SHORT"}</span></td>
-      <td>${money(position.amount)}</td>
+      <td><strong>${position.quantity.toFixed(quantityPrecision)} ${market.id}</strong><br><span>${money(position.amount)} simulated</span></td>
       <td>${formatExactPrice(market, position.entryPrice)}</td>
+      <td>${formatExactPrice(market, position.stopLoss)}</td>
+      <td>${formatExactPrice(market, position.takeProfit)}</td>
       <td>${state.showingHistory ? formatExactPrice(market, position.exitPrice) : formatExactPrice(market, currentPrice)}</td>
       <td class="${pnl >= 0 ? "positive" : "negative"}">${pnl >= 0 ? "+" : "−"}${money(Math.abs(pnl))}</td>
       <td>${state.showingHistory ? `<span class="result-tag ${position.outcome || "closed"}">${position.outcome ? position.outcome.toUpperCase() : "CLOSED"}</span>` : `<button class="close-position" data-position="${position.id}">Close</button>`}</td>`;
     if (!state.showingHistory) {
-      row.querySelector(".close-position").addEventListener("click", () => closePosition(position.id));
+      const closeButton = row.querySelector(".close-position");
+      closeButton.disabled = state.accountMode !== "demo" || state.isSubmittingTrade;
+      closeButton.addEventListener("click", () => closePosition(position.id));
     }
     body.append(row);
   });
 }
 
-function renderWithdrawalHistory() {
-  const body = $("#withdrawal-history-body");
-  const records = state.withdrawalHistory;
-  $("#withdrawal-count").textContent = String(records.length);
+function renderDemoDeposits() {
+  const body = $("#demo-transactions-body");
+  const records = state.demoDeposits;
   body.replaceChildren();
   if (!records.length) {
     const row = document.createElement("tr");
     row.className = "empty-row";
-    row.innerHTML = '<td colspan="5"><span class="empty-icon">↙</span><strong>No withdrawals yet</strong><span>Completed demo withdrawals will appear here.</span></td>';
+    row.innerHTML = '<td colspan="5"><span class="empty-icon">＋</span><strong>No demo deposits yet</strong><span>Simulated demo top-ups will appear here.</span></td>';
     body.append(row);
     return;
   }
-
-  records.slice().reverse().forEach((record) => {
+  records.forEach((record) => {
     const row = document.createElement("tr");
     const date = document.createElement("td");
-    date.textContent = new Date(record.createdAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
-    const account = document.createElement("td");
-    account.textContent = "Demo";
+    date.textContent = new Date(record.created_at).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" });
+    const transaction = document.createElement("td");
+    transaction.textContent = "Demo deposit";
     const amount = document.createElement("td");
-    amount.textContent = `−${money(record.amount)}`;
+    amount.textContent = `+${money(Number(record.amount))}`;
     const balance = document.createElement("td");
-    balance.textContent = money(record.balanceAfter);
-    const status = document.createElement("td");
-    status.innerHTML = '<span class="result-tag closed">COMPLETED</span>';
-    row.append(date, account, amount, balance, status);
+    balance.textContent = money(Number(record.balance_after));
+    const type = document.createElement("td");
+    type.innerHTML = '<span class="demo-tag">SIMULATED FUNDS</span>';
+    row.append(date, transaction, amount, balance, type);
     body.append(row);
   });
 }
@@ -516,137 +538,115 @@ async function placeTrade(side) {
     toast("Real trading is unavailable until a licensed trading provider is connected.", true);
     return;
   }
-  if (state.pendingTrade || state.isSubmittingTrade) return;
+  if (state.isSubmittingTrade) return;
   const amount = Number(amountInput.value);
   if (!Number.isFinite(amount) || amount < 10) {
-    toast("Enter a trade amount of at least $10.", true);
+    toast("Enter a simulated position amount of at least $10.", true);
     amountInput.focus();
     return;
   }
-  const fee = amount * 0.001;
-  if (amount + fee > state.balance) {
-    toast("Not enough demo funds for this trade and its simulated fee.", true);
+  const market = activeMarket();
+  if (state.defaultRiskValues && state.defaultRiskValues.marketId === market.id
+    && $("#stop-loss-price").value === state.defaultRiskValues.stop
+    && $("#take-profit-price").value === state.defaultRiskValues.take
+    && state.defaultRiskValues.side !== side) {
+    setRiskDefaults(side, market);
+  }
+  const stopLoss = Number($("#stop-loss-price").value);
+  const takeProfit = Number($("#take-profit-price").value);
+  if (!Number.isFinite(stopLoss) || !Number.isFinite(takeProfit)) {
+    toast("Enter valid stop-loss and take-profit prices.", true);
     return;
   }
-  const previousBalance = state.balance;
+
   state.isSubmittingTrade = true;
   renderAccountMode();
-  state.balance -= amount + fee;
-  renderBalance();
-  if (!await persistDemoBalance(previousBalance)) {
+  try {
+    const { data, error } = await supabaseClient.rpc("demo_open_position", {
+      p_market: market.id,
+      p_side: side,
+      p_amount: amount,
+      p_stop_loss: stopLoss,
+      p_take_profit: takeProfit,
+    });
+    if (error) throw error;
+    if (!data || !data.position) throw new Error("Supabase did not return the opened simulated position.");
+    const position = mapPositionRow(data.position);
+    const balance = Number(data.balance_after);
+    if (!Number.isFinite(balance) || balance < 0) throw new Error("Supabase returned an invalid simulated balance.");
+    state.balance = balance;
+    state.positions.push(position);
+    state.showingHistory = false;
+    $("#trade-result").hidden = false;
+    $("#trade-result").className = "trade-result is-complete";
+    $("#result-status").textContent = `${side.toUpperCase()} POSITION OPEN`;
+    $("#result-message").textContent = `${market.symbol} position size ${position.quantity.toFixed(market.price < 10 ? 4 : 6)} ${market.id}. All funds and execution prices are simulated.`;
+    $("#result-entry").textContent = formatExactPrice(market, position.entryPrice);
+    $("#result-exit").textContent = `${formatExactPrice(market, position.stopLoss)} / ${formatExactPrice(market, position.takeProfit)}`;
+    $("#result-pnl").textContent = "Open";
+    renderBalance();
+    renderPositions();
+    toast(`Simulated ${side} position opened at ${formatExactPrice(market, position.entryPrice)}.`);
+  } catch (error) {
+    toast(`Could not open simulated position: ${getErrorMessage(error, "Supabase request failed.")}`, true);
+  } finally {
     state.isSubmittingTrade = false;
     renderAccountMode();
-    return;
   }
-  state.isSubmittingTrade = false;
-  const market = activeMarket();
-  const trade = {
-    id: `${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
-    marketId: market.id,
-    side,
-    amount,
-    entryPrice: market.price,
-    fee,
-    openedAt: new Date(),
-    startedAt: Date.now(),
-  };
-  state.pendingTrade = trade;
-  state.showingHistory = false;
-  $("#trade-result").hidden = false;
-  $("#trade-result").className = "trade-result is-pending";
-  $("#result-status").textContent = `EXECUTING ${side.toUpperCase()}`;
-  $("#result-timer").textContent = "4s";
-  $("#result-message").textContent = `${market.symbol} demo order. Checking the market direction for four seconds.`;
-  $("#result-entry").textContent = formatExactPrice(market, trade.entryPrice);
-  $("#result-exit").textContent = "Pending";
-  $("#result-pnl").textContent = "Pending";
-  $("#execution-progress").style.width = "0%";
-  renderAccountMode();
-  renderPositions();
-  updateExecutionProgress();
-  state.executionInterval = window.setInterval(updateExecutionProgress, 100);
-  state.executionTimeout = window.setTimeout(() => settleTrade(trade), 4000);
-}
-
-function updateExecutionProgress() {
-  const trade = state.pendingTrade;
-  if (!trade) return;
-  const elapsed = Date.now() - trade.startedAt;
-  const remaining = Math.max(0, 4000 - elapsed);
-  $("#result-timer").textContent = `${Math.ceil(remaining / 1000)}s`;
-  $("#execution-progress").style.width = `${Math.min(100, (elapsed / 4000) * 100)}%`;
-}
-
-async function settleTrade(trade) {
-  if (state.pendingTrade !== trade) return;
-  window.clearInterval(state.executionInterval);
-  state.executionInterval = null;
-  state.executionTimeout = null;
-
-  const market = marketById(trade.marketId);
-  const exitPrice = market.price;
-  const movement = exitPrice - trade.entryPrice;
-  const epsilon = market.price * 1e-10;
-  const direction = movement > epsilon ? "up" : movement < -epsilon ? "down" : "unchanged";
-  const outcome = direction === "unchanged" ? "push" : (
-    (trade.side === "buy" && direction === "up") || (trade.side === "sell" && direction === "down")
-      ? "win"
-      : "loss"
-  );
-  const pnl = outcome === "win" ? trade.amount - trade.fee : outcome === "push" ? -trade.fee : -trade.amount - trade.fee;
-
-  const previousBalance = state.balance;
-  state.balance += outcome === "win" ? trade.amount * 2 : outcome === "push" ? trade.amount : 0;
-  await persistDemoBalance(previousBalance);
-  state.history.push({
-    ...trade,
-    exitPrice,
-    pnl,
-    outcome,
-    closedAt: new Date(),
-  });
-  state.pendingTrade = null;
-  state.showingHistory = true;
-  renderAccountMode();
-  $("#trade-result").className = `trade-result is-complete is-${outcome}`;
-  $("#result-status").textContent = outcome === "push" ? "NO MOVEMENT" : outcome.toUpperCase();
-  $("#result-timer").textContent = "4s complete";
-  $("#result-message").textContent = `${trade.side.toUpperCase()} ${market.symbol} moved ${direction}. Demo P&L: ${pnl >= 0 ? "+" : "−"}${money(Math.abs(pnl))}.`;
-  $("#result-entry").textContent = formatExactPrice(market, trade.entryPrice);
-  $("#result-exit").textContent = formatExactPrice(market, exitPrice);
-  $("#result-pnl").textContent = `${pnl >= 0 ? "+" : "−"}${money(Math.abs(pnl))}`;
-  renderPositions();
-  toast(`${outcome === "win" ? "Demo trade won" : outcome === "loss" ? "Demo trade lost" : "No price movement"} · ${pnl >= 0 ? "+" : "−"}${money(Math.abs(pnl))}.`);
 }
 
 async function closePosition(id) {
-  if (state.accountMode !== "demo") return;
-  const index = state.positions.findIndex((position) => position.id === id);
-  if (index < 0) return;
-  const position = state.positions.splice(index, 1)[0];
-  const market = marketById(position.marketId);
-  const grossPnl = (market.price - position.entryPrice) / position.entryPrice * position.amount * (position.side === "buy" ? 1 : -1);
-  const closeFee = position.amount * (market.price / position.entryPrice) * 0.001;
-  const netPnl = grossPnl - position.fee - closeFee;
-  const previousBalance = state.balance;
-  state.balance += Math.max(0, position.amount + grossPnl - closeFee);
-  if (!await persistDemoBalance(previousBalance)) {
-    state.positions.splice(index, 0, position);
-    renderPositions();
-    return;
+  if (state.accountMode !== "demo" || state.isSubmittingTrade) return;
+  state.isSubmittingTrade = true;
+  renderAccountMode();
+  try {
+    const { data, error } = await supabaseClient.rpc("demo_close_position", { p_position_id: id });
+    if (error) throw error;
+    if (!data || !data.position) throw new Error("Supabase did not return the closed simulated position.");
+    const position = mapPositionRow(data.position);
+    const balance = Number(data.balance_after);
+    if (!Number.isFinite(balance) || balance < 0) throw new Error("Supabase returned an invalid simulated balance.");
+    state.balance = balance;
+    await loadDemoPositions();
+    renderBalance();
+    const market = marketById(position.marketId);
+    toast(`Simulated position closed at ${formatExactPrice(market, position.exitPrice)}. P&L: ${position.pnl >= 0 ? "+" : "−"}${money(Math.abs(position.pnl))}.`);
+  } catch (error) {
+    toast(`Could not close simulated position: ${getErrorMessage(error, "Supabase request failed.")}`, true);
+  } finally {
+    state.isSubmittingTrade = false;
+    renderAccountMode();
   }
-  state.history.push({ ...position, pnl: netPnl, exitPrice: market.price, closedAt: new Date() });
-  renderPositions();
-  toast(`Position closed. Demo P&L: ${netPnl >= 0 ? "+" : "−"}${money(Math.abs(netPnl))}.`);
 }
 
-function updateMarkets() {
+async function updateMarkets() {
+  if (!supabaseClient || !state.userId || state.marketQuoteLoading) return;
+  state.marketQuoteLoading = true;
+  try {
+    const { data, error } = await supabaseClient.rpc("get_demo_market_prices");
+    if (error) throw error;
+    (data || []).forEach((quote) => {
+      const market = marketById(quote.market);
+      if (!market) return;
+      market.price = Number(quote.price);
+      market.change = (market.price / market.dayOpen - 1) * 100;
+      market.dayHigh = Math.max(market.dayHigh, market.price);
+      market.dayLow = Math.min(market.dayLow, market.price);
+    });
+    await loadDemoPositions();
+    state.balance = await loadDemoBalance();
+    renderBalance();
+    state.quoteErrorNotified = false;
+  } catch (error) {
+    if (!state.quoteErrorNotified) {
+      toast(`Could not update simulated market prices: ${getErrorMessage(error, "Supabase request failed.")}`, true);
+      state.quoteErrorNotified = true;
+    }
+    return;
+  } finally {
+    state.marketQuoteLoading = false;
+  }
   markets.forEach((market) => {
-    const movement = (Math.random() - 0.495) * market.volatility;
-    market.price = Math.max(market.price * 0.5, market.price * (1 + movement));
-    market.change = (market.price / market.dayOpen - 1) * 100;
-    market.dayHigh = Math.max(market.dayHigh, market.price);
-    market.dayLow = Math.min(market.dayLow, market.price);
     if (market.id === state.activeMarket && state.candles.length) {
       const candle = state.candles[state.candles.length - 1];
       const interval = Number.parseInt(state.timeframe, 10) * 60 * 1000;
@@ -670,33 +670,30 @@ function updateMarkets() {
 
 function selectAccountMode(mode) {
   if (mode !== "demo" && mode !== "real") return;
-  if (state.pendingTrade || state.isSubmittingTrade) {
-    toast("Wait for the current demo trade to finish before changing accounts.", true);
+  if (state.isSubmittingTrade) {
+    toast("Wait for the current simulated trade request to finish before changing accounts.", true);
     return;
   }
   state.accountMode = mode;
   renderAccountMode();
 }
 
-function openFundsModal(action = "deposit") {
-  state.fundsAction = action;
-  const isDeposit = action === "deposit";
+function openFundsModal() {
   const isDemo = state.accountMode === "demo";
   $("#funds-title").textContent = isDemo
-    ? `${isDeposit ? "Deposit" : "Withdraw"} demo funds`
-    : `Real ${isDeposit ? "deposits" : "withdrawals"} unavailable`;
+    ? "Deposit simulated funds"
+    : "Real deposits unavailable";
   $("#funds-description").textContent = isDemo
-    ? "This only changes your simulated demo balance. No real money is involved."
-    : "Payment and licensed trading providers are not connected yet. No real money can be deposited, withdrawn, or traded.";
+    ? "Add simulated funds for training. No real money is involved."
+    : "Payment and licensed trading providers are not connected. No real money is accepted.";
   $("#funds-amount-field").hidden = !isDemo;
   $("#confirm-funds").hidden = !isDemo;
   if (isDemo) {
-    $("#funds-amount").min = isDeposit ? "100" : "10";
-    $("#funds-amount").step = isDeposit ? "100" : "10";
-    $("#funds-amount").value = isDeposit ? "1000" : "100";
-    $("#funds-amount-field").querySelector("label").textContent = `${isDeposit ? "DEPOSIT" : "WITHDRAW"} AMOUNT IN USD`;
-    $("#confirm-funds").className = `trade-submit ${isDeposit ? "buy-submit" : "sell-submit"}`;
-    $("#confirm-funds").innerHTML = `${isDeposit ? "Deposit" : "Withdraw"} demo funds <span>→</span>`;
+    $("#funds-amount").min = "100";
+    $("#funds-amount").step = "100";
+    $("#funds-amount").value = "1000";
+    $("#confirm-funds").className = "trade-submit buy-submit";
+    $("#confirm-funds").innerHTML = "Deposit simulated funds <span>→</span>";
   }
   $("#funds-modal").hidden = false;
   if (isDemo) $("#funds-amount").focus();
@@ -726,7 +723,6 @@ function selectView(view) {
     state.showingHistory = true;
     renderPositions();
   }
-  if (view === "Withdrawal History") renderWithdrawalHistory();
   if (view === "Trade") renderChart();
   setNavigationMenuOpen(false);
   window.scrollTo({ top: 0 });
@@ -745,35 +741,27 @@ async function submitDemoFunds() {
     return;
   }
   const amount = Number($("#funds-amount").value);
-  const isDeposit = state.fundsAction === "deposit";
-  const minimum = isDeposit ? 100 : 10;
-  if (!Number.isFinite(amount) || amount < minimum) {
-    toast(`Enter at least ${money(minimum)}.`, true);
+  if (!Number.isFinite(amount) || amount < 100 || Math.round(amount * 100) !== amount * 100) {
+    toast("Enter a simulated deposit of at least $100 with no more than two decimal places.", true);
     return;
   }
-  if (!isDeposit && amount > state.balance) {
-    toast("You cannot withdraw more than your available demo balance.", true);
-    return;
-  }
-
-  const previousBalance = state.balance;
-  state.balance += isDeposit ? amount : -amount;
-  renderBalance();
   $("#confirm-funds").disabled = true;
-  const saved = await persistDemoBalance(previousBalance);
-  $("#confirm-funds").disabled = false;
-  if (!saved) return;
-
-  if (!isDeposit) {
-    state.withdrawalHistory.push({
-      amount,
-      balanceAfter: state.balance,
-      createdAt: new Date().toISOString(),
-    });
-    renderWithdrawalHistory();
+  try {
+    const { data, error } = await supabaseClient.rpc("demo_deposit", { p_amount: amount });
+    if (error) throw error;
+    if (!data || !Number.isFinite(Number(data.balance))) {
+      throw new Error("Supabase did not return the updated simulated balance.");
+    }
+    state.balance = Number(data.balance);
+    await loadDemoDeposits();
+    renderBalance();
+    closeFundsModal();
+    toast(`${money(amount)} added as simulated demo funds.`);
+  } catch (error) {
+    toast(`Could not deposit simulated funds: ${getErrorMessage(error, "Supabase request failed.")}`, true);
+  } finally {
+    $("#confirm-funds").disabled = false;
   }
-  closeFundsModal();
-  toast(`${money(amount)} ${isDeposit ? "added to" : "withdrawn from"} your demo balance.`);
 }
 
 function initialize() {
@@ -784,7 +772,7 @@ function initialize() {
   renderBalance();
   renderAccountMode();
   renderPositions();
-  renderWithdrawalHistory();
+  renderDemoDeposits();
   setSentiment();
 
   $$(".timeframe").forEach((button) => {
@@ -811,14 +799,15 @@ function initialize() {
     renderPositions();
   });
   $$(".account-tab").forEach((button) => button.addEventListener("click", () => selectAccountMode(button.dataset.accountMode)));
-  $("#open-funds").addEventListener("click", () => openFundsModal("deposit"));
-  $("#balance-deposit").addEventListener("click", () => openFundsModal("deposit"));
-  $("#balance-withdraw").addEventListener("click", () => openFundsModal("withdraw"));
+  $("#open-funds").addEventListener("click", openFundsModal);
+  $("#balance-deposit").addEventListener("click", openFundsModal);
   $("#close-funds").addEventListener("click", closeFundsModal);
   $("#funds-modal").addEventListener("click", (event) => {
     if (event.target === $("#funds-modal")) closeFundsModal();
   });
   $("#confirm-funds").addEventListener("click", submitDemoFunds);
+  $("#stop-loss-price").addEventListener("input", () => { state.defaultRiskValues = null; });
+  $("#take-profit-price").addEventListener("input", () => { state.defaultRiskValues = null; });
   $("#profile-button").addEventListener("click", toggleProfileDetails);
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
@@ -836,7 +825,7 @@ function initialize() {
   $("#help-button").addEventListener("click", () => toast("Demo trades use simulated prices and do not reach an exchange."));
   $("#disclaimer-link").addEventListener("click", (event) => {
     event.preventDefault();
-    toast("NexaTrade is a front-end demo. Prices, sentiment, and orders are simulated; no financial advice or real trading is provided.");
+    toast("NexaTrade is a simulated training environment. Prices, funds, and positions are simulated; no financial advice or real trading is provided.");
   });
   $("#chart-menu").addEventListener("click", () => {
     state.chartStyle = state.chartStyle === "candle" ? "line" : "candle";
@@ -914,9 +903,10 @@ function startDashboard() {
     renderChart();
     renderBalance();
     renderPositions();
-    renderWithdrawalHistory();
+    renderDemoDeposits();
   }
   if (!state.marketUpdateInterval) state.marketUpdateInterval = window.setInterval(updateMarkets, 3000);
+  updateMarkets();
   if (!state.sentimentInterval) state.sentimentInterval = window.setInterval(setSentiment, 9000);
 }
 
@@ -933,14 +923,14 @@ function resetUserDemoState() {
   state.accountMode = "demo";
   state.positions = [];
   state.history = [];
-  state.withdrawalHistory = [];
+  state.demoDeposits = [];
   state.watchlist = ["XAU", "EUR", "GBP"];
   state.showingHistory = false;
   state.activeMarket = "XAU";
   state.timeframe = "1min";
   state.chartStyle = "candle";
-  state.pendingTrade = null;
   state.isSubmittingTrade = false;
+  state.defaultRiskValues = null;
   $("#profile-details").hidden = true;
   $("#profile-button").setAttribute("aria-expanded", "false");
   generateCandles(activeMarket());
@@ -949,18 +939,18 @@ function resetUserDemoState() {
 }
 
 async function enterDashboard(user) {
-  let demoBalance;
   try {
-    demoBalance = await loadDemoBalance(user.id);
+    if (state.userId !== user.id) resetUserDemoState();
+    state.userId = user.id;
+    const [demoBalance] = await Promise.all([loadDemoBalance(), loadDemoPositions(), loadDemoDeposits()]);
+    state.balance = demoBalance;
   } catch (error) {
     const detail = getErrorMessage(error, "Supabase request failed.");
-    showAuthError(`Could not load your demo account. Run supabase-demo-accounts.sql in the Supabase SQL Editor, then reload. Details: ${detail}`);
+    showAuthError(`Could not load your simulated demo account. Run supabase-demo-accounts.sql in the Supabase SQL Editor, then reload. Details: ${detail}`);
     return false;
   }
 
-  if (state.userId !== user.id) resetUserDemoState();
   state.userId = user.id;
-  state.balance = demoBalance;
   const email = user.email || "";
   const name = user.user_metadata && user.user_metadata.full_name
     ? user.user_metadata.full_name
@@ -1056,8 +1046,8 @@ async function submitAuth(event) {
 }
 
 async function signOut() {
-  if (state.pendingTrade || state.isSubmittingTrade) {
-    toast("Wait for the four-second demo trade to finish before signing out.");
+  if (state.isSubmittingTrade) {
+    toast("Wait for the simulated trade request to finish before signing out.");
     return;
   }
   if (!supabaseClient) {
