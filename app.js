@@ -983,24 +983,84 @@ async function placeTrade(side) {
     if (error) throw error;
     if (!data || !data.position) throw new Error("The server did not return the opened position.");
 
-    const position = mapPositionRow(data.position);
-    const balance = Number(data.balance_after);
-    if (!Number.isFinite(balance) || balance < 0) throw new Error("The server returned an invalid balance.");
-
-    if (isDemo) {
-      state.balance = balance;
-      state.positions.push(position);
-    } else {
-      state.realTestBalance = balance;
-      state.realTestPositions.push(position);
-    }
+    const openedPosition = mapPositionRow(data.position);
 
     state.showingHistory = false;
+
+    if (isDemo) {
+      // Immediately settle the newly opened demo trade.
+      const { data: closeData, error: closeError } = await supabaseClient.rpc(
+        "demo_close_position",
+        { p_position_id: openedPosition.id }
+      );
+
+      if (closeError) throw closeError;
+
+      if (!closeData || !closeData.position) {
+        throw new Error("The server did not return the settled trade.");
+      }
+
+      const position = mapPositionRow(closeData.position);
+      const balance = Number(closeData.balance_after);
+
+      if (!Number.isFinite(balance) || balance < 0) {
+        throw new Error("The server returned an invalid balance.");
+      }
+
+      state.balance = balance;
+
+      await loadDemoPositions();
+
+      resultDisplay = {
+        status: "closed",
+        side: position.side,
+        marketId: position.marketId,
+        position,
+        outcome: position.outcome,
+      };
+
+      notification = `Demo trade ${position.outcome.toUpperCase()}: ${position.pnl >= 0 ? "+" : "−"
+        }${money(Math.abs(position.pnl))}.`;
+
+    } else {
+      // Immediately settle the simulated real-test trade.
+      const { data: closeData, error: closeError } = await supabaseClient.rpc(
+        "real_test_close_position",
+        { p_position_id: openedPosition.id }
+      );
+
+      if (closeError) throw closeError;
+
+      if (!closeData || !closeData.position) {
+        throw new Error("The server did not return the settled trade.");
+      }
+
+      const position = mapPositionRow(closeData.position);
+      const balance = Number(closeData.balance_after);
+
+      if (!Number.isFinite(balance) || balance < 0) {
+        throw new Error("The server returned an invalid balance.");
+      }
+
+      state.realTestBalance = balance;
+
+      await loadRealTestPositions();
+
+      resultDisplay = {
+        status: "closed",
+        side: position.side,
+        marketId: position.marketId,
+        position,
+        outcome: position.outcome,
+      };
+
+      notification = `Trade ${position.outcome.toUpperCase()}: ${
+        position.pnl >= 0 ? "+" : "−"
+      }${money(Math.abs(position.pnl))}.`;
+    }
+
     renderBalance();
     renderPositions();
-
-    notification = isDemo ? "Demo trade placed." : "Trade placed.";
-    resultDisplay = { status: "open", side: position.side, marketId: position.marketId, position };
   } catch (error) {
     const message = friendlyTradeError(getErrorMessage(error, "Supabase request failed."));
     resultDisplay = { status: "error", side, marketId: market.id, message };

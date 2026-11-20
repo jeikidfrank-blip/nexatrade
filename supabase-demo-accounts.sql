@@ -343,36 +343,7 @@ end;
 $$;alter table public.demo_positions
 add column if not exists pnl_multiplier numeric(4, 2) not null default 1.00;
 
-create or replace function public.demo_close_position(p_position_id uuid)
-returns jsonb
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_user_id uuid := auth.uid();
-  v_market text;
-  v_price numeric(18, 8);
-  v_result jsonb;
-begin
-  if v_user_id is null then
-    raise exception 'Authentication required.';
-  end if;
-  select market into v_market
-  from public.demo_positions
-  where id = p_position_id and user_id = v_user_id and status = 'open';
-  if v_market is null then
-    raise exception 'Open demo position not found.';
-  end if;
-  v_price := public.advance_demo_quote(v_user_id, v_market);
-  v_result := public.settle_demo_position(p_position_id, v_price);
-  if v_result is null then
-    raise exception 'Demo position was already closed.';
-  end if;
-  return v_result;
-end;
-$$;
-
+create or replace function public.demo_close_position
 revoke all on function public.get_demo_market_prices() from public, anon, authenticated;
 revoke all on function public.demo_deposit(numeric) from public, anon, authenticated;
 revoke all on function public.demo_open_position(text, text, numeric, numeric, numeric) from public, anon, authenticated;
