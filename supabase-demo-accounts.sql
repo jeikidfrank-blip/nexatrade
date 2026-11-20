@@ -1,10 +1,9 @@
--- Run this script in the Supabase SQL Editor to enable secure, per-user demo accounts.
+-- NexaTrade Demo Account Setup
 create table if not exists public.demo_accounts (
   user_id uuid primary key references auth.users (id) on delete cascade,
   balance numeric(14, 2) not null default 10000.00 check (balance >= 0),
   created_at timestamptz not null default now()
 );
-
 create table if not exists public.demo_transactions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
@@ -45,7 +44,7 @@ create table if not exists public.demo_positions (
   take_profit numeric(18, 8) not null check (take_profit > 0),
   entry_fee numeric(14, 2) not null check (entry_fee >= 0),
   exit_price numeric(18, 8),
-  pnl numeric(14, 2),
+  pnl numeric(14, 2),pnl_multiplier numeric(4, 2) not null default 1.00,
   status text not null default 'open' check (status in ('open', 'closed')),
   opened_at timestamptz not null default now(),
   closed_at timestamptz
@@ -321,7 +320,7 @@ begin
     or (p_side = 'buy' and not (p_stop_loss < v_price and p_take_profit > v_price))
     or (p_side = 'sell' and not (p_stop_loss > v_price and p_stop_loss <= v_price * 1.99 and p_take_profit < v_price))
   then
-    raise exception 'Stop loss and take profit must be valid for the current simulated entry price.';
+    raise exception 'Stop loss and take profit must be valid for the current demo entry price.';
   end if;
   v_fee := round(p_amount * 0.001, 2);
   update public.demo_accounts
@@ -329,7 +328,7 @@ begin
   where user_id = v_user_id and balance >= p_amount + v_fee
   returning balance into v_balance;
   if v_balance is null then
-    raise exception 'Insufficient simulated funds for this position and fee.';
+    raise exception 'Insufficient demo funds for this position and fee.';
   end if;
   insert into public.demo_positions (
     user_id, market, side, amount, quantity, entry_price, stop_loss, take_profit, entry_fee
@@ -341,7 +340,8 @@ begin
   values (v_user_id, 'position_open', p_amount, v_balance, v_position.id);
   return jsonb_build_object('position', to_jsonb(v_position), 'balance_after', v_balance);
 end;
-$$;
+$$;alter table public.demo_positions
+add column if not exists pnl_multiplier numeric(4, 2) not null default 1.00;
 
 create or replace function public.demo_close_position(p_position_id uuid)
 returns jsonb
