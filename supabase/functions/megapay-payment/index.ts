@@ -52,7 +52,7 @@ Deno.serve(async (req: Request) => {
       ? String(body.email).trim()
       : (user.email ?? "");
     const requestedRef = body?.reference != null ? String(body.reference).trim() : "";
-    const reference = requestedRef || makeReference("MP");
+    const reference = requestedRef || makeReference("NEXATRADE");
 
     const service = createServiceClient();
 

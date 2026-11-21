@@ -139,7 +139,7 @@
         const opts = options || {};
         const amount = Number(opts.amount);
         const currency = String(opts.currency || cfg.currency || "KES").toUpperCase();
-        const reference = String(opts.reference || createReference("MP"));
+        const reference = String(opts.reference || createReference("NEXATRADE"));
         const msisdn = opts.msisdn != null ? String(opts.msisdn).trim() : "";
         const email = opts.email != null ? String(opts.email).trim() : "";
         const localTest = cfg.localTest === true || !cfg.checkoutUrl;
@@ -162,10 +162,10 @@
             ok: true,
             localTest: true,
             reference: reference,
-            transactionRequestId: "TX-" + reference,
+            transactionRequestId: "NEXATRADE-" + reference,
             checkoutUrl: cfg.testCheckoutUrl || null,
             instructions:
-              "M-Pesa STK push test. Reference: " + reference
+              "NexaTrade M-Pesa STK push test. Reference: " + reference
               + (msisdn ? ", phone: " + msisdn : "")
               + ". No external request was sent. Set `checkoutUrl` in "
               + "`window.NEXATRADE_MEGAPAY_CONFIG` to your server endpoint that calls "

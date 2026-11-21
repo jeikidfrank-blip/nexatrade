@@ -1774,8 +1774,8 @@ async function submitExternalDeposit(amount, providerId) {
   const email = $("#funds-email") ? String($("#funds-email").value || "").trim() : "";
 
   const reference = typeof api.createReference === "function"
-    ? api.createReference("MP")
-    : ("MP-" + Date.now());
+    ? api.createReference("NEXATRADE")
+    : ("NEXATRADE-" + Date.now());
 
   let accessToken = null;
   try {
