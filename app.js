@@ -39,6 +39,7 @@ const state = {
   marketUpdateInterval: null,
   sentimentInterval: null,
   candleTimerInterval: null,
+  liveTickInterval: null,
 };
 
 markets.forEach((market) => {
@@ -240,16 +241,20 @@ function getVisibleCandles() {
 }
 
 function getChartPriceBounds(candles = getVisibleCandles().candles) {
-  const marketPrice = activeMarket().price;
+  const market = activeMarket();
+  const marketPrice = market ? market.price : 0;
   if (!candles.length) {
-    const range = marketPrice * 0.006;
+    const range = Math.max(marketPrice * 0.006, 0.0001);
     return { min: marketPrice - range / 2, max: marketPrice + range / 2, center: marketPrice, baseRange: range };
   }
-  const values = candles.flatMap((candle) => [candle.high, candle.low]);
+  const values = candles.flatMap((candle) => [candle.high, candle.low, candle.open, candle.close]);
+  if (Number.isFinite(marketPrice) && marketPrice > 0) values.push(marketPrice);
   const rawMin = Math.min(...values);
   const rawMax = Math.max(...values);
-  const baseRange = (rawMax - rawMin || marketPrice * 0.006) * 1.16;
-  const center = (rawMin + rawMax) / 2 + state.priceOffset;
+  const rawRange = Math.max(rawMax - rawMin, marketPrice * 0.0012 || 0.0001);
+  const baseRange = rawRange * 1.22;
+  const baseCenter = (rawMin + rawMax) / 2;
+  const center = baseCenter + state.priceOffset;
   const range = baseRange / state.priceZoom;
   return { min: center - range / 2, max: center + range / 2, center, baseRange };
 }
@@ -295,6 +300,57 @@ function renderCandleCountdown() {
   $("#candle-countdown").textContent = `NEXT CANDLE IN ${minutes}:${seconds}`;
 }
 
+function syncActiveMarketCandle(price) {
+  if (!state.candles.length) return;
+  const market = activeMarket();
+  if (!market) return;
+  const interval = getTimeframeInterval();
+  const safePrice = Math.max(0.0001, Number(price));
+  let candle = state.candles[state.candles.length - 1];
+  if (!candle) return;
+
+  while (Date.now() - candle.startedAt >= interval) {
+    const nextOpen = candle.close;
+    const startedAt = candle.startedAt + interval;
+    if (state.candleOffset > 0 && state.candles.length < 2000) state.candleOffset += 1;
+    candle = {
+      open: nextOpen,
+      close: safePrice,
+      high: Math.max(nextOpen, safePrice),
+      low: Math.min(nextOpen, safePrice),
+      startedAt,
+    };
+    state.candles.push(candle);
+    if (state.candles.length > 2000) {
+      state.candles.shift();
+      state.candleOffset = Math.min(state.candleOffset, Math.max(0, state.candles.length - 12));
+    }
+  }
+
+  candle.close = safePrice;
+  candle.high = Math.max(candle.high, safePrice);
+  candle.low = Math.min(candle.low, safePrice);
+  market.price = safePrice;
+  market.change = (market.price / market.dayOpen - 1) * 100;
+  market.dayHigh = Math.max(market.dayHigh, market.price);
+  market.dayLow = Math.min(market.dayLow, market.price);
+}
+
+function tickLiveChart() {
+  if (!state.initialized || !state.candles.length) return;
+  const market = activeMarket();
+  if (!market) return;
+  const magnitude = state.timeframe === "30sec" ? 0.28 : state.timeframe === "1min" ? 0.22 : 0.16;
+  const drift = (Math.random() - 0.5) * market.volatility * magnitude;
+  const revert = (market.dayOpen - market.price) / market.dayOpen * 0.01;
+  const nextPrice = Math.max(0.0001, market.price * (1 + drift + revert));
+  syncActiveMarketCandle(nextPrice);
+  renderCandleCountdown();
+  renderMarketStrip();
+  renderWatchlist();
+  renderChart();
+}
+
 function drawChart() {
   const bounds = chartCanvas.getBoundingClientRect();
   if (!bounds.width || !bounds.height) return;
@@ -308,8 +364,17 @@ function drawChart() {
   const candles = getVisibleCandles().candles;
   if (!candles.length) return;
   const { min, max } = getChartPriceBounds(candles);
-  const yFor = (value) => height - ((value - min) / (max - min)) * height;
-  const xStep = width / candles.length;
+  const plot = {
+    left: 8,
+    right: 8,
+    top: 12,
+    bottom: 12,
+    width: Math.max(1, width - 16),
+    height: Math.max(1, height - 24),
+  };
+  const range = max - min || Math.max(activeMarket().price * 0.001, 0.0001);
+  const yFor = (value) => plot.top + plot.height - ((value - min) / range) * plot.height;
+  const xStep = plot.width / candles.length;
   const isLight = document.documentElement.dataset.theme === "light";
 
   chartContext.clearRect(0, 0, width, height);
@@ -328,17 +393,17 @@ function drawChart() {
   chartContext.strokeStyle = isLight ? "rgba(91, 111, 133, .14)" : "rgba(26, 42, 64, .75)";
   chartContext.lineWidth = 1;
   for (let index = 0; index <= 4; index += 1) {
-    const y = Math.round((height / 4) * index) + 0.5;
+    const y = Math.round(plot.top + (plot.height / 4) * index) + 0.5;
     chartContext.beginPath();
-    chartContext.moveTo(0, y);
-    chartContext.lineTo(width, y);
+    chartContext.moveTo(plot.left, y);
+    chartContext.lineTo(width - plot.right, y);
     chartContext.stroke();
   }
   for (let index = 0; index <= 6; index += 1) {
-    const x = Math.round((width / 6) * index) + 0.5;
+    const x = Math.round(plot.left + (plot.width / 6) * index) + 0.5;
     chartContext.beginPath();
-    chartContext.moveTo(x, 0);
-    chartContext.lineTo(x, height);
+    chartContext.moveTo(x, plot.top);
+    chartContext.lineTo(x, height - plot.bottom);
     chartContext.stroke();
   }
 
@@ -349,13 +414,13 @@ function drawChart() {
   if (state.chartStyle === "line") {
     chartContext.beginPath();
     candles.forEach((candle, index) => {
-      const x = index * xStep + xStep / 2;
+      const x = plot.left + index * xStep + xStep / 2;
       const y = yFor(candle.close);
       if (index === 0) chartContext.moveTo(x, y);
       else chartContext.lineTo(x, y);
     });
-    chartContext.lineTo(width, height);
-    chartContext.lineTo(0, height);
+    chartContext.lineTo(plot.left + plot.width, height - plot.bottom);
+    chartContext.lineTo(plot.left, height - plot.bottom);
     chartContext.closePath();
     const fill = chartContext.createLinearGradient(0, 0, 0, height);
     fill.addColorStop(0, isLight ? "rgba(15,163,122,.18)" : "rgba(24,198,255,.18)");
@@ -365,7 +430,7 @@ function drawChart() {
 
     chartContext.beginPath();
     candles.forEach((candle, index) => {
-      const x = index * xStep + xStep / 2;
+      const x = plot.left + index * xStep + xStep / 2;
       const y = yFor(candle.close);
       if (index === 0) chartContext.moveTo(x, y);
       else chartContext.lineTo(x, y);
@@ -377,7 +442,7 @@ function drawChart() {
     chartContext.stroke();
   } else {
     candles.forEach((candle, index) => {
-      const center = index * xStep + xStep / 2;
+      const center = plot.left + index * xStep + xStep / 2;
       const rising = candle.close >= candle.open;
       const color = rising ? upColor : downColor;
       const openY = yFor(candle.open);
@@ -387,7 +452,7 @@ function drawChart() {
       const top = Math.min(openY, closeY);
       const bottom = Math.max(openY, closeY);
       const bodyHeight = Math.max(1.5, bottom - top);
-      const candleWidth = Math.max(3, Math.min(11, xStep * 0.7));
+      const candleWidth = Math.max(3, Math.min(12, xStep * 0.72));
 
       chartContext.strokeStyle = color;
       chartContext.fillStyle = color;
@@ -400,22 +465,20 @@ function drawChart() {
       chartContext.stroke();
 
       chartContext.fillRect(center - candleWidth / 2, top, candleWidth, bodyHeight);
-      if (!isLight) {
-        chartContext.strokeStyle = "rgba(255,255,255,.08)";
-        chartContext.lineWidth = 0.5;
-        chartContext.strokeRect(center - candleWidth / 2, top, candleWidth, bodyHeight);
-      }
+      chartContext.strokeStyle = isLight ? "rgba(0,0,0,.08)" : "rgba(255,255,255,.1)";
+      chartContext.lineWidth = 0.6;
+      chartContext.strokeRect(center - candleWidth / 2, top, candleWidth, bodyHeight);
     });
   }
 
   const currentPrice = activeMarket().price;
-  const currentY = Math.min(height - 1, Math.max(1, yFor(currentPrice)));
+  const clampedY = Math.min(height - plot.bottom, Math.max(plot.top, yFor(currentPrice)));
   chartContext.setLineDash([5, 4]);
   chartContext.strokeStyle = isLight ? "rgba(15,163,122,.7)" : "rgba(21,216,92,.7)";
   chartContext.lineWidth = 1;
   chartContext.beginPath();
-  chartContext.moveTo(0, currentY);
-  chartContext.lineTo(width, currentY);
+  chartContext.moveTo(plot.left, clampedY);
+  chartContext.lineTo(width - plot.right, clampedY);
   chartContext.stroke();
   chartContext.setLineDash([]);
 
@@ -424,8 +487,8 @@ function drawChart() {
   const labelPaddingX = 6;
   const labelHeight = 18;
   const labelWidth = Math.ceil(chartContext.measureText(priceLabel).width) + labelPaddingX * 2;
-  const labelX = Math.max(0, width - labelWidth - 2);
-  const labelY = Math.min(height - labelHeight / 2 - 1, Math.max(labelHeight / 2 + 1, currentY));
+  const labelX = Math.max(plot.left, width - plot.right - labelWidth);
+  const labelY = Math.min(height - plot.bottom - labelHeight / 2, Math.max(plot.top + labelHeight / 2, clampedY));
   chartContext.fillStyle = isLight ? "#0fa37a" : "#15d85c";
   chartContext.beginPath();
   const radius = 4;
@@ -1325,26 +1388,8 @@ async function updateMarkets() {
     state.marketQuoteLoading = false;
   }
 
-  markets.forEach((market) => {
-    if (market.id === state.activeMarket && state.candles.length) {
-      const candle = state.candles[state.candles.length - 1];
-      const interval = getTimeframeInterval();
-      if (Date.now() - candle.startedAt >= interval) {
-        const nextOpen = candle.close;
-        const startedAt = Math.floor(Date.now() / interval) * interval;
-        if (state.candleOffset > 0 && state.candles.length < 2000) state.candleOffset += 1;
-        state.candles.push({ open: nextOpen, close: market.price, high: Math.max(nextOpen, market.price), low: Math.min(nextOpen, market.price), startedAt });
-        if (state.candles.length > 2000) {
-          state.candles.shift();
-          state.candleOffset = Math.min(state.candleOffset, state.candles.length - 12);
-        }
-      } else {
-        candle.close = market.price;
-        candle.high = Math.max(candle.high, market.price);
-        candle.low = Math.min(candle.low, market.price);
-      }
-    }
-  });
+  const active = activeMarket();
+  if (active) syncActiveMarketCandle(active.price);
 
   renderMarketStrip();
   renderWatchlist();
@@ -2068,10 +2113,10 @@ function initialize() {
       state.candleOffset = Math.max(0, Math.min(
         maxOffset,
         chartPointerDrag.candleOffset
-        + Math.round((event.clientX - chartPointerDrag.x) / rect.width * chartPointerDrag.candleCount),
+        + Math.round((event.clientX - chartPointerDrag.x) / Math.max(1, rect.width - 16) * chartPointerDrag.candleCount),
       ));
       state.priceOffset = chartPointerDrag.priceOffset
-        - (event.clientY - chartPointerDrag.y) / rect.height * chartPointerDrag.priceRange;
+        - (event.clientY - chartPointerDrag.y) / Math.max(1, rect.height - 24) * chartPointerDrag.priceRange;
       refreshChartViewport();
       return;
     }
@@ -2159,6 +2204,7 @@ function startDashboard() {
   }
   if (!state.marketUpdateInterval) state.marketUpdateInterval = window.setInterval(updateMarkets, 3000);
   if (!state.candleTimerInterval) state.candleTimerInterval = window.setInterval(renderCandleCountdown, 1000);
+  if (!state.liveTickInterval) state.liveTickInterval = window.setInterval(tickLiveChart, 800);
   updateMarkets();
   if (!state.sentimentInterval) state.sentimentInterval = window.setInterval(setSentiment, 9000);
 }
@@ -2167,9 +2213,11 @@ function stopDashboard() {
   window.clearInterval(state.marketUpdateInterval);
   window.clearInterval(state.sentimentInterval);
   window.clearInterval(state.candleTimerInterval);
+  window.clearInterval(state.liveTickInterval);
   state.marketUpdateInterval = null;
   state.sentimentInterval = null;
   state.candleTimerInterval = null;
+  state.liveTickInterval = null;
 }
 
 function resetUserDemoState() {
