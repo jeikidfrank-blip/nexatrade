@@ -1488,6 +1488,14 @@ function toggleProfileDetails() {
   $("#profile-button").setAttribute("aria-expanded", String(!details.hidden));
 }
 
+function setProfileMessage(message = "", type = "") {
+  const element = $("#profile-message");
+  if (!element) return;
+  element.textContent = message;
+  element.classList.remove("error", "success");
+  if (type) element.classList.add(type);
+}
+
 async function saveProfile(event) {
   if (event) event.preventDefault();
   if (!supabaseClient) {
