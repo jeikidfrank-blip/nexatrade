@@ -32,7 +32,6 @@ const state = {
   isSubmittingTrade: false,
   tradeDisplay: null,
   tradeResultTimeout: null,
-  defaultRiskValues: null,
   quoteErrorNotified: false,
   marketQuoteLoading: false,
   initialized: false,
@@ -574,9 +573,6 @@ function renderChart() {
   $("#order-coin").style.background = `${market.color}24`;
   $("#order-market-name").textContent = market.symbol;
   $("#order-market-price").textContent = formatExactPrice(market, market.price);
-  if (!state.defaultRiskValues || state.defaultRiskValues.marketId !== market.id) {
-    setRiskDefaults("buy", market);
-  }
   $(".sentiment-heading > span").textContent = market.symbol;
   if ($("#buy-trade").dataset.market !== market.id) {
     $("#buy-trade").innerHTML = `Buy ${market.symbol} <span>↗</span>`;
@@ -650,7 +646,7 @@ function renderAccountMode() {
     : "Available funds";
 
 
-  $$("#trade-amount, #stop-loss-price, #take-profit-price").forEach((field) => {
+  $$("#trade-amount").forEach((field) => {
     field.disabled = false;
   });
 
@@ -672,14 +668,11 @@ function renderAccountMode() {
   updateOrderEstimate();
 }
 
-function setRiskDefaults(side, market) {
-  const stop = side === "buy" ? market.price * 0.97 : market.price * 1.03;
-  const take = side === "buy" ? market.price * 1.06 : market.price * 0.94;
-  const precision = market.price < 10 ? 4 : 2;
-  const values = { marketId: market.id, side, stop: stop.toFixed(precision), take: take.toFixed(precision) };
-  $("#stop-loss-price").value = values.stop;
-  $("#take-profit-price").value = values.take;
-  state.defaultRiskValues = values;
+function getAutomaticTradeLevels(side, market) {
+  const factor = side === "buy" ? 10 : 0.1;
+  const stopLoss = side === "buy" ? Math.max(0.0001, market.price * 0.5) : market.price * 2;
+  const takeProfit = side === "buy" ? market.price * factor : Math.max(0.0001, market.price * 0.5);
+  return { stopLoss, takeProfit };
 }
 
 async function loadDemoBalance() {
@@ -1096,31 +1089,7 @@ async function placeTrade(side) {
     return;
   }
 
-  if (state.defaultRiskValues && state.defaultRiskValues.marketId === market.id
-    && $("#stop-loss-price").value === state.defaultRiskValues.stop
-    && $("#take-profit-price").value === state.defaultRiskValues.take
-    && state.defaultRiskValues.side !== side) {
-    setRiskDefaults(side, market);
-  }
-
-  if (state.defaultRiskValues
-    && state.defaultRiskValues.marketId === market.id
-    && state.defaultRiskValues.side === side) {
-    const currentStop = Number($("#stop-loss-price").value);
-    const currentTake = Number($("#take-profit-price").value);
-    const stillBrackets = side === "buy"
-      ? currentStop < market.price && currentTake > market.price
-      : currentStop > market.price && currentTake < market.price;
-    if (!stillBrackets) setRiskDefaults(side, market);
-  }
-
-  const stopLoss = Number($("#stop-loss-price").value);
-  const takeProfit = Number($("#take-profit-price").value);
-
-  if (!Number.isFinite(stopLoss) || !Number.isFinite(takeProfit)) {
-    toast("Enter valid stop-loss and take-profit prices.", true);
-    return;
-  }
+  const { stopLoss, takeProfit } = getAutomaticTradeLevels(side, market);
 
   const executionStartedAt = Date.now();
   state.isSubmittingTrade = true;
@@ -2027,8 +1996,6 @@ function initialize() {
       await checkMegapayDepositStatus(button);
     });
   }
-  $("#stop-loss-price").addEventListener("input", () => { state.defaultRiskValues = null; });
-  $("#take-profit-price").addEventListener("input", () => { state.defaultRiskValues = null; });
   $("#profile-button").addEventListener("click", toggleProfileDetails);
   const profileForm = $("#profile-form");
   if (profileForm) profileForm.addEventListener("submit", saveProfile);
@@ -2240,7 +2207,6 @@ function resetUserDemoState() {
   state.chartStyle = "candle";
   state.isSubmittingTrade = false;
   state.tradeDisplay = null;
-  state.defaultRiskValues = null;
   $("#profile-details").hidden = true;
   $("#profile-button").setAttribute("aria-expanded", "false");
   generateCandles(activeMarket());
