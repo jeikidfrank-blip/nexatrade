@@ -1286,6 +1286,55 @@ function fundsActionChoices(isDemo) {
     : [["deposit", "Deposit"], ["withdrawal", "Withdraw"]];
 }
 
+function getDepositProviders() {
+  const api = window.NexaTradePayments;
+  if (!api || typeof api.getDepositProviders !== "function") return [];
+  return api.getDepositProviders();
+}
+
+function renderFundsProviderOptions() {
+  const select = $("#funds-provider");
+  const providers = getDepositProviders();
+  const options = [["simulated", "Instant test funds"]].concat(
+    providers.map((provider) => [provider.id, provider.label || provider.id]),
+  );
+
+  select.replaceChildren(...options.map(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    return option;
+  }));
+
+  if (!providers.some((provider) => provider.id === select.value)) {
+    select.value = providers.length ? providers[0].id : "simulated";
+  }
+}
+
+function setFundsCheckoutResult(message, isError) {
+  const box = $("#funds-checkout-result");
+  if (!message) {
+    box.hidden = true;
+    box.className = "funds-checkout-result";
+    box.textContent = "";
+    return;
+  }
+  box.hidden = false;
+  box.className = "funds-checkout-result" + (isError ? " error" : "");
+  box.textContent = message;
+}
+
+function setFundsCheckoutResultHtml(html, isError) {
+  const box = $("#funds-checkout-result");
+  if (!html) {
+    setFundsCheckoutResult("", false);
+    return;
+  }
+  box.hidden = false;
+  box.className = "funds-checkout-result" + (isError ? " error" : "");
+  box.innerHTML = html;
+}
+
 function openFundsModal(preferredAction) {
   const isDemo = state.accountMode === "demo";
 
@@ -1293,9 +1342,11 @@ function openFundsModal(preferredAction) {
     ? "Deposit demo funds"
     : "Manage account";
 
-  $("#funds-description").textContent = isDemo
+  const fundsDescription = isDemo
     ? "Add demo funds for training, or set an exact demo balance. No real money is involved."
-    : "SIMULATED FUNDS ONLY. Deposits and withdrawals are for testing. No real money is transferred.";
+    : "";
+  $("#funds-description").textContent = fundsDescription;
+  $("#funds-description").hidden = !fundsDescription;
 
   const actionSelect = $("#funds-action");
   actionSelect.replaceChildren(...fundsActionChoices(isDemo).map(([value, label]) => {
@@ -1310,6 +1361,9 @@ function openFundsModal(preferredAction) {
     actionSelect.value = preferredAction;
   }
 
+  renderFundsProviderOptions();
+  setFundsCheckoutResult("", false);
+
   $("#funds-amount-field").hidden = false;
   $("#funds-action-field").hidden = false;
 
@@ -1319,6 +1373,7 @@ function openFundsModal(preferredAction) {
 
   $("#confirm-funds").hidden = false;
   $("#confirm-funds").className = "trade-submit buy-submit";
+  $("#confirm-funds").disabled = false;
 
   updateFundsActionButton();
 
@@ -1328,6 +1383,8 @@ function openFundsModal(preferredAction) {
 
 function closeFundsModal() {
   $("#funds-modal").hidden = true;
+  setFundsCheckoutResult("", false);
+  state.pendingMegapayDeposit = null;
 }
 
 function updateFundsActionButton() {
@@ -1335,24 +1392,52 @@ function updateFundsActionButton() {
   const action = $("#funds-action").value;
   const button = $("#confirm-funds");
   const label = document.querySelector("#funds-amount-field label");
+  const providerField = $("#funds-provider-field");
+  const providerNote = $("#funds-provider-note");
+  const provider = $("#funds-provider") ? $("#funds-provider").value : "simulated";
+  const usingExternalProvider = !isDemo && action === "deposit" && provider && provider !== "simulated";
+
+  const providerDetails = $("#funds-provider-details");
+  providerField.hidden = !( !isDemo && action === "deposit" );
+  providerDetails.hidden = !usingExternalProvider;
+
+  if (providerField.hidden) {
+    providerNote.textContent = "";
+  } else if (provider === "simulated") {
+    providerNote.textContent = "Credits test funds immediately to your account balance.";
+  } else {
+    providerNote.textContent = "";
+    const emailInput = $("#funds-email");
+    const userEmailEl = $("#user-email");
+    if (emailInput && !emailInput.value && userEmailEl && userEmailEl.textContent && userEmailEl.textContent.includes("@")) {
+      emailInput.value = userEmailEl.textContent.trim();
+    }
+  }
 
   if (action === "set") {
     button.innerHTML = 'Set demo balance <span>→</span>';
     if (label) label.textContent = "NEW DEMO BALANCE IN KSH";
     $("#funds-amount").value = Number(state.balance || 0).toFixed(2);
+    setFundsCheckoutResult("", false);
     return;
   }
 
   if (action === "withdrawal") {
     button.innerHTML = 'Withdraw funds <span>→</span>';
     if (label) label.textContent = "AMOUNT IN KSH";
+    setFundsCheckoutResult("", false);
     return;
   }
 
-  button.innerHTML = isDemo
-    ? 'Deposit demo funds <span>→</span>'
-    : 'Deposit funds <span>→</span>';
-  if (label) label.textContent = isDemo ? "DEMO AMOUNT IN KSH" : "AMOUNT IN KSH";
+  if (usingExternalProvider) {
+    button.innerHTML = 'Continue to payment <span>→</span>';
+    if (label) label.textContent = "AMOUNT IN KSH";
+  } else {
+    button.innerHTML = isDemo
+      ? 'Deposit demo funds <span>→</span>'
+      : 'Deposit funds <span>→</span>';
+    if (label) label.textContent = isDemo ? "DEMO AMOUNT IN KSH" : "AMOUNT IN KSH";
+  }
 }
 
 function setNavigationMenuOpen(isOpen) {
@@ -1386,12 +1471,189 @@ function toggleProfileDetails() {
   $("#profile-button").setAttribute("aria-expanded", String(!details.hidden));
 }
 
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function normalizeMsisdn(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length === 10 && digits.startsWith("0")) return digits;
+  if (digits.length === 9 && digits.startsWith("7")) return "0" + digits;
+  if (digits.length === 12 && digits.startsWith("254")) return "0" + digits.slice(3);
+  return digits;
+}
+
+function formatMegapayStatus(raw) {
+  if (!raw || typeof raw !== "object") return "Status response received.";
+  const status = raw.status || raw.transaction_status || raw.ResultDesc || raw.ResponseDescription || raw.message || raw.description || raw.CustomerMessage;
+  const code = raw.ResultCode != null ? (" (code " + raw.ResultCode + ")") : "";
+  const receipt = raw.MpesaReceiptNumber || raw.receipt || raw.receipt_number;
+  let text = status ? String(status) + code : "Status response received.";
+  if (receipt) text += " Receipt: " + receipt + ".";
+  return text;
+}
+
+async function checkMegapayDepositStatus(button) {
+  const pending = state.pendingMegapayDeposit;
+  const statusBox = $("#funds-status-result");
+  if (!pending) {
+    if (statusBox) statusBox.textContent = "No pending M-Pesa payment to check.";
+    return;
+  }
+
+  const api = window.NexaTradePayments;
+  if (!api || typeof api.checkStatus !== "function") {
+    if (statusBox) statusBox.textContent = "Payment status check is not available.";
+    return;
+  }
+
+  button.disabled = true;
+  if (statusBox) statusBox.textContent = "Checking payment status...";
+  try {
+    let accessToken = null;
+    try {
+      if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.getSession === "function") {
+        const { data } = await supabaseClient.auth.getSession();
+        accessToken = data && data.session ? data.session.access_token : null;
+      }
+    } catch (_) { accessToken = null; }
+
+    const result = await api.checkStatus(pending.providerId, {
+      transactionRequestId: pending.transactionRequestId,
+      reference: pending.reference,
+      email: pending.email || null,
+      accessToken: accessToken,
+      apikey: supabaseConfig && supabaseConfig.publishableKey ? supabaseConfig.publishableKey : null,
+    });
+
+    if (!result || !result.ok) {
+      throw new Error((result && result.error) || "Could not check payment status.");
+    }
+
+    const message = result.simulated
+      ? (result.message || "Status check simulation: pending.")
+      : formatMegapayStatus(result.raw);
+    if (statusBox) statusBox.textContent = message + " If payment is successful, balance is credited only by verified server-side processing/webhook.";
+    toast("Payment status checked.");
+
+    // Refresh in case a trusted server/webhook already credited the balance.
+    if (state.accountMode !== "demo") {
+      state.realTestBalance = await loadRealTestBalance();
+      renderBalance();
+      await loadRealTestTransactions();
+    }
+  } catch (error) {
+    if (statusBox) statusBox.textContent = "Could not check status: " + getErrorMessage(error, "Request failed.");
+    toast("Could not check payment status.", true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function submitExternalDeposit(amount, providerId) {
+  const api = window.NexaTradePayments;
+  if (!api || typeof api.createCheckout !== "function") {
+    throw new Error("Payment integration is not available. Reload the page and try again.");
+  }
+
+  const rawMsisdn = $("#funds-msisdn") ? $("#funds-msisdn").value : "";
+  const msisdn = normalizeMsisdn(rawMsisdn);
+  if (!/^0\d{9}$/.test(msisdn)) {
+    throw new Error("Enter a valid M-Pesa phone number (e.g. 0712345678).");
+  }
+  const email = $("#funds-email") ? String($("#funds-email").value || "").trim() : "";
+
+  const reference = typeof api.createReference === "function"
+    ? api.createReference("MP")
+    : ("MP-" + Date.now());
+
+  let accessToken = null;
+  try {
+    if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.getSession === "function") {
+      const { data } = await supabaseClient.auth.getSession();
+      accessToken = data && data.session ? data.session.access_token : null;
+    }
+  } catch (_) { accessToken = null; }
+
+  const result = await api.createCheckout(providerId, {
+    amount: amount,
+    currency: "KES",
+    reference: reference,
+    msisdn: msisdn,
+    email: email || null,
+    accessToken: accessToken,
+    apikey: supabaseConfig && supabaseConfig.publishableKey ? supabaseConfig.publishableKey : null,
+    metadata: {
+      userId: state.userId || null,
+      accountMode: state.accountMode,
+      purpose: "deposit",
+    },
+  });
+
+  if (!result || !result.ok) {
+    throw new Error((result && result.error) || "Could not start the payment checkout.");
+  }
+
+  const ref = String(result.reference || reference);
+  const transactionRequestId = String(result.transactionRequestId || (result.raw && (result.raw.transaction_request_id || result.raw.CheckoutRequestID || result.raw.MerchantRequestID || result.raw.requestId)) || ref);
+  const checkoutUrl = result.checkoutUrl || result.redirectUrl || null;
+  const note = result.instructions
+    || (checkoutUrl
+      ? "Checkout created. Complete payment in the opened window; balance updates only after verified server-side webhook/callback confirmation."
+      : "STK push request sent. Check your phone to complete payment. Balance updates only after verified server-side webhook/callback confirmation.");
+
+  state.pendingMegapayDeposit = {
+    providerId: providerId,
+    transactionRequestId: transactionRequestId,
+    reference: ref,
+    email: email || "",
+    amount: amount,
+  };
+
+  let html = "<strong>M-Pesa STK push initiated.</strong><br>";
+  html += "Reference: <span class=\"checkout-ref\">" + escapeHtml(ref) + "</span><br>";
+  if (transactionRequestId && transactionRequestId !== ref) {
+    html += "Transaction request ID: <span class=\"checkout-ref\">" + escapeHtml(transactionRequestId) + "</span><br>";
+  }
+  html += "Phone: <span class=\"checkout-ref\">" + escapeHtml(msisdn) + "</span><br>";
+  html += escapeHtml(note);
+  if (result.raw && typeof result.raw === "object") {
+    const detail = result.raw.CustomerMessage || result.raw.ResponseDescription || result.raw.message || result.raw.description;
+    if (detail && String(detail) !== String(note)) {
+      html += "<br>" + escapeHtml(String(detail));
+    }
+  }
+  if (checkoutUrl) {
+    const safeUrl = String(checkoutUrl);
+    if (/^https?:\/\//i.test(safeUrl)) {
+      html += '<br><a href="' + escapeHtml(safeUrl) + '" target="_blank" rel="noopener noreferrer">Open payment checkout</a>';
+      try { window.open(safeUrl, "_blank", "noopener"); } catch (_) { /* popup blocked; link is shown */ }
+    } else {
+      html += "<br>Checkout URL: <span class=\"checkout-ref\">" + escapeHtml(safeUrl) + "</span>";
+    }
+  }
+  html += '<br><button type="button" class="text-button" id="funds-check-status" style="margin-top:10px;">Check payment status</button>';
+  html += '<div id="funds-status-result" style="margin-top:8px;"></div>';
+  setFundsCheckoutResultHtml(html, false);
+  toast(result.simulated ? "M-Pesa STK push test created (simulation)." : "M-Pesa STK push sent. Check your phone to complete payment.");
+}
+
 async function submitDemoFunds() {
   const isDemo = state.accountMode === "demo";
   const action = $("#funds-action").value;
   const amount = Number($("#funds-amount").value);
   const isSet = isDemo && action === "set";
   const minimum = isSet ? 0 : (isDemo || action === "deposit" ? 100 : 0.01);
+  const providerId = $("#funds-provider") ? $("#funds-provider").value : "simulated";
+  const useExternalProvider = !isDemo && action === "deposit" && providerId && providerId !== "simulated";
+
+  setFundsCheckoutResult("", false);
 
   if (!Number.isFinite(amount) || amount < minimum || Math.round(amount * 100) !== amount * 100) {
     toast(
@@ -1405,16 +1667,26 @@ async function submitDemoFunds() {
     return;
   }
 
-  const rpcName = isSet
-    ? "demo_set_balance"
-    : isDemo
-      ? "demo_deposit"
-      : action === "withdrawal"
-        ? "real_test_withdraw"
-        : "real_test_deposit";
-
   $("#confirm-funds").disabled = true;
   try {
+    if (useExternalProvider) {
+      await submitExternalDeposit(amount, providerId);
+      // Do not credit balance here: deposits must be credited from a verified
+      // server-side webhook/callback. Refresh account data in case it already ran.
+      state.realTestBalance = await loadRealTestBalance();
+      renderBalance();
+      await loadRealTestTransactions();
+      return;
+    }
+
+    const rpcName = isSet
+      ? "demo_set_balance"
+      : isDemo
+        ? "demo_deposit"
+        : action === "withdrawal"
+          ? "real_test_withdraw"
+          : "real_test_deposit";
+
     const { error } = await supabaseClient.rpc(
       rpcName,
       isSet ? { p_balance: amount } : { p_amount: amount },
@@ -1445,7 +1717,9 @@ async function submitDemoFunds() {
           : `${money(amount)} ${action === "withdrawal" ? "withdrawn from" : "added to"} your balance.`,
     );
   } catch (error) {
-    toast(`Could not update funds: ${getErrorMessage(error, "Supabase request failed.")}`, true);
+    const message = getErrorMessage(error, "Could not update funds.");
+    if (useExternalProvider) setFundsCheckoutResult(message, true);
+    toast(`Could not update funds: ${message}`, true);
   } finally {
     $("#confirm-funds").disabled = false;
   }
@@ -1503,10 +1777,22 @@ function initialize() {
   $("#balance-withdraw").addEventListener("click", () => openFundsModal("withdrawal"));
   $("#close-funds").addEventListener("click", closeFundsModal);
   $("#funds-action").addEventListener("change", updateFundsActionButton);
+  const fundsProvider = $("#funds-provider");
+  if (fundsProvider) fundsProvider.addEventListener("change", updateFundsActionButton);
   $("#funds-modal").addEventListener("click", (event) => {
     if (event.target === $("#funds-modal")) closeFundsModal();
   });
   $("#confirm-funds").addEventListener("click", submitDemoFunds);
+
+  const fundsCheckoutResult = $("#funds-checkout-result");
+  if (fundsCheckoutResult) {
+    fundsCheckoutResult.addEventListener("click", async (event) => {
+      const button = event.target.closest("#funds-check-status");
+      if (!button) return;
+      event.preventDefault();
+      await checkMegapayDepositStatus(button);
+    });
+  }
   $("#stop-loss-price").addEventListener("input", () => { state.defaultRiskValues = null; });
   $("#take-profit-price").addEventListener("input", () => { state.defaultRiskValues = null; });
   $("#profile-button").addEventListener("click", toggleProfileDetails);

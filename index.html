@@ -308,17 +308,34 @@
         <button class="modal-close" id="close-funds" aria-label="Close dialog">×</button>
         <div class="modal-mark">＋</div>
         <h2 id="funds-title">Deposit demo funds</h2>
-        <p id="funds-description">Add demo funds to your demo balance. No real money is involved.</p><div id="funds-action-field" hidden>
-  <label for="funds-action">TRANSACTION TYPE</label>
-  <select id="funds-action">
-    <option value="deposit">Deposit</option>
-    <option value="withdrawal">Withdraw</option>
-  </select>
-</div>
+        <p id="funds-description">Add demo funds to your demo balance. No real money is involved.</p>
+        <div id="funds-action-field" hidden>
+          <label for="funds-action">TRANSACTION TYPE</label>
+          <select id="funds-action">
+            <option value="deposit">Deposit</option>
+            <option value="withdrawal">Withdraw</option>
+          </select>
+        </div>
         <div class="funds-amount-field" id="funds-amount-field">
           <label for="funds-amount">DEMO AMOUNT IN KSH</label>
           <div class="amount-input-wrap modal-amount"><span>KSh</span><input id="funds-amount" type="number" min="100" step="100" value="1000" /></div>
         </div>
+        <div class="funds-provider-field" id="funds-provider-field" hidden>
+          <label for="funds-provider">PAYMENT METHOD</label>
+          <select id="funds-provider"></select>
+          <p class="funds-provider-note" id="funds-provider-note"></p>
+        </div>
+        <div class="funds-provider-details" id="funds-provider-details" hidden>
+          <div class="funds-amount-field">
+            <label for="funds-msisdn">M-PESA PHONE NUMBER</label>
+            <div class="amount-input-wrap modal-amount"><span>+254</span><input id="funds-msisdn" type="tel" inputmode="tel" autocomplete="tel" placeholder="0712345678" /></div>
+          </div>
+          <div class="funds-amount-field">
+            <label for="funds-email">EMAIL (OPTIONAL)</label>
+            <div class="amount-input-wrap modal-amount"><span>@</span><input id="funds-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" /></div>
+          </div>
+        </div>
+        <div class="funds-checkout-result" id="funds-checkout-result" hidden aria-live="polite"></div>
         <button class="trade-submit buy-submit" id="confirm-funds">Deposit demo funds <span>→</span></button>
       </section>
     </div>

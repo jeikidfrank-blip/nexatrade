@@ -354,15 +354,53 @@ h1 { margin-top: 9px; font-family: var(--font-display); font-size: 27px; line-he
 .toast { max-width: 340px; padding: 12px 15px; border: 1px solid #33443e; border-radius: 6px; background: #14201d; color: #cce5db; box-shadow: 0 12px 35px #0006; font-size: 11px; animation: toast-in .2s ease-out; }
 .toast.error { border-color: #56343a; background: #291a1e; color: #f0c3c6; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.modal-backdrop { position: fixed; inset: 0; z-index: 15; display: grid; place-items: center; padding: 20px; background: #05080bc9; }
+.modal-backdrop { position: fixed; inset: 0; z-index: 15; display: grid; justify-items: center; align-items: start; padding: 20px; background: #05080bc9; overflow-y: auto; }
 .modal-backdrop[hidden] { display: none; }
-.modal { position: relative; width: min(100%, 380px); padding: 25px; border: 1px solid #2a3640; border-radius: 9px; background: #111820; box-shadow: 0 25px 80px #0008; }
+.modal { position: relative; width: min(100%, 380px); margin: auto 0; max-height: calc(100vh - 40px); overflow-y: auto; padding: 25px; border: 1px solid #2a3640; border-radius: 9px; background: #111820; box-shadow: 0 25px 80px #0008; }
 .modal-close { position: absolute; top: 12px; right: 14px; border: 0; background: transparent; color: #9ba8b3; font-size: 23px; cursor: pointer; }
 .modal-mark { width: 36px; height: 36px; display: grid; place-items: center; margin-bottom: 13px; border-radius: 8px; background: #16362e; color: #6cdbb5; font-size: 21px; }
 .modal h2 { font-family: var(--font-display); font-size: 17px; }
 .modal p { margin-top: 7px; color: #8996a2; font-size: 10px; line-height: 1.6; }
+.modal p:empty, .modal p[hidden] { display: none; }
 .modal label { display: block; margin-top: 19px; color: #86939e; font-size: 8px; font-weight: 600; letter-spacing: .7px; }
-.funds-amount-field[hidden], #confirm-funds[hidden] { display: none; }
+.funds-amount-field[hidden], #confirm-funds[hidden], .funds-provider-field[hidden], .funds-provider-details[hidden], .funds-checkout-result[hidden] { display: none; }
+
+.funds-provider-details .funds-amount-field { margin-bottom: 14px; }
+.funds-provider-details .modal-amount { margin-bottom: 0; }
+
+.funds-provider-field { margin-bottom: 18px; }
+.funds-provider-field select, #funds-action {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.03);
+  color: var(--text);
+  padding: 12px 14px;
+  font: inherit;
+}
+.modal .funds-provider-note {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.funds-checkout-result {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(121, 178, 255, 0.08);
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  word-break: break-word;
+}
+.funds-checkout-result a { color: #79b2ff; font-weight: 700; text-decoration: underline; }
+.funds-checkout-result .checkout-ref { font-family: Consolas, "Courier New", monospace; font-weight: 700; }
+.funds-checkout-result.error {
+  background: rgba(236, 114, 122, 0.1);
+  border-color: rgba(236, 114, 122, 0.35);
+}
 .amount-presets button:disabled { cursor: not-allowed; opacity: .5; }
 .modal .amount-input-wrap { min-height: 41px; }
 .modal .trade-submit { margin-top: 15px; }
