@@ -101,6 +101,40 @@ function getTimeframeInterval() {
   return interval;
 }
 
+const THEME_KEY = "nexatrade-theme";
+
+function getSavedTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function applyTheme(theme) {
+  const resolvedTheme = theme === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = resolvedTheme;
+  const metaTheme = $("#meta-theme-color");
+  if (metaTheme) metaTheme.setAttribute("content", resolvedTheme === "light" ? "#f4f7fb" : "#090d12");
+  $$(".theme-option").forEach((button) => {
+    button.classList.toggle("active", button.dataset.themeChoice === resolvedTheme);
+  });
+}
+
+function setTheme(theme) {
+  const resolvedTheme = theme === "light" ? "light" : "dark";
+  applyTheme(resolvedTheme);
+  try {
+    localStorage.setItem(THEME_KEY, resolvedTheme);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function initTheme() {
+  setTheme(getSavedTheme() || document.documentElement.dataset.theme || "dark");
+}
+
 function generateCandles(market) {
   const candles = [];
   const interval = getTimeframeInterval();
