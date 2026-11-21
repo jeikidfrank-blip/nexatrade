@@ -16,6 +16,7 @@ const state = {
   realTestHistory: [],
   fundsAction: "deposit",
   userId: null,
+  userPhone: "",
   accountMode: "demo",
   positions: [],
   history: [],
@@ -327,15 +328,15 @@ function drawChart() {
       const color = rising ? "#36c99a" : "#e9747c";
       chartContext.strokeStyle = color;
       chartContext.fillStyle = color;
-      chartContext.lineWidth = 1;
+      chartContext.lineWidth = 1.5;
       chartContext.beginPath();
       chartContext.moveTo(center, yFor(candle.high));
       chartContext.lineTo(center, yFor(candle.low));
       chartContext.stroke();
       const top = yFor(Math.max(candle.open, candle.close));
       const bottom = yFor(Math.min(candle.open, candle.close));
-      const candleWidth = Math.max(2, Math.min(7, xStep * 0.56));
-      chartContext.fillRect(center - candleWidth / 2, top, candleWidth, Math.max(1, bottom - top));
+      const candleWidth = Math.max(3, Math.min(10, xStep * 0.68));
+      chartContext.fillRect(center - candleWidth / 2, top, candleWidth, Math.max(1.5, bottom - top));
     });
   }
 
@@ -1209,11 +1210,17 @@ async function updateMarkets() {
     renderBalance();
     state.quoteErrorNotified = false;
   } catch (error) {
+    markets.forEach((market) => {
+      const drift = (Math.random() - 0.5) * market.volatility * 1.6;
+      market.price = Math.max(0.0001, market.price * (1 + drift));
+      market.change = (market.price / market.dayOpen - 1) * 100;
+      market.dayHigh = Math.max(market.dayHigh, market.price);
+      market.dayLow = Math.min(market.dayLow, market.price);
+    });
     if (!state.quoteErrorNotified) {
-      toast(`Could not update market prices: ${getErrorMessage(error, "Supabase request failed.")}`, true);
+      toast(`Could not update market prices from server. Showing simulated movement.`, true);
       state.quoteErrorNotified = true;
     }
-    return;
   } finally {
     state.marketQuoteLoading = false;
   }
@@ -1293,10 +1300,9 @@ function getDepositProviders() {
 
 function renderFundsProviderOptions() {
   const select = $("#funds-provider");
+  if (!select) return;
   const providers = getDepositProviders();
-  const options = [["instant", "Instant test funds"]].concat(
-    providers.map((provider) => [provider.id, provider.label || provider.id]),
-  );
+  const options = providers.map((provider) => [provider.id, provider.label || provider.id]);
 
   select.replaceChildren(...options.map(([value, label]) => {
     const option = document.createElement("option");
@@ -1305,8 +1311,8 @@ function renderFundsProviderOptions() {
     return option;
   }));
 
-  if (!providers.some((provider) => provider.id === select.value)) {
-    select.value = providers.length ? providers[0].id : "instant";
+  if (providers.length && !providers.some((provider) => provider.id === select.value)) {
+    select.value = providers[0].id;
   }
 }
 
@@ -1370,6 +1376,12 @@ function openFundsModal(preferredAction) {
   $("#funds-amount").step = "0.01";
   $("#funds-amount").value = "1000";
 
+  const withdrawalPhone = $("#funds-withdrawal-phone");
+  if (withdrawalPhone) {
+    const normalized = normalizeMsisdn(state.userPhone || "");
+    withdrawalPhone.value = normalized || (state.userPhone || "");
+  }
+
   $("#confirm-funds").hidden = false;
   $("#confirm-funds").className = "trade-submit buy-submit";
   $("#confirm-funds").disabled = false;
@@ -1393,23 +1405,29 @@ function updateFundsActionButton() {
   const label = document.querySelector("#funds-amount-field label");
   const providerField = $("#funds-provider-field");
   const providerNote = $("#funds-provider-note");
-  const provider = $("#funds-provider") ? $("#funds-provider").value : "instant";
-  const usingExternalProvider = !isDemo && action === "deposit" && provider && provider !== "instant";
+  const providers = getDepositProviders();
+  const provider = $("#funds-provider") ? $("#funds-provider").value : "";
+  const isRealDeposit = !isDemo && action === "deposit";
+  const isRealWithdrawal = !isDemo && action === "withdrawal";
+  const usingExternalProvider = isRealDeposit && Boolean(provider);
 
   const providerDetails = $("#funds-provider-details");
-  providerField.hidden = !( !isDemo && action === "deposit" );
-  providerDetails.hidden = !usingExternalProvider;
+  const withdrawalDetails = $("#funds-withdrawal-details");
+  if (providerField) providerField.hidden = !isRealDeposit;
+  if (providerDetails) providerDetails.hidden = !usingExternalProvider;
+  if (withdrawalDetails) withdrawalDetails.hidden = !isRealWithdrawal;
 
-  if (providerField.hidden) {
-    providerNote.textContent = "";
-  } else if (provider === "instant") {
-    providerNote.textContent = "Credits test funds immediately to your account balance.";
+  if (!isRealDeposit) {
+    if (providerNote) providerNote.textContent = "";
+  } else if (!providers.length) {
+    if (providerNote) providerNote.textContent = "M-Pesa deposits are not configured right now.";
   } else {
-    providerNote.textContent = "";
+    if (providerNote) providerNote.textContent = "Real account deposits use M-Pesa STK push only. Switch to Demo mode for test deposits.";
     const emailInput = $("#funds-email");
-    const userEmailEl = $("#user-email");
-    if (emailInput && !emailInput.value && userEmailEl && userEmailEl.textContent && userEmailEl.textContent.includes("@")) {
-      emailInput.value = userEmailEl.textContent.trim();
+    const profileEmail = $("#profile-email") ? $("#profile-email").value.trim() : "";
+    const fallbackEmail = profileEmail || state.userEmail || "";
+    if (emailInput && !emailInput.value && fallbackEmail.includes("@")) {
+      emailInput.value = fallbackEmail;
     }
   }
 
@@ -1468,6 +1486,71 @@ function toggleProfileDetails() {
   const details = $("#profile-details");
   details.hidden = !details.hidden;
   $("#profile-button").setAttribute("aria-expanded", String(!details.hidden));
+}
+
+async function saveProfile(event) {
+  if (event) event.preventDefault();
+  if (!supabaseClient) {
+    setProfileMessage("Supabase is not configured.", "error");
+    return;
+  }
+
+  const saveButton = $("#profile-save");
+  const nameInput = $("#profile-name");
+  const emailInput = $("#profile-email");
+  const phoneInput = $("#profile-phone");
+  const fullName = nameInput ? nameInput.value.trim() : "";
+  const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
+  const phone = phoneInput ? phoneInput.value.trim() : "";
+  const normalizedPhone = phone ? normalizeMsisdn(phone) : "";
+
+  if (!fullName) {
+    setProfileMessage("Enter your name.", "error");
+    return;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setProfileMessage("Enter a valid email address.", "error");
+    return;
+  }
+  if (phone && !/^0\d{9}$/.test(normalizedPhone)) {
+    setProfileMessage("Enter a valid phone number (e.g. 0712345678) or leave it blank.", "error");
+    return;
+  }
+
+  const payload = { data: { full_name: fullName, phone: normalizedPhone || phone } };
+  const emailChanged = email !== (state.userEmail || "").trim().toLowerCase();
+  if (emailChanged) payload.email = email;
+
+  if (saveButton) saveButton.disabled = true;
+  setProfileMessage("Saving profile...", "");
+  try {
+    const { data, error } = await supabaseClient.auth.updateUser(payload);
+    if (error) throw error;
+
+    state.userName = fullName;
+    state.userPhone = normalizedPhone || phone;
+    if (emailInput) emailInput.value = email;
+    if (phoneInput) phoneInput.value = state.userPhone;
+    const avatar = $("#profile-avatar");
+    if (avatar) avatar.textContent = fullName.charAt(0).toUpperCase();
+
+    const updatedEmail = data && data.user && data.user.email ? String(data.user.email).toLowerCase() : state.userEmail;
+    const confirmationNeeded = emailChanged && updatedEmail !== email;
+    if (!confirmationNeeded && updatedEmail) state.userEmail = updatedEmail;
+    if (!confirmationNeeded) state.userEmail = email;
+
+    const message = confirmationNeeded
+      ? "Profile saved. Check your new email inbox to confirm the email change."
+      : "Profile updated.";
+    setProfileMessage(message, "success");
+    toast(message);
+  } catch (error) {
+    const message = getErrorMessage(error, "Could not update profile.");
+    setProfileMessage(message, "error");
+    toast(`Could not update profile: ${message}`, true);
+  } finally {
+    if (saveButton) saveButton.disabled = false;
+  }
 }
 
 function escapeHtml(value) {
@@ -1649,10 +1732,15 @@ async function submitDemoFunds() {
   const amount = Number($("#funds-amount").value);
   const isSet = isDemo && action === "set";
   const minimum = isSet ? 0 : (isDemo || action === "deposit" ? 100 : 0.01);
-  const providerId = $("#funds-provider") ? $("#funds-provider").value : "instant";
+  const providerId = $("#funds-provider") ? $("#funds-provider").value : "";
   const useExternalProvider = !isDemo && action === "deposit" && providerId && providerId !== "instant";
 
   setFundsCheckoutResult("", false);
+
+  if (!isDemo && action === "deposit" && !useExternalProvider) {
+    toast("Real account deposits use M-Pesa STK push only. Use Demo mode for test deposits.", true);
+    return;
+  }
 
   if (!Number.isFinite(amount) || amount < minimum || Math.round(amount * 100) !== amount * 100) {
     toast(
@@ -1666,6 +1754,15 @@ async function submitDemoFunds() {
     return;
   }
 
+  let withdrawalPhone = "";
+  if (!isDemo && action === "withdrawal") {
+    withdrawalPhone = normalizeMsisdn($("#funds-withdrawal-phone") ? $("#funds-withdrawal-phone").value : state.userPhone);
+    if (!/^0\d{9}$/.test(withdrawalPhone)) {
+      toast("Enter a valid phone number for withdrawal (e.g. 0712345678).", true);
+      return;
+    }
+  }
+
   $("#confirm-funds").disabled = true;
   try {
     if (useExternalProvider) {
@@ -1676,6 +1773,19 @@ async function submitDemoFunds() {
       renderBalance();
       await loadRealTestTransactions();
       return;
+    }
+
+    if (!isDemo && action === "withdrawal" && withdrawalPhone) {
+      state.userPhone = withdrawalPhone;
+      const profilePhoneInput = $("#profile-phone");
+      if (profilePhoneInput) profilePhoneInput.value = withdrawalPhone;
+      try {
+        if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.updateUser === "function") {
+          await supabaseClient.auth.updateUser({ data: { phone: withdrawalPhone } });
+        }
+      } catch (_) {
+        // Keep withdrawal flow working even if profile phone persistence fails.
+      }
     }
 
     const rpcName = isSet
@@ -1795,6 +1905,11 @@ function initialize() {
   $("#stop-loss-price").addEventListener("input", () => { state.defaultRiskValues = null; });
   $("#take-profit-price").addEventListener("input", () => { state.defaultRiskValues = null; });
   $("#profile-button").addEventListener("click", toggleProfileDetails);
+  const profileForm = $("#profile-form");
+  if (profileForm) profileForm.addEventListener("submit", saveProfile);
+  $$(".theme-option[data-theme-choice]").forEach((button) => {
+    button.addEventListener("click", () => setTheme(button.dataset.themeChoice));
+  });
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeFundsModal();
@@ -2022,13 +2137,21 @@ async function enterDashboard(user) {
   const name = user.user_metadata && user.user_metadata.full_name
     ? user.user_metadata.full_name
     : email.split("@")[0] || "Trader";
-  const phone = user.phone || (user.user_metadata && user.user_metadata.phone) || "Not provided";
+  const rawPhone = user.phone || (user.user_metadata && user.user_metadata.phone) || "";
+  state.userPhone = String(rawPhone || "").trim();
+  state.userName = name;
+  state.userEmail = email;
   $("#auth-password").value = "";
   $("#auth-confirm").value = "";
-  $("#user-name").textContent = name;
-  $("#user-email").textContent = email;
-  $("#user-phone").textContent = `Phone: ${phone}`;
-  $(".avatar").textContent = name.charAt(0).toUpperCase();
+  const profileName = $("#profile-name");
+  const profileEmail = $("#profile-email");
+  const profilePhone = $("#profile-phone");
+  if (profileName) profileName.value = name;
+  if (profileEmail) profileEmail.value = email;
+  if (profilePhone) profilePhone.value = state.userPhone;
+  const avatar = $("#profile-avatar");
+  if (avatar) avatar.textContent = name.charAt(0).toUpperCase();
+  setProfileMessage("");
   renderAccountMode();
   document.body.classList.add("authenticated");
   startDashboard();
@@ -2141,6 +2264,7 @@ async function signOut() {
 }
 
 async function initializeAuth() {
+  initTheme();
   $$(".auth-tab").forEach((button) => button.addEventListener("click", () => setAuthMode(button.dataset.authMode)));
   $("#auth-form").addEventListener("submit", submitAuth);
   $("#sign-out").addEventListener("click", signOut);

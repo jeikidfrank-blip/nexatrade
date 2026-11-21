@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#090d12" />
+    <meta name="theme-color" id="meta-theme-color" content="#090d12" />
     <meta
       name="description"
       content="NexaTrade is a demo market dashboard for exploring illustrative prices, charts, and demo trades."
@@ -76,13 +76,33 @@
               <span class="nav-icon">●</span>Profile
             </button>
             <div class="user-card" id="profile-details" hidden>
-              <div class="avatar">N</div>
-              <div class="user-copy">
-                <strong id="user-name">Demo trader</strong>
-                <span id="user-email">Demo account</span>
-                <span id="user-phone">Phone not provided</span>
-              </div>
-              <button type="button" class="sign-out-button" id="sign-out" title="Sign out"><span class="sign-out-label">Sign out</span><span class="sign-out-icon" aria-hidden="true">↪</span></button>
+              <div class="avatar" id="profile-avatar">N</div>
+              <form class="profile-form" id="profile-form">
+                <div class="profile-theme-picker" aria-label="Theme">
+                  <span class="profile-field-label">THEME</span>
+                  <div class="theme-toggle" role="group" aria-label="Choose theme">
+                    <button type="button" class="theme-option active" data-theme-choice="dark">Dark</button>
+                    <button type="button" class="theme-option" data-theme-choice="light">Light</button>
+                  </div>
+                </div>
+                <label class="profile-field">
+                  <span class="profile-field-label">USERNAME</span>
+                  <input id="profile-name" type="text" autocomplete="name" placeholder="Your name" />
+                </label>
+                <label class="profile-field">
+                  <span class="profile-field-label">EMAIL</span>
+                  <input id="profile-email" type="email" autocomplete="email" placeholder="you@example.com" />
+                </label>
+                <label class="profile-field">
+                  <span class="profile-field-label">PHONE NUMBER</span>
+                  <input id="profile-phone" type="tel" autocomplete="tel" placeholder="0712345678" />
+                </label>
+                <p class="profile-message" id="profile-message" hidden></p>
+                <div class="profile-actions">
+                  <button type="submit" class="profile-save" id="profile-save">Save profile</button>
+                  <button type="button" class="sign-out-button" id="sign-out" title="Sign out"><span class="sign-out-label">Sign out</span><span class="sign-out-icon" aria-hidden="true">↪</span></button>
+                </div>
+              </form>
             </div>
           </div>
         </nav>
@@ -328,6 +348,13 @@
           <div class="funds-amount-field">
             <label for="funds-email">EMAIL (OPTIONAL)</label>
             <div class="amount-input-wrap modal-amount"><span>@</span><input id="funds-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" /></div>
+          </div>
+        </div>
+        <div class="funds-withdrawal-details" id="funds-withdrawal-details" hidden>
+          <div class="funds-amount-field">
+            <label for="funds-withdrawal-phone">PHONE NUMBER</label>
+            <div class="amount-input-wrap modal-amount"><span>+254</span><input id="funds-withdrawal-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0712345678" /></div>
+            <p class="funds-provider-note">This number is added from your sign-up details. You can edit it before withdrawing.</p>
           </div>
         </div>
         <div class="funds-checkout-result" id="funds-checkout-result" hidden aria-live="polite"></div>
