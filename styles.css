@@ -842,7 +842,6 @@ button, input, select { font: inherit; }
 [data-theme="light"] .demo-card span:not(.demo-pulse) { color: #4f667a; }
 [data-theme="light"] .auth-field input,
 [data-theme="light"] .amount-input-wrap,
-[data-theme="light"] .trade-risk-fields input,
 [data-theme="light"] .market-select,
 [data-theme="light"] .order-instrument,
 [data-theme="light"] .timeframes,
@@ -883,8 +882,7 @@ button, input, select { font: inherit; }
 [data-theme="light"] .auth-submit { color: #ffffff; background: linear-gradient(135deg, #12b886, #4b6fff); }
 [data-theme="light"] .brand-light { color: #5b6f85; }
 [data-theme="light"] .order-instrument-copy strong,
-[data-theme="light"] .amount-label span,
-[data-theme="light"] .risk-field span { color: var(--text); }
+[data-theme="light"] .amount-label span { color: var(--text); }
 [data-theme="light"] .result-executing.chart-execution-status { background: #f3f7fb; border-color: var(--line); }
 [data-theme="light"] .theme-option { background: #f3f7fb; }
 [data-theme="light"] .profile-save { box-shadow: 0 6px 18px #4b6fff22; }
