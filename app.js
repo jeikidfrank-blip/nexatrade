@@ -1692,11 +1692,6 @@ async function submitExternalDeposit(amount, providerId) {
 
   const ref = String(result.reference || reference);
   const transactionRequestId = String(result.transactionRequestId || (result.raw && (result.raw.transaction_request_id || result.raw.CheckoutRequestID || result.raw.MerchantRequestID || result.raw.requestId)) || ref);
-  const checkoutUrl = result.checkoutUrl || result.redirectUrl || null;
-  const note = result.instructions
-    || (checkoutUrl
-      ? "Checkout created. Complete payment in the opened window; balance updates only after verified server-side webhook/callback confirmation."
-      : "STK push request sent. Check your phone to complete payment. Balance updates only after verified server-side webhook/callback confirmation.");
 
   state.pendingMegapayDeposit = {
     providerId: providerId,
@@ -1706,32 +1701,9 @@ async function submitExternalDeposit(amount, providerId) {
     amount: amount,
   };
 
-  let html = "<strong>M-Pesa STK push initiated.</strong><br>";
-  html += "Reference: <span class=\"checkout-ref\">" + escapeHtml(ref) + "</span><br>";
-  if (transactionRequestId && transactionRequestId !== ref) {
-    html += "Transaction request ID: <span class=\"checkout-ref\">" + escapeHtml(transactionRequestId) + "</span><br>";
-  }
-  html += "Phone: <span class=\"checkout-ref\">" + escapeHtml(msisdn) + "</span><br>";
-  html += escapeHtml(note);
-  if (result.raw && typeof result.raw === "object") {
-    const detail = result.raw.CustomerMessage || result.raw.ResponseDescription || result.raw.message || result.raw.description;
-    if (detail && String(detail) !== String(note)) {
-      html += "<br>" + escapeHtml(String(detail));
-    }
-  }
-  if (checkoutUrl) {
-    const safeUrl = String(checkoutUrl);
-    if (/^https?:\/\//i.test(safeUrl)) {
-      html += '<br><a href="' + escapeHtml(safeUrl) + '" target="_blank" rel="noopener noreferrer">Open payment checkout</a>';
-      try { window.open(safeUrl, "_blank", "noopener"); } catch (_) { /* popup blocked; link is shown */ }
-    } else {
-      html += "<br>Checkout URL: <span class=\"checkout-ref\">" + escapeHtml(safeUrl) + "</span>";
-    }
-  }
-  html += '<br><button type="button" class="text-button" id="funds-check-status" style="margin-top:10px;">Check payment status</button>';
-  html += '<div id="funds-status-result" style="margin-top:8px;"></div>';
-  setFundsCheckoutResultHtml(html, false);
-  toast(result.localTest ? "M-Pesa STK push test created." : "M-Pesa STK push sent. Check your phone to complete payment.");
+  const message = "STK push request sent. Check your phone to enter your PIN and complete payment.";
+  setFundsCheckoutResult(message, false);
+  toast(message);
 }
 
 async function submitDemoFunds() {
