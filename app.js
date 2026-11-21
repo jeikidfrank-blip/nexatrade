@@ -310,24 +310,41 @@ function drawChart() {
   const { min, max } = getChartPriceBounds(candles);
   const yFor = (value) => height - ((value - min) / (max - min)) * height;
   const xStep = width / candles.length;
+  const isLight = document.documentElement.dataset.theme === "light";
 
   chartContext.clearRect(0, 0, width, height);
-  chartContext.strokeStyle = "rgba(133, 149, 163, .11)";
+
+  const bg = chartContext.createLinearGradient(0, 0, 0, height);
+  if (isLight) {
+    bg.addColorStop(0, "#f8fbff");
+    bg.addColorStop(1, "#eef4fb");
+  } else {
+    bg.addColorStop(0, "#0b121d");
+    bg.addColorStop(1, "#050a11");
+  }
+  chartContext.fillStyle = bg;
+  chartContext.fillRect(0, 0, width, height);
+
+  chartContext.strokeStyle = isLight ? "rgba(91, 111, 133, .14)" : "rgba(26, 42, 64, .75)";
   chartContext.lineWidth = 1;
-  for (let index = 0; index < 5; index += 1) {
+  for (let index = 0; index <= 4; index += 1) {
     const y = Math.round((height / 4) * index) + 0.5;
     chartContext.beginPath();
     chartContext.moveTo(0, y);
     chartContext.lineTo(width, y);
     chartContext.stroke();
   }
-  for (let index = 1; index < 6; index += 1) {
+  for (let index = 0; index <= 6; index += 1) {
     const x = Math.round((width / 6) * index) + 0.5;
     chartContext.beginPath();
     chartContext.moveTo(x, 0);
     chartContext.lineTo(x, height);
     chartContext.stroke();
   }
+
+  const upColor = isLight ? "#0fa37a" : "#15d85c";
+  const downColor = isLight ? "#e0455a" : "#ff4545";
+  const lineColor = isLight ? "#0fa37a" : "#18c6ff";
 
   if (state.chartStyle === "line") {
     chartContext.beginPath();
@@ -341,10 +358,11 @@ function drawChart() {
     chartContext.lineTo(0, height);
     chartContext.closePath();
     const fill = chartContext.createLinearGradient(0, 0, 0, height);
-    fill.addColorStop(0, "rgba(46, 211, 160, .18)");
-    fill.addColorStop(1, "rgba(46, 211, 160, 0)");
+    fill.addColorStop(0, isLight ? "rgba(15,163,122,.18)" : "rgba(24,198,255,.18)");
+    fill.addColorStop(1, "rgba(0,0,0,0)");
     chartContext.fillStyle = fill;
     chartContext.fill();
+
     chartContext.beginPath();
     candles.forEach((candle, index) => {
       const x = index * xStep + xStep / 2;
@@ -352,36 +370,84 @@ function drawChart() {
       if (index === 0) chartContext.moveTo(x, y);
       else chartContext.lineTo(x, y);
     });
-    chartContext.strokeStyle = "#39d2a2";
-    chartContext.lineWidth = 1.6;
+    chartContext.strokeStyle = lineColor;
+    chartContext.lineWidth = 1.8;
+    chartContext.lineJoin = "round";
+    chartContext.lineCap = "round";
     chartContext.stroke();
   } else {
     candles.forEach((candle, index) => {
       const center = index * xStep + xStep / 2;
       const rising = candle.close >= candle.open;
-      const color = rising ? "#36c99a" : "#e9747c";
+      const color = rising ? upColor : downColor;
+      const openY = yFor(candle.open);
+      const closeY = yFor(candle.close);
+      const highY = yFor(candle.high);
+      const lowY = yFor(candle.low);
+      const top = Math.min(openY, closeY);
+      const bottom = Math.max(openY, closeY);
+      const bodyHeight = Math.max(1.5, bottom - top);
+      const candleWidth = Math.max(3, Math.min(11, xStep * 0.7));
+
       chartContext.strokeStyle = color;
       chartContext.fillStyle = color;
-      chartContext.lineWidth = 1.5;
+      chartContext.lineWidth = 1.2;
       chartContext.beginPath();
-      chartContext.moveTo(center, yFor(candle.high));
-      chartContext.lineTo(center, yFor(candle.low));
+      chartContext.moveTo(center, highY);
+      chartContext.lineTo(center, top);
+      chartContext.moveTo(center, bottom);
+      chartContext.lineTo(center, lowY);
       chartContext.stroke();
-      const top = yFor(Math.max(candle.open, candle.close));
-      const bottom = yFor(Math.min(candle.open, candle.close));
-      const candleWidth = Math.max(3, Math.min(10, xStep * 0.68));
-      chartContext.fillRect(center - candleWidth / 2, top, candleWidth, Math.max(1.5, bottom - top));
+
+      chartContext.fillRect(center - candleWidth / 2, top, candleWidth, bodyHeight);
+      if (!isLight) {
+        chartContext.strokeStyle = "rgba(255,255,255,.08)";
+        chartContext.lineWidth = 0.5;
+        chartContext.strokeRect(center - candleWidth / 2, top, candleWidth, bodyHeight);
+      }
     });
   }
 
-  const currentY = yFor(activeMarket().price);
-  chartContext.setLineDash([4, 4]);
-  chartContext.strokeStyle = "rgba(56, 211, 161, .55)";
+  const currentPrice = activeMarket().price;
+  const currentY = Math.min(height - 1, Math.max(1, yFor(currentPrice)));
+  chartContext.setLineDash([5, 4]);
+  chartContext.strokeStyle = isLight ? "rgba(15,163,122,.7)" : "rgba(21,216,92,.7)";
+  chartContext.lineWidth = 1;
   chartContext.beginPath();
   chartContext.moveTo(0, currentY);
   chartContext.lineTo(width, currentY);
   chartContext.stroke();
   chartContext.setLineDash([]);
+
+  const priceLabel = formatExactPrice(activeMarket(), currentPrice);
+  chartContext.font = '600 10px "Space Grotesk", "Segoe UI", sans-serif';
+  const labelPaddingX = 6;
+  const labelHeight = 18;
+  const labelWidth = Math.ceil(chartContext.measureText(priceLabel).width) + labelPaddingX * 2;
+  const labelX = Math.max(0, width - labelWidth - 2);
+  const labelY = Math.min(height - labelHeight / 2 - 1, Math.max(labelHeight / 2 + 1, currentY));
+  chartContext.fillStyle = isLight ? "#0fa37a" : "#15d85c";
+  chartContext.beginPath();
+  const radius = 4;
+  const x = labelX;
+  const y = labelY - labelHeight / 2;
+  const w = labelWidth;
+  const h = labelHeight;
+  chartContext.moveTo(x + radius, y);
+  chartContext.lineTo(x + w - radius, y);
+  chartContext.quadraticCurveTo(x + w, y, x + w, y + radius);
+  chartContext.lineTo(x + w, y + h - radius);
+  chartContext.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+  chartContext.lineTo(x + radius, y + h);
+  chartContext.quadraticCurveTo(x, y + h, x, y + h - radius);
+  chartContext.lineTo(x, y + radius);
+  chartContext.quadraticCurveTo(x, y, x + radius, y);
+  chartContext.closePath();
+  chartContext.fill();
+  chartContext.fillStyle = isLight ? "#ffffff" : "#04150b";
+  chartContext.textAlign = "center";
+  chartContext.textBaseline = "middle";
+  chartContext.fillText(priceLabel, labelX + labelWidth / 2, labelY + 0.5);
 }
 
 function refreshChartViewport() {
