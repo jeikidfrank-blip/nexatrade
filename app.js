@@ -2264,11 +2264,17 @@ async function signOut() {
 }
 
 async function initializeAuth() {
-  initTheme();
-  $$(".auth-tab").forEach((button) => button.addEventListener("click", () => setAuthMode(button.dataset.authMode)));
-  $("#auth-form").addEventListener("submit", submitAuth);
-  $("#sign-out").addEventListener("click", signOut);
-  setAuthMode("signin");
+  try {
+    initTheme();
+    $$(".auth-tab").forEach((button) => button.addEventListener("click", () => setAuthMode(button.dataset.authMode)));
+    const authForm = $("#auth-form");
+    if (authForm) authForm.addEventListener("submit", submitAuth);
+    const signOutButton = $("#sign-out");
+    if (signOutButton) signOutButton.addEventListener("click", signOut);
+    setAuthMode("signin");
+  } catch (error) {
+    console.error("Could not initialize auth UI:", error);
+  }
 
   if (!supabaseClient) {
     showAuthError(supabaseSetupError);
@@ -2287,4 +2293,8 @@ async function initializeAuth() {
   }
 }
 
-initializeAuth();
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeAuth);
+} else {
+  initializeAuth();
+}
