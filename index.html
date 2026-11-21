@@ -71,6 +71,20 @@
           <button class="nav-link active" data-view="Trade"><span class="nav-icon">↗</span>Trade</button>
           <button class="nav-link" data-view="Markets"><span class="nav-icon">⌁</span>Markets</button>
           <button class="nav-link" data-view="History"><span class="nav-icon">▤</span>History</button>
+          <div class="profile-menu" id="profile-menu">
+            <button type="button" class="nav-link profile-menu-button" id="profile-button" aria-expanded="false" aria-controls="profile-details">
+              <span class="nav-icon">●</span>Profile
+            </button>
+            <div class="user-card" id="profile-details" hidden>
+              <div class="avatar">N</div>
+              <div class="user-copy">
+                <strong id="user-name">Demo trader</strong>
+                <span id="user-email">Demo account</span>
+                <span id="user-phone">Phone not provided</span>
+              </div>
+              <button type="button" class="sign-out-button" id="sign-out" title="Sign out"><span class="sign-out-label">Sign out</span><span class="sign-out-icon" aria-hidden="true">↪</span></button>
+            </div>
+          </div>
         </nav>
 
         <div class="sidebar-label watchlist-label">
@@ -83,23 +97,10 @@
           <div class="demo-card">
             <span class="demo-pulse"></span>
             <div>
-              <strong>Demo environment</strong>
-              <span>Demo market data</span>
+              <span>Market data</span>
             </div>
           </div>
           <button class="nav-link help-link" id="help-button"><span class="nav-icon">?</span>Help centre</button>
-          <button type="button" class="nav-link profile-menu-button" id="profile-button" aria-expanded="false" aria-controls="profile-details">
-            <span class="nav-icon">●</span>Profile
-          </button>
-          <div class="user-card" id="profile-details" hidden>
-            <div class="avatar">N</div>
-            <div class="user-copy">
-              <strong id="user-name">Demo trader</strong>
-              <span id="user-email">Demo account</span>
-              <span id="user-phone">Phone not provided</span>
-            </div>
-            <button type="button" class="sign-out-button" id="sign-out" title="Sign out"><span class="sign-out-label">Sign out</span><span class="sign-out-icon" aria-hidden="true">↪</span></button>
-          </div>
         </div>
       </aside>
 
@@ -124,11 +125,6 @@
         <div class="page-body">
           <section class="view-panel active" id="trade-view" data-view-panel="Trade">
           <section class="welcome-row">
-            <div>
-              <div class="eyebrow"><span class="eyebrow-line"></span>WEDNESDAY, NOVEMBER 18</div>
-              <h1>Trade<span class="title-period">.</span></h1>
-              <p class="welcome-subtitle">Explore markets and place demo trades.</p>
-            </div>
             <div class="account-overview">
               <div class="account-switch" role="group" aria-label="Account type">
                 <button type="button" class="account-tab active" id="demo-account-tab" data-account-mode="demo">Demo</button>
@@ -154,11 +150,11 @@
                   <div class="market-title">
                     <h2 id="chart-market-name">Gold</h2>
                     <select class="market-select" id="market-select" aria-label="Select market">
-                      <option value="XAU">XAU / KES</option>
-                      <option value="EUR">EUR / KES</option>
-                      <option value="GBP">GBP / KES</option>
+                          <option value="XAU">XAUUSD</option>
+                      <option value="EUR">EURUSD</option>
+                      <option value="GBP">GBPUSD</option>
                     </select>
-                    <span class="instrument-label">Spot market <span class="instrument-dot"></span> KES</span>
+                    <span class="instrument-label">Spot market <span class="instrument-dot"></span> USD</span>
                   </div>
                   <button class="favorite-button" id="favorite-button" aria-label="Toggle current market favorite">☆</button>
                 </div>
@@ -172,8 +168,8 @@
                 </div>
               </div>
               <div class="chart-price-row">
-                  <div><strong id="chart-price">KSh 527,189.00</strong><span class="chart-price-change positive" id="chart-change">+KSh 1,950.00 (+0.37%)</span></div>
-                  <div class="chart-range"><span>24H HIGH <strong id="chart-high">KSh 532,306.00</strong></span><span>24H LOW <strong id="chart-low">KSh 522,128.00</strong></span></div>
+                  <div><strong id="chart-price">$3,342.58</strong><span class="chart-price-change positive" id="chart-change">+$12.32 (+0.37%)</span></div>
+                  <div class="chart-range"><span>24H HIGH <strong id="chart-high">$3,375.01</strong></span><span>24H LOW <strong id="chart-low">$3,310.15</strong></span></div>
                   <span class="candle-countdown" id="candle-countdown" aria-live="off">NEXT CANDLE IN --:--</span>
               </div>
               <div class="chart-container">
@@ -203,7 +199,7 @@
                 <button type="button" class="chart-reset" data-chart-control="reset">Reset</button>
                 <span class="chart-navigation-hint">Drag to pan · Scroll to zoom time · Shift+scroll to zoom price</span>
               </div>
-              <div class="chart-legend"><span><i class="legend-candle-up"></i> Bullish</span><span><i class="legend-candle-down"></i> Bearish</span><span class="chart-disclaimer">Illustrative demo chart · not investment advice</span></div>
+              <div class="chart-legend"><span><i class="legend-candle-up"></i> Bullish</span><span><i class="legend-candle-down"></i> Bearish</span></div>
             </section>
 
             <aside class="panel order-panel">
@@ -211,7 +207,7 @@
               <div class="order-market-label">MARKET <span>Market order <span class="market-order-dot"></span></span></div>
               <div class="order-instrument">
                 <span class="order-coin" id="order-coin">Au</span>
-                <div><strong id="order-market-name">XAU / KES</strong><span id="order-market-price">KSh 527,189.00</span></div>
+                <div><strong id="order-market-name">XAUUSD</strong><span id="order-market-price">$3,342.58</span></div>
                 <span class="order-market-live"><i></i>Demo</span>
               </div>
               <label class="amount-label" for="trade-amount">AMOUNT <span>KES</span></label>
@@ -227,12 +223,11 @@
                 <div><span>Demo fee <span class="info-tip" title="Estimated demo fee">i</span></span><strong id="estimated-fee">KSh 0.00</strong></div>
               </div>
               <div class="trade-actions">
-                <button class="trade-submit buy-submit trade-action" id="buy-trade" aria-label="Buy the selected market">Buy XAU <span>↗</span></button>
-                <button class="trade-submit sell-submit trade-action" id="sell-trade" aria-label="Sell the selected market">Sell XAU <span>↘</span></button>
+                <button class="trade-submit buy-submit trade-action" id="buy-trade" aria-label="Buy the selected market">Buy XAUUSD <span>↗</span></button>
+                <button class="trade-submit sell-submit trade-action" id="sell-trade" aria-label="Sell the selected market">Sell XAUUSD <span>↘</span></button>
               </div>
-              <p class="order-disclaimer" id="order-disclaimer">Demo only. Orders do not reach an exchange.</p>
               <div class="sentiment">
-                <div class="sentiment-heading"><strong>Market sentiment</strong><span>XAU / KES</span></div>
+                <div class="sentiment-heading"><strong>Market sentiment</strong><span>XAUUSD</span></div>
                 <div class="sentiment-bar"><span class="sentiment-buy-bar" id="sentiment-buy-bar"></span><span class="sentiment-sell-bar" id="sentiment-sell-bar"></span></div>
                 <div class="sentiment-values"><span><i class="sentiment-green"></i><strong id="sentiment-buy">64%</strong> buyers</span><span><i class="sentiment-red"></i><strong id="sentiment-sell">36%</strong> sellers</span></div>
               </div>
@@ -242,22 +237,22 @@
 
           <section class="view-panel" id="markets-view" data-view-panel="Markets" hidden>
             <div class="view-heading">
-              <div><h1>Markets<span class="title-period">.</span></h1><p>Gold, EUR/KES, and GBP/KES price snapshots.</p></div>
+              <div><h1>Markets<span class="title-period">.</span></h1><p>Gold, EURUSD, and GBPUSD price snapshots.</p></div>
             </div>
             <section class="market-strip" aria-label="FX and gold markets">
               <article class="market-stat">
-                <div class="stat-heading"><span class="coin-icon gold">Au</span><span>GOLD</span><span class="stat-symbol">XAU / KES</span></div>
-                <div class="stat-main"><strong id="xau-price">KSh 527,189.00</strong><span class="change positive" id="xau-change">+0.37%</span></div>
+                <div class="stat-heading"><span class="coin-icon gold">Au</span><span class="stat-name">Gold</span><span class="stat-symbol">XAUUSD</span></div>
+                <div class="stat-main"><strong id="xau-price">$3,342.58</strong><span class="change positive" id="xau-change">+0.37%</span></div>
                 <div class="sparkline-wrap"><span>24H TREND</span><canvas class="sparkline" id="spark-xau" aria-label="Gold 24-hour price trend"></canvas></div>
               </article>
               <article class="market-stat">
-                <div class="stat-heading"><span class="coin-icon euro">€</span><span>EURO</span><span class="stat-symbol">EUR / KES</span></div>
+                <div class="stat-heading"><span class="coin-icon euro">€</span><span class="stat-name">Euro</span><span class="stat-symbol">EURUSD</span></div>
                 <div class="stat-main"><strong id="eur-price">151.35</strong><span class="change positive" id="eur-change">+0.12%</span></div>
                 <div class="sparkline-wrap"><span>24H TREND</span><canvas class="sparkline" id="spark-eur" aria-label="Euro US dollar 24-hour price trend"></canvas></div>
               </article>
               <article class="market-stat">
-                <div class="stat-heading"><span class="coin-icon pound">£</span><span>POUND</span><span class="stat-symbol">GBP / KES</span></div>
-                <div class="stat-main"><strong id="gbp-price">173.81</strong><span class="change positive" id="gbp-change">+0.18%</span></div>
+                <div class="stat-heading"><span class="coin-icon pound">£</span><span class="stat-name">Pound</span><span class="stat-symbol">GBPUSD</span></div>
+                <div class="stat-main"><strong id="gbp-price">$1.2742</strong><span class="change positive" id="gbp-change">+0.18%</span></div>
                 <div class="sparkline-wrap"><span>24H TREND</span><canvas class="sparkline" id="spark-gbp" aria-label="Pound US dollar 24-hour price trend"></canvas></div>
               </article>
               <article class="market-stat market-strip-meta">
@@ -270,8 +265,19 @@
 
           <section class="view-panel" id="history-view" data-view-panel="History" hidden>
             <div class="view-heading">
-              <div><h1>History<span class="title-period">.</span></h1><p>Review demo positions and deposits.</p></div>
+              <div><h1>History<span class="title-period">.</span></h1></div>
             </div>
+          <section class="panel positions-panel transaction-panel">
+            <div class="panel-heading positions-heading">
+              <div class="positions-title"><h2 id="transactions-title">Transaction history</h2></div>
+            </div>
+            <div class="positions-table-wrap">
+              <table class="history-table">
+                <thead><tr><th>DATE</th><th>TRANSACTION</th><th>AMOUNT</th><th>BALANCE AFTER</th><th>TYPE</th></tr></thead>
+               <tbody id="demo-transactions-body"><tr class="empty-row"><td colspan="5"><span class="empty-icon">＋</span><strong>No transactions yet</strong><span>Your deposits and withdrawals will appear here.</span></td></tr></tbody>
+              </table>
+            </div>
+          </section>
           <section class="panel positions-panel">
             <div class="panel-heading positions-heading">
               <div class="positions-title"><h2 id="positions-title">Completed trades</h2><span class="position-count" id="position-count">0</span></div>
@@ -279,24 +285,13 @@
             </div>
             <div class="positions-table-wrap">
               <table class="positions-table">
-                <thead><tr><th>MARKET</th><th>TYPE</th><th>POSITION SIZE</th><th>ENTRY PRICE</th><th>STOP LOSS</th><th>TAKE PROFIT</th><th id="mark-price-heading">MARK PRICE</th><th id="pnl-heading">UNREALIZED P&amp;L</th><th></th></tr></thead>
-                <tbody id="positions-body"><tr class="empty-row"><td colspan="9"><span class="empty-icon">⌁</span><strong>No open positions yet</strong><span>Place a demo trade to see it here.</span></td></tr></tbody>
-              </table>
-            </div>
-          </section>
-          <section class="panel positions-panel transaction-panel">
-            <div class="panel-heading positions-heading">
-              <div class="positions-title"><h2 id="transactions-title">Demo deposits</h2><span class="demo-tag" id="transactions-mode-tag">DEMO FUNDS</span></div>
-            </div>
-            <div class="positions-table-wrap">
-              <table class="history-table">
-                <thead><tr><th>DATE</th><th>TRANSACTION</th><th>AMOUNT</th><th>BALANCE AFTER</th><th>TYPE</th></tr></thead>
-               <tbody id="demo-transactions-body"><tr class="empty-row"><td colspan="5"><span class="empty-icon">＋</span><strong>No demo deposits yet</strong><span>Demo balance top-ups will appear here.</span></td></tr></tbody>
+                <thead><tr><th>MARKET</th><th>TYPE</th><th>POSITION SIZE</th><th id="pnl-heading">UNREALIZED P&amp;L</th><th></th></tr></thead>
+                <tbody id="positions-body"><tr class="empty-row"><td colspan="5"><span class="empty-icon">⌁</span><strong>No open positions yet</strong><span>Place a demo trade to see it here.</span></td></tr></tbody>
               </table>
             </div>
           </section>
           </section>
-          <footer class="page-footer"><span>© 2026 NexaTrade</span><span><i class="footer-dot"></i> Demo environment · Prices are illustrative and may not reflect live markets</span><a href="#" id="disclaimer-link">Risk disclaimer</a></footer>
+          <footer class="page-footer"><span>© 2026 NexaTrade</span><span><i class="footer-dot"></i> Market data</span></footer>
         </div>
       </main>
     </div>

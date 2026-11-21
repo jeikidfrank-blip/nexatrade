@@ -1,11 +1,10 @@
 "use strict";
 
-// Prices are quoted in Kenya Shillings, seeded at 1 USD = 130 KES:
-// XAU 4055.30 USD -> 527,189.00, EUR 1.1642 -> 151.346, GBP 1.3370 -> 173.810.
+// Demo price data for USD currency pairs.
 const markets = [
-  { id: "XAU", name: "Gold", symbol: "XAU / KES", price: 527189, change: 0.37, icon: "Au", iconClass: "xau", color: "#e7c96f", volatility: 0.0007 },
-  { id: "EUR", name: "Euro / Kenya Shilling", symbol: "EUR / KES", price: 151.346, change: 0.12, icon: "€", iconClass: "eur", color: "#79b2ff", volatility: 0.0004 },
-  { id: "GBP", name: "Pound / Kenya Shilling", symbol: "GBP / KES", price: 173.81, change: 0.18, icon: "£", iconClass: "gbp", color: "#ba9bff", volatility: 0.00045 },
+  { id: "XAU", name: "Gold", symbol: "XAUUSD", price: 3342.58, change: 0.37, icon: "Au", iconClass: "xau", color: "#e7c96f", volatility: 0.0007 },
+  { id: "EUR", name: "Euro", symbol: "EURUSD", price: 1.0846, change: 0.12, icon: "€", iconClass: "eur", color: "#79b2ff", volatility: 0.0004 },
+  { id: "GBP", name: "Pound", symbol: "GBPUSD", price: 1.2742, change: 0.18, icon: "£", iconClass: "gbp", color: "#ba9bff", volatility: 0.00045 },
 ];
 
 const state = {
@@ -74,9 +73,10 @@ if (!window.supabase) {
 }
 
 function formatExactPrice(market, value) {
-  return `KSh ${new Intl.NumberFormat("en-KE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+  const digits = Math.abs(value) < 10 ? 4 : 2;
+  return `$${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   }).format(value)}`;
 }
 
@@ -105,25 +105,30 @@ function generateCandles(market) {
   const interval = getTimeframeInterval();
   const scale = { "30sec": 0.00045, "1min": 0.0007, "5min": 0.0016 }[state.timeframe];
   const step = market.price * scale * 0.3;
-  let close = market.price + (Math.random() - 0.5) * step * 8;
+  const historyCount = 360;
+  let close = market.price + (Math.random() - 0.5) * step * 18;
   const lastIntervalStart = Math.floor(Date.now() / interval) * interval;
-  for (let index = 0; index < 64; index += 1) {
+  for (let index = 0; index < historyCount; index += 1) {
     const open = close;
-    close = Math.max(0, open + (Math.random() - 0.5) * step);
-    if (index === 63) close = market.price;
-    const wick = market.price * scale * (0.1 + Math.random() * 0.25);
+    const drift = (Math.random() - 0.5) * step + (market.change / 100) * market.price * 0.002;
+    close = Math.max(0.0001, open + drift);
+    if (index === historyCount - 1) close = market.price;
+    const bodyHigh = Math.max(open, close);
+    const bodyLow = Math.min(open, close);
+    const wick = market.price * scale * (0.08 + Math.random() * 0.32);
     candles.push({
       open,
       close,
-      high: Math.max(open, close) + wick * Math.random(),
-      low: Math.min(open, close) - wick * Math.random(),
-      startedAt: lastIntervalStart - (63 - index) * interval,
+      high: bodyHigh + wick * (0.3 + Math.random()),
+      low: Math.max(0.0001, bodyLow - wick * (0.3 + Math.random())),
+      startedAt: lastIntervalStart - (historyCount - 1 - index) * interval,
     });
   }
-  candles[candles.length - 1].high = Math.max(candles[candles.length - 1].high, market.price);
-  candles[candles.length - 1].low = Math.min(candles[candles.length - 1].low, market.price);
+  const last = candles[candles.length - 1];
+  last.high = Math.max(last.high, market.price);
+  last.low = Math.min(last.low, market.price);
   state.candles = candles;
-  state.visibleCandles = 64;
+  state.visibleCandles = Math.min(64, candles.length);
   state.candleOffset = 0;
   state.priceZoom = 1;
   state.priceOffset = 0;
@@ -141,7 +146,7 @@ function renderWatchlist() {
     button.setAttribute("aria-label", `Show ${market.name} chart`);
     button.innerHTML = `
       <span class="watch-coin coin-${market.iconClass}">${market.icon}</span>
-      <span class="watch-copy"><strong>${market.id} / KES</strong><span>${market.name}</span></span>
+      <span class="watch-copy"><strong class="watch-symbol">${market.symbol}</strong><span class="watch-name">${market.name}</span></span>
       <span class="watch-price"><strong>${formatExactPrice(market, market.price)}</strong><span class="${market.change >= 0 ? "positive" : "negative"}">${formatChange(market.change)}</span></span>`;
     button.addEventListener("click", () => selectMarket(id));
     container.append(button);
@@ -410,8 +415,8 @@ function renderChart() {
   }
   $(".sentiment-heading > span").textContent = market.symbol;
   if ($("#buy-trade").dataset.market !== market.id) {
-    $("#buy-trade").innerHTML = `Buy ${market.id} <span>↗</span>`;
-    $("#sell-trade").innerHTML = `Sell ${market.id} <span>↘</span>`;
+    $("#buy-trade").innerHTML = `Buy ${market.symbol} <span>↗</span>`;
+    $("#sell-trade").innerHTML = `Sell ${market.symbol} <span>↘</span>`;
     $("#buy-trade").dataset.market = market.id;
     $("#sell-trade").dataset.market = market.id;
   }
@@ -460,25 +465,26 @@ function renderAccountMode() {
 
   $("#balance-label").innerHTML = isDemo
     ? 'DEMO BALANCE <span class="info-tip" title="Demo funds only">i</span>'
-    : 'REAL ACCOUNT BALANCE <span class="info-tip" title="Simulated funds — no real money">i</span>';
+    : 'REAL ACCOUNT BALANCE <span class="info-tip" title="No real money">i</span>';
 
   $("#account-status").textContent = isDemo
     ? "DEMO · No real money involved"
-    : "SIMULATED · Prices are illustrative, no real money";
+    : "";
 
   $("#order-mode-description").textContent = isDemo
     ? "Demo position · server-priced execution"
-    : "Market order · simulated execution";
+    : "Market order";
 
-  $("#order-mode-tag").textContent = isDemo ? "DEMO" : "SIMULATED";
+  const orderModeTag = $("#order-mode-tag");
+  if (orderModeTag) {
+    orderModeTag.hidden = !isDemo;
+    orderModeTag.textContent = "DEMO";
+  }
 
   $("#available-balance-label").textContent = isDemo
     ? "Available demo funds"
     : "Available funds";
 
-  $("#order-disclaimer").textContent = isDemo
-    ? "Demo only. Orders do not reach an exchange."
-    : "Prices are simulated. No live orders are sent.";
 
   $$("#trade-amount, #stop-loss-price, #take-profit-price").forEach((field) => {
     field.disabled = false;
@@ -641,8 +647,8 @@ function renderPositions() {
     : (state.showingHistory ? state.realTestHistory : state.realTestPositions);
 
   $("#positions-title").textContent = state.showingHistory ? "Completed trades" : "Open positions";
-  $("#mark-price-heading").textContent = state.showingHistory ? "EXIT PRICE" : "MARK PRICE";
-  $("#pnl-heading").textContent = state.showingHistory ? "REALIZED P&L" : "UNREALIZED P&L";
+  const pnlHeading = $("#pnl-heading");
+  if (pnlHeading) pnlHeading.textContent = state.showingHistory ? "REALIZED P&L" : "UNREALIZED P&L";
   $("#position-count").textContent = String(positions.length);
   $("#view-all-positions").innerHTML = state.showingHistory ? "View open positions <span>↗</span>" : "View completed trades <span>↗</span>";
 
@@ -652,7 +658,7 @@ function renderPositions() {
   if (!positions.length) {
     const row = document.createElement("tr");
     row.className = "empty-row";
-    row.innerHTML = `<td colspan="9"><span class="empty-icon">⌁</span><strong>${state.showingHistory ? "No closed trades yet" : "No open positions yet"}</strong><span>${state.showingHistory ? "Closed trades will appear here." : "Place a trade to see it here."}</span></td>`;
+    row.innerHTML = `<td colspan="5"><span class="empty-icon">⌁</span><strong>${state.showingHistory ? "No closed trades yet" : "No open positions yet"}</strong><span>${state.showingHistory ? "Closed trades will appear here." : "Place a trade to see it here."}</span></td>`;
     body.append(row);
     return;
   }
@@ -674,13 +680,9 @@ function renderPositions() {
         : "CLOSED";
 
     row.innerHTML = `
-      <td><span class="position-market"><span class="watch-coin coin-${market.iconClass}">${market.icon}</span><span class="position-market-copy"><strong>${market.id} / KES</strong><span>${market.name}</span></span></span></td>
+      <td><span class="position-market"><span class="watch-coin coin-${market.iconClass}">${market.icon}</span><span class="position-market-copy"><strong class="position-symbol">${market.symbol}</strong><span class="position-name">${market.name}</span></span></span></td>
       <td><span class="side-pill ${position.side}">${position.side === "buy" ? "BUY / LONG" : "SELL / SHORT"}</span></td>
       <td><strong>${position.quantity.toFixed(quantityPrecision)} ${market.id}</strong><br><span>${money(position.amount)}</span></td>
-      <td>${formatExactPrice(market, position.entryPrice)}</td>
-      <td>${formatExactPrice(market, position.stopLoss)}</td>
-      <td>${formatExactPrice(market, position.takeProfit)}</td>
-      <td>${state.showingHistory ? formatExactPrice(market, position.exitPrice) : formatExactPrice(market, currentPrice)}</td>
       <td class="${pnl >= 0 ? "positive" : "negative"}">${pnl >= 0 ? "+" : "−"}${money(Math.abs(pnl))}</td>
       <td>${state.showingHistory ? `<span class="result-tag ${position.outcome || "closed"}">${outcomeLabel}</span>` : `<button class="close-position" data-position="${position.id}">Close</button>`}</td>`;
 
@@ -701,8 +703,9 @@ function renderDemoDeposits() {
     ? state.demoDeposits
     : state.realTestTransactions;
 
-  $("#transactions-title").textContent = isDemo ? "Demo deposits" : "Transactions";
-  $("#transactions-mode-tag").textContent = isDemo ? "DEMO FUNDS" : "SIMULATED";
+  $("#transactions-title").textContent = "Transaction history";
+  const transactionsModeTag = $("#transactions-mode-tag");
+  if (transactionsModeTag) transactionsModeTag.textContent = "";
 
   body.replaceChildren();
 
@@ -710,9 +713,7 @@ function renderDemoDeposits() {
     const row = document.createElement("tr");
     row.className = "empty-row";
 
-    row.innerHTML = isDemo
-      ? '<td colspan="5"><span class="empty-icon">＋</span><strong>No demo deposits yet</strong><span>Demo balance top-ups will appear here.</span></td>'
-      : '<td colspan="5"><span class="empty-icon">＋</span><strong>No transactions yet</strong><span>Your deposits and withdrawals will appear here.</span></td>';
+    row.innerHTML = '<td colspan="5"><span class="empty-icon">＋</span><strong>No transactions yet</strong><span>Your deposits and withdrawals will appear here.</span></td>';
 
     body.append(row);
     return;
@@ -746,9 +747,7 @@ function renderDemoDeposits() {
     balance.textContent = money(Number(record.balance_after));
 
     const type = document.createElement("td");
-    type.innerHTML = isDemo
-      ? '<span class="demo-tag">DEMO FUNDS</span>'
-      : '<span class="demo-tag">SIMULATED</span>';
+    type.textContent = transactionType === "withdrawal" ? "Withdrawal" : "Deposit";
 
     row.append(date, transaction, amount, balance, type);
     body.append(row);
@@ -1023,7 +1022,7 @@ async function placeTrade(side) {
         }${money(Math.abs(position.pnl))}.`;
 
     } else {
-      // Immediately settle the simulated real-test trade.
+      // Immediately settle the real-test trade.
       const { data: closeData, error: closeError } = await supabaseClient.rpc(
         "real_test_close_position",
         { p_position_id: openedPosition.id }
@@ -1295,7 +1294,7 @@ function getDepositProviders() {
 function renderFundsProviderOptions() {
   const select = $("#funds-provider");
   const providers = getDepositProviders();
-  const options = [["simulated", "Instant test funds"]].concat(
+  const options = [["instant", "Instant test funds"]].concat(
     providers.map((provider) => [provider.id, provider.label || provider.id]),
   );
 
@@ -1307,7 +1306,7 @@ function renderFundsProviderOptions() {
   }));
 
   if (!providers.some((provider) => provider.id === select.value)) {
-    select.value = providers.length ? providers[0].id : "simulated";
+    select.value = providers.length ? providers[0].id : "instant";
   }
 }
 
@@ -1394,8 +1393,8 @@ function updateFundsActionButton() {
   const label = document.querySelector("#funds-amount-field label");
   const providerField = $("#funds-provider-field");
   const providerNote = $("#funds-provider-note");
-  const provider = $("#funds-provider") ? $("#funds-provider").value : "simulated";
-  const usingExternalProvider = !isDemo && action === "deposit" && provider && provider !== "simulated";
+  const provider = $("#funds-provider") ? $("#funds-provider").value : "instant";
+  const usingExternalProvider = !isDemo && action === "deposit" && provider && provider !== "instant";
 
   const providerDetails = $("#funds-provider-details");
   providerField.hidden = !( !isDemo && action === "deposit" );
@@ -1403,7 +1402,7 @@ function updateFundsActionButton() {
 
   if (providerField.hidden) {
     providerNote.textContent = "";
-  } else if (provider === "simulated") {
+  } else if (provider === "instant") {
     providerNote.textContent = "Credits test funds immediately to your account balance.";
   } else {
     providerNote.textContent = "";
@@ -1536,8 +1535,8 @@ async function checkMegapayDepositStatus(button) {
       throw new Error((result && result.error) || "Could not check payment status.");
     }
 
-    const message = result.simulated
-      ? (result.message || "Status check simulation: pending.")
+    const message = result.localTest
+      ? (result.message || "Status check: pending.")
       : formatMegapayStatus(result.raw);
     if (statusBox) statusBox.textContent = message + " If payment is successful, balance is credited only by verified server-side processing/webhook.";
     toast("Payment status checked.");
@@ -1641,7 +1640,7 @@ async function submitExternalDeposit(amount, providerId) {
   html += '<br><button type="button" class="text-button" id="funds-check-status" style="margin-top:10px;">Check payment status</button>';
   html += '<div id="funds-status-result" style="margin-top:8px;"></div>';
   setFundsCheckoutResultHtml(html, false);
-  toast(result.simulated ? "M-Pesa STK push test created (simulation)." : "M-Pesa STK push sent. Check your phone to complete payment.");
+  toast(result.localTest ? "M-Pesa STK push test created." : "M-Pesa STK push sent. Check your phone to complete payment.");
 }
 
 async function submitDemoFunds() {
@@ -1650,8 +1649,8 @@ async function submitDemoFunds() {
   const amount = Number($("#funds-amount").value);
   const isSet = isDemo && action === "set";
   const minimum = isSet ? 0 : (isDemo || action === "deposit" ? 100 : 0.01);
-  const providerId = $("#funds-provider") ? $("#funds-provider").value : "simulated";
-  const useExternalProvider = !isDemo && action === "deposit" && providerId && providerId !== "simulated";
+  const providerId = $("#funds-provider") ? $("#funds-provider").value : "instant";
+  const useExternalProvider = !isDemo && action === "deposit" && providerId && providerId !== "instant";
 
   setFundsCheckoutResult("", false);
 
@@ -1810,10 +1809,6 @@ function initialize() {
   $("#menu-backdrop").addEventListener("click", () => setNavigationMenuOpen(false));
   $("#notifications-button").addEventListener("click", () => toast("You’re all caught up. Market updates are for demo purposes."));
   $("#help-button").addEventListener("click", () => toast("Demo trades use demo prices and do not reach an exchange."));
-  $("#disclaimer-link").addEventListener("click", (event) => {
-    event.preventDefault();
-    toast("NexaTrade is a demo environment. Prices, funds, and positions are for demonstration; no financial advice or real trading is provided.");
-  });
   $("#chart-menu").addEventListener("click", () => {
     state.chartStyle = state.chartStyle === "candle" ? "line" : "candle";
     $("#chart-menu").title = state.chartStyle === "candle" ? "Switch to line chart" : "Switch to candlestick chart";

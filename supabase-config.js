@@ -6,14 +6,13 @@ window.NEXATRADE_SUPABASE_CONFIG = {
 // Megapay payment integration (STK push) via Supabase Edge Functions.
 // Secrets (MEGAPAY_API_KEY, MEGAPAY_EMAIL) are read in Edge Functions from
 // Supabase secrets via Deno.env.get() - never put them in frontend code.
-// - simulate: true = local UI test only (no external request, no DB pending record).
-// - simulate: false = call megapay-payment Edge Function (creates pending deposit,
+// - localTest: true = local UI test only (no external request, no DB pending record).
+// - localTest: false = call megapay-payment Edge Function (creates pending deposit,
 //   initiates STK push). Credit happens only after verified server-side webhook/status.
-// After deploying the functions for project ref itqcevznvmqpewksipvo, set simulate: false.
 window.NEXATRADE_MEGAPAY_CONFIG = {
   id: "megapay",
-  label: "Megapay (STK push)",
-  simulate: false,
+  label: "M-Pesa (STK push)",
+  localTest: false,
   mode: "live",
   currency: "KES",
   // Supabase Edge Functions (deploy with CLI - see deployment instructions):

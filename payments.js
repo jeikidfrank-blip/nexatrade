@@ -42,7 +42,7 @@
      - checkoutUrl: your server/Megapay checkout endpoint to POST to
      - merchantId/publicKey: identifiers sent with the request (if required)
      - currency: defaults to "KES"
-     - simulate: if true (or if checkoutUrl is missing), returns a local test
+     - localTest: if true (or if checkoutUrl is missing), returns a local test
        checkout response so you can exercise the UI without an external call
      - callbackUrl/webhookUrl: informational values forwarded as metadata
 
@@ -142,7 +142,7 @@
         const reference = String(opts.reference || createReference("MP"));
         const msisdn = opts.msisdn != null ? String(opts.msisdn).trim() : "";
         const email = opts.email != null ? String(opts.email).trim() : "";
-        const simulate = cfg.simulate === true || !cfg.checkoutUrl;
+        const localTest = cfg.localTest === true || !cfg.checkoutUrl;
 
         const payload = {
           amount: amount,
@@ -157,17 +157,17 @@
           metadata: opts.metadata || null,
         };
 
-        if (simulate) {
+        if (localTest) {
           return {
             ok: true,
-            simulated: true,
+            localTest: true,
             reference: reference,
-            transactionRequestId: "SIM-" + reference,
-            checkoutUrl: cfg.simulatedCheckoutUrl || null,
+            transactionRequestId: "TX-" + reference,
+            checkoutUrl: cfg.testCheckoutUrl || null,
             instructions:
-              "M-Pesa STK push test (simulation). Reference: " + reference
+              "M-Pesa STK push test. Reference: " + reference
               + (msisdn ? ", phone: " + msisdn : "")
-              + ". No external request was sent. Set `simulate: false` and `checkoutUrl` in "
+              + ". No external request was sent. Set `checkoutUrl` in "
               + "`window.NEXATRADE_MEGAPAY_CONFIG` to your server endpoint that calls "
               + "https://megapay.co.ke/backend/v1/initiatestk with your secret api_key. "
               + "Balance must be credited only from a verified server-side webhook/callback.",
@@ -213,7 +213,7 @@
           const providerRef = (raw && (raw.reference || raw.transactionReference)) || transactionRequestId || reference;
           return {
             ok: true,
-            simulated: false,
+            localTest: false,
             reference: providerRef,
             transactionRequestId: transactionRequestId,
             checkoutUrl: checkoutUrl || null,
@@ -235,14 +235,14 @@
           return { ok: false, error: "A transaction request ID is required to check status." };
         }
 
-        const simulate = cfg.simulate === true || !cfg.statusUrl;
-        if (simulate) {
+        const localTest = cfg.localTest === true || !cfg.statusUrl;
+        if (localTest) {
           return {
             ok: true,
-            simulated: true,
+            localTest: true,
             transactionRequestId: transactionRequestId,
             status: "pending",
-            message: "Status check simulation: no request sent. Set `simulate: false` and `statusUrl` in `window.NEXATRADE_MEGAPAY_CONFIG` to your server endpoint that calls https://megapay.co.ke/backend/v1/transactionstatus with your secret api_key.",
+            message: "Status check: no request sent. Set `statusUrl` in `window.NEXATRADE_MEGAPAY_CONFIG` to your server endpoint that calls https://megapay.co.ke/backend/v1/transactionstatus with your secret api_key.",
           };
         }
 
@@ -270,7 +270,7 @@
             return { ok: false, error: String(message), raw: raw };
           }
 
-          return { ok: true, simulated: false, transactionRequestId: transactionRequestId, raw: raw };
+          return { ok: true, localTest: false, transactionRequestId: transactionRequestId, raw: raw };
         } catch (error) {
           return { ok: false, error: error && error.message ? error.message : "M-Pesa status request failed." };
         }
@@ -360,11 +360,11 @@
   global.NexaTradePayments = api;
 
   // Auto-register a Megapay adapter for testing. Configure with:
-  // window.NEXATRADE_MEGAPAY_CONFIG = { checkoutUrl, merchantId, publicKey, currency, mode, simulate, callbackUrl, webhookUrl }
+  // window.NEXATRADE_MEGAPAY_CONFIG = { checkoutUrl, merchantId, publicKey, currency, mode, localTest, callbackUrl, webhookUrl }
   // Define the config before loading payments.js, or call
   // NexaTradePayments.register(NexaTradePayments.createMegapayProvider({...})) after.
   try {
-    const megapayConfig = global.NEXATRADE_MEGAPAY_CONFIG || { mode: "sandbox", simulate: true };
+    const megapayConfig = global.NEXATRADE_MEGAPAY_CONFIG || { mode: "sandbox", localTest: true };
     api.register(api.createMegapayProvider(megapayConfig));
   } catch (error) {
     console.warn("[payments] Could not auto-register M-Pesa provider.", error);
