@@ -1,5 +1,5 @@
 (() => {
-  const cfg = window.NEXATRADE_CONFIG || window.SUPABASE_CONFIG || {};
+  const cfg = window.NEXATRADE_SUPABASE_CONFIG || window.NEXATRADE_CONFIG || window.SUPABASE_CONFIG || {};
   const url = cfg.url || cfg.supabaseUrl || window.SUPABASE_URL;
   const key = cfg.anonKey || cfg.publishableKey || cfg.supabaseKey || window.SUPABASE_ANON_KEY;
   const client = url && key && window.supabase ? window.supabase.createClient(url,key) : null;
