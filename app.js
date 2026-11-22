@@ -53,9 +53,12 @@ const marketById = (id) => markets.find((market) => market.id === id);
 const activeMarket = () => marketById(state.activeMarket);
 const amountInput = $("#trade-amount");
 const chartCanvas = $("#candlestick-chart");
-const chartContext = chartCanvas.getContext("2d");
+const chartContext = chartCanvas ? chartCanvas.getContext("2d") : null;
 const compactCurrency = new Intl.NumberFormat("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const timeframeDurations = { "30sec": 30_000 };
+const timeframeDurations = {
+  "30sec": 30_000,
+  "1min": 60_000
+};
 const supabaseConfig = window.NEXATRADE_SUPABASE_CONFIG || {};
 let supabaseClient = null;
 let supabaseSetupError = "";
@@ -138,7 +141,7 @@ function initTheme() {
 function generateCandles(market) {
   const candles = [];
   const interval = getTimeframeInterval();
-  const scale = 0.00045;
+  const scale = state.timeframe === "1min" ? 0.0007 : 0.00045;
   const step = market.price * scale * 0.3;
   const historyCount = 360;
   let close = market.price + (Math.random() - 0.5) * step * 18;
@@ -260,9 +263,10 @@ function getChartPriceBounds(candles = getVisibleCandles().candles) {
 
 function renderChartLabels() {
   const market = activeMarket();
+  if (!market) return;
   const visible = getVisibleCandles().candles;
   const bounds = getChartPriceBounds(visible);
-  const step = (bounds.max - bounds.min) / 4;
+  const step = (bounds.max - bounds.min) / 4 || 0.0001;
   const firstTime = visible.length ? new Date(visible[0].startedAt) : null;
   const lastTime = visible.length ? new Date(visible[visible.length - 1].startedAt) : null;
   const timeOptions = { hour: "2-digit", minute: "2-digit", hour12: false };
@@ -271,13 +275,16 @@ function renderChartLabels() {
     timeOptions.month = "2-digit";
     timeOptions.day = "2-digit";
   }
-  $("#chart-y-labels").replaceChildren(...Array.from({ length: 5 }, (_, index) => {
-    const label = document.createElement("span");
-    label.textContent = formatExactPrice(market, bounds.max - step * index);
-    return label;
-  }));
+  const yLabels = $("#chart-y-labels");
+  if (yLabels) {
+    yLabels.replaceChildren(...Array.from({ length: 5 }, (_, index) => {
+      const label = document.createElement("span");
+      label.textContent = formatExactPrice(market, bounds.max - step * index);
+      return label;
+    }));
+  }
   $$("[data-chart-time]").forEach((label, index, labels) => {
-    const candleIndex = Math.round(index / (labels.length - 1) * (visible.length - 1));
+    const candleIndex = Math.round(index / (labels.length - 1 || 1) * (visible.length - 1));
     const candle = visible[candleIndex];
     if (!candle) {
       label.textContent = "";
@@ -296,7 +303,8 @@ function renderCandleCountdown() {
   ));
   const minutes = String(Math.floor(remaining / 60)).padStart(2, "0");
   const seconds = String(remaining % 60).padStart(2, "0");
-  $("#candle-countdown").textContent = `NEXT CANDLE IN ${minutes}:${seconds}`;
+  const countdown = $("#candle-countdown");
+  if (countdown) countdown.textContent = `NEXT CANDLE IN ${minutes}:${seconds}`;
 }
 
 function syncActiveMarketCandle(price) {
@@ -343,7 +351,7 @@ function tickLiveChart() {
   if (!state.initialized || !state.candles.length) return;
   const market = activeMarket();
   if (!market) return;
-  const magnitude = 0.28;
+  const magnitude = state.timeframe === "1min" ? 0.22 : 0.28;
   const drift = (Math.random() - 0.5) * market.volatility * magnitude;
   const revert = (market.dayOpen - market.price) / market.dayOpen * 0.01;
   const nextPrice = Math.max(0.0001, market.price * (1 + drift + revert));
@@ -371,6 +379,7 @@ function tickLiveChart() {
 }
 
 function drawChart() {
+  if (!chartCanvas || !chartContext) return;
   const bounds = chartCanvas.getBoundingClientRect();
   if (!bounds.width || !bounds.height) return;
   const ratio = window.devicePixelRatio || 1;
@@ -1206,9 +1215,8 @@ async function placeTrade(side) {
         outcome: position.outcome,
       };
 
-      notification = `Trade ${position.outcome.toUpperCase()}: ${
-        position.pnl >= 0 ? "+" : "−"
-      }${money(Math.abs(position.pnl))}.`;
+      notification = `Trade ${position.outcome.toUpperCase()}: ${position.pnl >= 0 ? "+" : "−"
+        }${money(Math.abs(position.pnl))}.`;
     }
 
     renderBalance();
@@ -1963,11 +1971,13 @@ function initialize() {
 
   $$(".timeframe").forEach((button) => {
     button.addEventListener("click", () => {
-      state.timeframe = "30sec";
-      $$(".timeframe").forEach((item) => item.classList.toggle("active", item.dataset.timeframe === "30sec"));
+      const selected = button.dataset.timeframe === "1min" ? "1min" : "30sec";
+      state.timeframe = selected;
+      $$(".timeframe").forEach((item) => item.classList.toggle("active", item.dataset.timeframe === selected));
       generateCandles(activeMarket());
       renderChart();
       renderCandleCountdown();
+      toast(`Chart timeframe changed to ${button.textContent.trim()}.`);
     });
   });
 
@@ -2066,68 +2076,74 @@ function initialize() {
   });
   $("#dismiss-trade-result").addEventListener("click", dismissTradeResult);
 
-  chartCanvas.addEventListener("wheel", (event) => {
-    event.preventDefault();
-    const rect = chartCanvas.getBoundingClientRect();
-    const anchorX = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    const anchorY = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
-    const factor = Math.exp(event.deltaY * 0.001);
-    if (event.shiftKey || event.ctrlKey) zoomChartPrice(1 / factor, anchorY);
-    else zoomChartTime(factor, anchorX);
-  }, { passive: false });
+  if (chartCanvas) {
+    chartCanvas.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      const rect = chartCanvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const anchorX = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+      const anchorY = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+      const factor = Math.exp(event.deltaY * 0.001);
+      if (event.shiftKey || event.ctrlKey) zoomChartPrice(1 / factor, anchorY);
+      else zoomChartTime(factor, anchorX);
+    }, { passive: false });
 
-  chartCanvas.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
-    const tip = $("#chart-tooltip");
-    const bounds = getChartPriceBounds();
-    chartPointerDrag = {
-      pointerId: event.pointerId,
-      x: event.clientX,
-      y: event.clientY,
-      candleOffset: state.candleOffset,
-      priceOffset: state.priceOffset,
-      candleCount: state.visibleCandles,
-      priceRange: bounds.max - bounds.min,
+    chartCanvas.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) return;
+      const tip = $("#chart-tooltip");
+      const bounds = getChartPriceBounds();
+      chartPointerDrag = {
+        pointerId: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        candleOffset: state.candleOffset,
+        priceOffset: state.priceOffset,
+        candleCount: state.visibleCandles,
+        priceRange: bounds.max - bounds.min,
+      };
+      chartCanvas.setPointerCapture?.(event.pointerId);
+      chartCanvas.classList.add("is-dragging");
+      if (tip) tip.style.display = "none";
+    });
+    chartCanvas.addEventListener("pointermove", (event) => {
+      const rect = chartCanvas.getBoundingClientRect();
+      if (chartPointerDrag && chartPointerDrag.pointerId === event.pointerId) {
+        const maxOffset = Math.max(0, state.candles.length - 12);
+        state.candleOffset = Math.max(0, Math.min(
+          maxOffset,
+          chartPointerDrag.candleOffset
+          + Math.round((event.clientX - chartPointerDrag.x) / Math.max(1, rect.width - 16) * chartPointerDrag.candleCount),
+        ));
+        state.priceOffset = chartPointerDrag.priceOffset
+          - (event.clientY - chartPointerDrag.y) / Math.max(1, rect.height - 24) * chartPointerDrag.priceRange;
+        refreshChartViewport();
+        return;
+      }
+
+      const visible = getVisibleCandles().candles;
+      const market = activeMarket();
+      const tip = $("#chart-tooltip");
+      if (!visible.length || !market || !tip || !rect.width) return;
+      const fraction = Math.max(0, Math.min(0.999999, (event.clientX - rect.left) / rect.width));
+      const candle = visible[Math.floor(fraction * visible.length)];
+      if (!candle) return;
+      tip.textContent = `${state.timeframe} · O ${formatExactPrice(market, candle.open)} · H ${formatExactPrice(market, candle.high)} · L ${formatExactPrice(market, candle.low)} · C ${formatExactPrice(market, candle.close)}`;
+      tip.style.display = "block";
+      tip.style.left = `${Math.max(42, Math.min(rect.width - 210, event.clientX - rect.left + 10))}px`;
+      tip.style.top = `${Math.max(0, event.clientY - rect.top - 27)}px`;
+    });
+    const endChartPan = (event) => {
+      if (!chartPointerDrag || chartPointerDrag.pointerId !== event.pointerId) return;
+      chartPointerDrag = null;
+      chartCanvas.classList.remove("is-dragging");
     };
-    chartCanvas.setPointerCapture(event.pointerId);
-    chartCanvas.classList.add("is-dragging");
-    tip.style.display = "none";
-  });
-  chartCanvas.addEventListener("pointermove", (event) => {
-    const rect = chartCanvas.getBoundingClientRect();
-    if (chartPointerDrag && chartPointerDrag.pointerId === event.pointerId) {
-      const maxOffset = Math.max(0, state.candles.length - 12);
-      state.candleOffset = Math.max(0, Math.min(
-        maxOffset,
-        chartPointerDrag.candleOffset
-        + Math.round((event.clientX - chartPointerDrag.x) / Math.max(1, rect.width - 16) * chartPointerDrag.candleCount),
-      ));
-      state.priceOffset = chartPointerDrag.priceOffset
-        - (event.clientY - chartPointerDrag.y) / Math.max(1, rect.height - 24) * chartPointerDrag.priceRange;
-      refreshChartViewport();
-      return;
-    }
-
-    const visible = getVisibleCandles().candles;
-    if (!visible.length) return;
-    const fraction = Math.max(0, Math.min(0.999999, (event.clientX - rect.left) / rect.width));
-    const candle = visible[Math.floor(fraction * visible.length)];
-    const tip = $("#chart-tooltip");
-    tip.textContent = `${state.timeframe} · O ${formatExactPrice(activeMarket(), candle.open)} · H ${formatExactPrice(activeMarket(), candle.high)} · L ${formatExactPrice(activeMarket(), candle.low)} · C ${formatExactPrice(activeMarket(), candle.close)}`;
-    tip.style.display = "block";
-    tip.style.left = `${Math.max(42, Math.min(rect.width - 210, event.clientX - rect.left + 10))}px`;
-    tip.style.top = `${Math.max(0, event.clientY - rect.top - 27)}px`;
-  });
-  const endChartPan = (event) => {
-    if (!chartPointerDrag || chartPointerDrag.pointerId !== event.pointerId) return;
-    chartPointerDrag = null;
-    chartCanvas.classList.remove("is-dragging");
-  };
-  chartCanvas.addEventListener("pointerup", endChartPan);
-  chartCanvas.addEventListener("pointercancel", endChartPan);
-  chartCanvas.addEventListener("pointerleave", () => {
-    if (!chartPointerDrag) $("#chart-tooltip").style.display = "none";
-  });
+    chartCanvas.addEventListener("pointerup", endChartPan);
+    chartCanvas.addEventListener("pointercancel", endChartPan);
+    chartCanvas.addEventListener("pointerleave", () => {
+      const tip = $("#chart-tooltip");
+      if (!chartPointerDrag && tip) tip.style.display = "none";
+    });
+  }
   window.addEventListener("resize", () => {
     drawChart();
     renderMarketStrip();
