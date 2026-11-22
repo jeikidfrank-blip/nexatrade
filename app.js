@@ -172,6 +172,95 @@ function formatChartTimeLabel(startedAt, includeSeconds = true) {
   });
 }
 
+function getChartReferencePrice(market) {
+  const candidates = [];
+  const pushValue = (value) => {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) candidates.push(n);
+  };
+
+  (state.candles || []).slice(-40).forEach((candle) => {
+    if (!candle) return;
+    pushValue(candle.open);
+    pushValue(candle.high);
+    pushValue(candle.low);
+    pushValue(candle.close);
+  });
+
+  if (candidates.length) {
+    const sorted = [...candidates].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const inliers = candidates.filter((value) => value >= median / 4 && value <= median * 4);
+    const pool = inliers.length ? inliers : candidates;
+    const poolSorted = [...pool].sort((a, b) => a - b);
+    const ref = poolSorted[Math.floor(poolSorted.length / 2)];
+    const dayOpen = Number(market?.dayOpen);
+    if (Number.isFinite(dayOpen) && dayOpen > 0 && (ref > dayOpen * 5 || ref < dayOpen / 5)) {
+      return dayOpen;
+    }
+    if (Number.isFinite(ref) && ref > 0) return ref;
+  }
+
+  const dayOpen = Number(market?.dayOpen);
+  if (Number.isFinite(dayOpen) && dayOpen > 0) return dayOpen;
+  const price = Number(market?.price);
+  if (Number.isFinite(price) && price > 0 && price < 100000) return price;
+  return 4726.4;
+}
+
+function isPlausibleMarketPrice(price, reference) {
+  const n = Number(price);
+  const ref = Number(reference);
+  return Number.isFinite(n) && n > 0 && Number.isFinite(ref) && ref > 0 && n >= ref / 4 && n <= ref * 4;
+}
+
+function sanitizeMarketPrice(price, market, reference = getChartReferencePrice(market)) {
+  const n = Number(price);
+  if (isPlausibleMarketPrice(n, reference)) return n;
+  return reference;
+}
+
+function repairMarketChartState(market = activeMarket()) {
+  if (!market) return getChartReferencePrice(market);
+  const reference = getChartReferencePrice(market);
+  let lastSaneClose = reference;
+
+  (state.candles || []).forEach((candle) => {
+    if (!candle) return;
+    const raw = [candle.open, candle.high, candle.low, candle.close].map((value) => Number(value));
+    const finite = raw.filter((value) => Number.isFinite(value) && value > 0);
+    const pool = finite.filter((value) => isPlausibleMarketPrice(value, reference));
+    const base = pool.length ? pool[pool.length - 1] : lastSaneClose;
+    const open = isPlausibleMarketPrice(candle.open, reference) ? Number(candle.open) : base;
+    const close = isPlausibleMarketPrice(candle.close, reference) ? Number(candle.close) : open;
+    let high = isPlausibleMarketPrice(candle.high, reference) ? Number(candle.high) : Math.max(open, close);
+    let low = isPlausibleMarketPrice(candle.low, reference) ? Number(candle.low) : Math.min(open, close);
+    high = Math.max(high, open, close);
+    low = Math.min(low, open, close);
+    candle.open = open;
+    candle.high = high;
+    candle.low = Math.max(0.0001, low);
+    candle.close = close;
+    lastSaneClose = close;
+  });
+
+  market.price = sanitizeMarketPrice(market.price, market, lastSaneClose || reference);
+  const dayOpen = Number(market.dayOpen);
+  if (!Number.isFinite(dayOpen) || dayOpen <= 0 || !isPlausibleMarketPrice(dayOpen, reference)) {
+    market.dayOpen = reference / (1 + (Number(market.change) || 0) / 100);
+  }
+  if (!isPlausibleMarketPrice(market.dayHigh, reference)) {
+    market.dayHigh = market.price;
+  }
+  if (!isPlausibleMarketPrice(market.dayLow, reference)) {
+    market.dayLow = market.price;
+  }
+  market.dayHigh = Math.max(market.dayHigh, market.price);
+  market.dayLow = Math.min(market.dayLow, market.price);
+  market.change = (market.price / Math.max(0.0001, market.dayOpen) - 1) * 100;
+  return market.price;
+}
+
 function getVisibleChartSlice() {
   const candles = state.candles || [];
   const total = candles.length;
@@ -186,19 +275,44 @@ function getVisibleChartSlice() {
 
 function getChartPriceBounds(visibleCandles) {
   const market = activeMarket();
-  let high = -Infinity;
-  let low = Infinity;
+  const values = [];
   (visibleCandles || []).forEach((c) => {
     if (!c) return;
-    if (Number.isFinite(c.high)) high = Math.max(high, c.high);
-    if (Number.isFinite(c.low)) low = Math.min(low, c.low);
+    [c.open, c.high, c.low, c.close].forEach((v) => {
+      const n = Number(v);
+      if (Number.isFinite(n) && n > 0) values.push(n);
+    });
   });
+  if (!values.length) {
+    const price = Number(market?.price) || 1;
+    const high = price * 1.001;
+    const low = price * 0.999;
+    const span = (high - low) / Math.max(0.4, state.priceZoom || 1);
+    const mid = ((high + low) / 2) + (state.priceOffset || 0) * span;
+    const padded = span * 0.12;
+    return { min: mid - span / 2 - padded, max: mid + span / 2 + padded };
+  }
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const minRef = median / 4;
+  const maxRef = median * 4;
+  let filtered = values.filter((v) => v >= minRef && v <= maxRef);
+  if (!filtered.length) filtered = values;
+
+  let high = -Infinity;
+  let low = Infinity;
+  filtered.forEach((v) => {
+    if (v > high) high = v;
+    if (v < low) low = v;
+  });
+
   if (!Number.isFinite(high) || !Number.isFinite(low)) {
-    const price = market ? market.price : 1;
+    const price = Number(market?.price) || 1;
     high = price * 1.001;
     low = price * 0.999;
   }
-  if (high <= low) high = low + Math.max(low * 0.0002, 0.01);
+  if (high <= low) high = low + Math.max(Math.abs(low) * 0.0002, 0.01);
   const span = (high - low) / Math.max(0.4, state.priceZoom || 1);
   const mid = ((high + low) / 2) + (state.priceOffset || 0) * span;
   const padded = span * 0.12;
@@ -352,14 +466,25 @@ function drawChart() {
     ctx.fillText(formatChartTimeLabel(c.startedAt, true), x, top + plotH + 4);
   }
 
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(left, top, plotW, plotH);
+  ctx.clip();
+
   // candles
   candles.forEach((candle, index) => {
+    if (!candle) return;
+    const o = Number(candle.open);
+    const c = Number(candle.close);
+    const h = Number(candle.high);
+    const l = Number(candle.low);
+    if (![o, c, h, l].every(Number.isFinite)) return;
     const x = left + index * slot + slot / 2;
-    const openY = priceToY(candle.open);
-    const closeY = priceToY(candle.close);
-    const highY = priceToY(candle.high);
-    const lowY = priceToY(candle.low);
-    const up = candle.close >= candle.open;
+    const openY = priceToY(o);
+    const closeY = priceToY(c);
+    const highY = priceToY(h);
+    const lowY = priceToY(l);
+    const up = c >= o;
     const color = up ? "#17e66a" : "#ff4b52";
     const bodyTop = Math.min(openY, closeY);
     const bodyHeight = Math.max(1.5, Math.abs(closeY - openY));
@@ -378,9 +503,10 @@ function drawChart() {
 
   // current price line/label
   const last = candles[candles.length - 1];
-  const current = market ? market.price : last.close;
+  const rawCurrent = market ? Number(market.price) : Number(last?.close);
+  const current = Number.isFinite(rawCurrent) ? rawCurrent : Number(last?.close) || 0;
   const y = Math.max(top + 6, Math.min(top + plotH - 6, priceToY(current)));
-  const upNow = current >= last.open;
+  const upNow = current >= Number(last?.open || current);
   const lineColor = upNow ? "#17e66a" : "#ff4b52";
   ctx.strokeStyle = lineColor;
   ctx.setLineDash([4, 4]);
@@ -389,6 +515,7 @@ function drawChart() {
   ctx.lineTo(left + plotW, y);
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.restore();
   const label = formatChartAxisPrice(current);
   ctx.font = 'bold 9px "IBM Plex Mono", monospace';
   const labelW = Math.ceil(ctx.measureText(label).width) + 8;
@@ -563,14 +690,17 @@ function syncActiveMarketCandle(price) {
   if (!market) return;
   const interval = Number(getTimeframeInterval());
   if (!Number.isFinite(interval) || interval <= 0) return;
-  const safePrice = Math.max(0.0001, Number(price));
-  if (!Number.isFinite(safePrice)) return;
+
+  const reference = getChartReferencePrice(market);
+  const safePrice = sanitizeMarketPrice(price, market, reference);
+  if (!Number.isFinite(safePrice) || safePrice <= 0) return;
+
   let candle = state.candles[state.candles.length - 1];
   if (!candle) return;
 
   let guard = 0;
   while (Date.now() >= candle.startedAt + interval && guard < 500) {
-    const nextOpen = candle.close;
+    const nextOpen = sanitizeMarketPrice(candle.close, market, reference);
     const startedAt = candle.startedAt + interval;
     candle = {
       open: nextOpen,
@@ -587,12 +717,17 @@ function syncActiveMarketCandle(price) {
   }
 
   candle.close = safePrice;
-  candle.high = Math.max(candle.high, safePrice);
-  candle.low = Math.min(candle.low, safePrice);
+  candle.high = Math.max(Number(candle.high) || safePrice, safePrice, Number(candle.open) || safePrice);
+  candle.low = Math.min(Number(candle.low) || safePrice, safePrice, Number(candle.open) || safePrice);
   market.price = safePrice;
-  market.change = (market.price / market.dayOpen - 1) * 100;
-  market.dayHigh = Math.max(market.dayHigh, market.price);
-  market.dayLow = Math.min(market.dayLow, market.price);
+  if (!isPlausibleMarketPrice(market.dayOpen, reference)) {
+    market.dayOpen = reference;
+  }
+  if (!isPlausibleMarketPrice(market.dayHigh, reference)) market.dayHigh = safePrice;
+  if (!isPlausibleMarketPrice(market.dayLow, reference)) market.dayLow = safePrice;
+  market.dayHigh = Math.max(market.dayHigh, safePrice);
+  market.dayLow = Math.min(market.dayLow, safePrice);
+  market.change = (market.price / Math.max(0.0001, market.dayOpen) - 1) * 100;
 }
 
 function tickLiveChart() {
@@ -600,16 +735,20 @@ function tickLiveChart() {
   const market = activeMarket();
   if (!market) return;
 
+  repairMarketChartState(market);
   const last = state.candles[state.candles.length - 1];
+  if (!last) return;
   const interval = getTimeframeInterval();
   const progress = interval > 0 ? Math.max(0, Math.min(1, (Date.now() - last.startedAt) / interval)) : 0;
   const baseVol = Math.max(0.00005, (market.volatility || 0.0007) * 0.55);
   const noise = (Math.random() - 0.5) * baseVol;
   const pulse = Math.sin(Date.now() / 1400) * baseVol * 0.18;
   const revert = ((market.dayOpen - market.price) / Math.max(market.dayOpen, 0.0001)) * 0.015 * baseVol;
-  const momentum = ((last.close - last.open) / Math.max(last.open, 0.0001)) * 0.12 * baseVol;
+  const momentum = ((Number(last.close) - Number(last.open)) / Math.max(Number(last.open) || market.price, 0.0001)) * 0.12 * baseVol;
   const micro = (Math.random() < 0.18 ? (Math.random() - 0.5) * baseVol * 2.2 : 0);
-  const nextPrice = Math.max(0.0001, market.price * (1 + noise + pulse + revert + momentum + micro));
+  const reference = getChartReferencePrice(market);
+  const basePrice = sanitizeMarketPrice(market.price, market, reference);
+  const nextPrice = sanitizeMarketPrice(basePrice * (1 + noise + pulse + revert + momentum + micro), market, reference);
 
   syncActiveMarketCandle(nextPrice);
   market.dayVolume = (market.dayVolume || 128400) + Math.round(20 + Math.random() * 140 + progress * 30);
@@ -624,17 +763,18 @@ function tickLiveChart() {
   const chartLow = $("#chart-low");
   const chartVolume = $("#chart-volume");
   const orderPrice = $("#order-market-price");
-  const changePct = market.change || 0;
+  const displayPrice = sanitizeMarketPrice(market.price, market, reference);
+  const changePct = Number(market.change || 0);
   if (chartPrice) {
-    chartPrice.textContent = formatExactPrice(market, market.price);
+    chartPrice.textContent = formatExactPrice(market, displayPrice);
     chartPrice.classList.toggle("down", changePct < 0);
   }
   if (chartChange) {
     chartChange.textContent = `${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}%`;
     chartChange.className = `im-change chart-price-change ${changePct >= 0 ? "positive" : "negative"}`;
   }
-  if (chartHigh) chartHigh.textContent = formatExactPrice(market, Math.max(market.dayHigh, market.price));
-  if (chartLow) chartLow.textContent = formatExactPrice(market, Math.min(market.dayLow, market.price));
+  if (chartHigh) chartHigh.textContent = formatExactPrice(market, Math.max(Number(market.dayHigh) || displayPrice, displayPrice));
+  if (chartLow) chartLow.textContent = formatExactPrice(market, Math.min(Number(market.dayLow) || displayPrice, displayPrice));
   if (chartVolume) {
     const vol = market.dayVolume || 0;
     const label = vol >= 1000 ? `${(vol / 1000).toFixed(1)}K oz` : `${Math.round(vol)} oz`;
@@ -675,17 +815,20 @@ function renderChart() {
     selectedCoinIcon.style.background = `${market.color}24`;
   }
 
+  repairMarketChartState(market);
+  const reference = getChartReferencePrice(market);
+  const displayPrice = sanitizeMarketPrice(market.price, market, reference);
   const changePct = Number(market.change || 0);
   if (chartPrice) {
-    chartPrice.textContent = formatExactPrice(market, market.price);
+    chartPrice.textContent = formatExactPrice(market, displayPrice);
     chartPrice.classList.toggle("down", changePct < 0);
   }
   if (chartChange) {
     chartChange.textContent = `${changePct >= 0 ? "+" : ""}${changePct.toFixed(2)}%`;
     chartChange.className = `im-change chart-price-change ${changePct >= 0 ? "positive" : "negative"}`;
   }
-  if (chartHigh) chartHigh.textContent = formatExactPrice(market, Math.max(market.dayHigh, market.price));
-  if (chartLow) chartLow.textContent = formatExactPrice(market, Math.min(market.dayLow, market.price));
+  if (chartHigh) chartHigh.textContent = formatExactPrice(market, Math.max(Number(market.dayHigh) || displayPrice, displayPrice));
+  if (chartLow) chartLow.textContent = formatExactPrice(market, Math.min(Number(market.dayLow) || displayPrice, displayPrice));
   if (chartVolume) {
     const vol = Number(market.dayVolume || 128400);
     chartVolume.textContent = vol >= 1000 ? `${(vol / 1000).toFixed(1)}K oz` : `${Math.round(vol)} oz`;
@@ -702,7 +845,7 @@ function renderChart() {
     orderCoin.style.background = `${market.color}24`;
   }
   if (orderMarketName) orderMarketName.textContent = market.symbol;
-  if (orderMarketPrice) orderMarketPrice.textContent = formatExactPrice(market, market.price);
+  if (orderMarketPrice) orderMarketPrice.textContent = formatExactPrice(market, displayPrice);
   if (sentimentSymbol) sentimentSymbol.textContent = market.symbol;
   if (buyButton) {
     if (buyButton.dataset.market !== market.id) buyButton.innerHTML = `Buy ${market.symbol} <span>↗</span>`;
@@ -1438,10 +1581,15 @@ async function updateMarkets() {
     (data || []).forEach((quote) => {
       const market = marketById(quote.market);
       if (!market) return;
-      market.price = Number(quote.price);
-      market.change = (market.price / market.dayOpen - 1) * 100;
-      market.dayHigh = Math.max(market.dayHigh, market.price);
-      market.dayLow = Math.min(market.dayLow, market.price);
+      const reference = getChartReferencePrice(market);
+      const safePrice = sanitizeMarketPrice(Number(quote.price), market, reference);
+      market.price = safePrice;
+      if (!isPlausibleMarketPrice(market.dayOpen, reference)) market.dayOpen = reference;
+      if (!isPlausibleMarketPrice(market.dayHigh, reference)) market.dayHigh = safePrice;
+      if (!isPlausibleMarketPrice(market.dayLow, reference)) market.dayLow = safePrice;
+      market.dayHigh = Math.max(market.dayHigh, safePrice);
+      market.dayLow = Math.min(market.dayLow, safePrice);
+      market.change = (market.price / Math.max(0.0001, market.dayOpen) - 1) * 100;
     });
 
     if (isDemo) {
@@ -1477,11 +1625,16 @@ async function updateMarkets() {
     state.quoteErrorNotified = false;
   } catch (error) {
     markets.forEach((market) => {
+      const reference = getChartReferencePrice(market);
+      const basePrice = sanitizeMarketPrice(market.price, market, reference);
       const drift = (Math.random() - 0.5) * market.volatility * 1.6;
-      market.price = Math.max(0.0001, market.price * (1 + drift));
-      market.change = (market.price / market.dayOpen - 1) * 100;
+      market.price = sanitizeMarketPrice(basePrice * (1 + drift), market, reference);
+      if (!isPlausibleMarketPrice(market.dayOpen, reference)) market.dayOpen = reference;
+      if (!isPlausibleMarketPrice(market.dayHigh, reference)) market.dayHigh = market.price;
+      if (!isPlausibleMarketPrice(market.dayLow, reference)) market.dayLow = market.price;
       market.dayHigh = Math.max(market.dayHigh, market.price);
       market.dayLow = Math.min(market.dayLow, market.price);
+      market.change = (market.price / Math.max(0.0001, market.dayOpen) - 1) * 100;
     });
     if (!state.quoteErrorNotified) {
       toast(`Could not update market prices from server. Showing simulated movement.`, true);
