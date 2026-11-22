@@ -9,7 +9,7 @@ const markets = [
 
 const state = {
   activeMarket: "XAU",
-  timeframe: "1min",
+  timeframe: "30sec",
   balance: 10000, realTestBalance: 0,
   realTestTransactions: [],
   realTestPositions: [],
@@ -55,7 +55,7 @@ const amountInput = $("#trade-amount");
 const chartCanvas = $("#candlestick-chart");
 const chartContext = chartCanvas.getContext("2d");
 const compactCurrency = new Intl.NumberFormat("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const timeframeDurations = { "30sec": 30_000, "1min": 60_000, "5min": 300_000 };
+const timeframeDurations = { "30sec": 30_000 };
 const supabaseConfig = window.NEXATRADE_SUPABASE_CONFIG || {};
 let supabaseClient = null;
 let supabaseSetupError = "";
@@ -138,7 +138,7 @@ function initTheme() {
 function generateCandles(market) {
   const candles = [];
   const interval = getTimeframeInterval();
-  const scale = { "30sec": 0.00045, "1min": 0.0007, "5min": 0.0016 }[state.timeframe];
+  const scale = 0.00045;
   const step = market.price * scale * 0.3;
   const historyCount = 360;
   let close = market.price + (Math.random() - 0.5) * step * 18;
@@ -343,7 +343,7 @@ function tickLiveChart() {
   if (!state.initialized || !state.candles.length) return;
   const market = activeMarket();
   if (!market) return;
-  const magnitude = state.timeframe === "30sec" ? 0.28 : state.timeframe === "1min" ? 0.22 : 0.16;
+  const magnitude = 0.28;
   const drift = (Math.random() - 0.5) * market.volatility * magnitude;
   const revert = (market.dayOpen - market.price) / market.dayOpen * 0.01;
   const nextPrice = Math.max(0.0001, market.price * (1 + drift + revert));
@@ -1963,8 +1963,8 @@ function initialize() {
 
   $$(".timeframe").forEach((button) => {
     button.addEventListener("click", () => {
-      $$(".timeframe").forEach((item) => item.classList.toggle("active", item === button));
-      state.timeframe = button.dataset.timeframe;
+      state.timeframe = "30sec";
+      $$(".timeframe").forEach((item) => item.classList.toggle("active", item.dataset.timeframe === "30sec"));
       generateCandles(activeMarket());
       renderChart();
       renderCandleCountdown();
@@ -2223,15 +2223,18 @@ function resetUserDemoState() {
   state.watchlist = ["XAU", "EUR", "GBP"];
   state.showingHistory = false;
   state.activeMarket = "XAU";
-  state.timeframe = "1min";
+  state.timeframe = "30sec";
   state.chartStyle = "candle";
   state.isSubmittingTrade = false;
   state.tradeDisplay = null;
-  $("#profile-details").hidden = true;
-  $("#profile-button").setAttribute("aria-expanded", "false");
+  const profileDetails = $("#profile-details");
+  const profileButton = $("#profile-button");
+  if (profileDetails) profileDetails.hidden = true;
+  if (profileButton) profileButton.setAttribute("aria-expanded", "false");
   generateCandles(activeMarket());
   $$(".timeframe").forEach((button) => button.classList.toggle("active", button.dataset.timeframe === state.timeframe));
-  $("#trade-result").hidden = true;
+  const tradeResult = $("#trade-result");
+  if (tradeResult) tradeResult.hidden = true;
 }
 
 async function enterDashboard(user) {
