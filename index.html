@@ -163,62 +163,75 @@
           </section>
 
           <div class="dashboard-grid">
-            <section class="panel chart-panel">
-              <div class="panel-heading chart-heading">
-                <div class="selected-market">
-                  <div class="selected-coin-icon" id="selected-coin-icon">Au</div>
-                  <div class="market-title">
-                    <h2 id="chart-market-name">Gold</h2>
-                    <select class="market-select" id="market-select" aria-label="Select market">
-                          <option value="XAU">XAUUSD</option>
-                      <option value="EUR">EURUSD</option>
-                      <option value="GBP">GBPUSD</option>
-                    </select>
-                    <span class="instrument-label">Spot market <span class="instrument-dot"></span> USD</span>
+            <section class="panel chart-panel im-chart-panel">
+              <div class="im-market-head">
+                <div class="im-asset-title">
+                  <div class="im-coin selected-coin-icon" id="selected-coin-icon">Au</div>
+                  <div class="im-market-meta">
+                    <div class="im-select-title">
+                      <strong id="chart-market-name">Gold</strong>
+                      <select class="market-select im-market-select" id="market-select" aria-label="Select market">
+                        <option value="XAU">XAUUSD</option>
+                      </select>
+                    </div>
+                    <div class="im-price-row">
+                      <strong id="chart-price">$4,726.40</strong>
+                      <span class="im-change chart-price-change positive" id="chart-change">+0.18%</span>
+                    </div>
                   </div>
-                  <button class="favorite-button" id="favorite-button" aria-label="Toggle current market favorite">☆</button>
+                  <button class="favorite-button im-favorite" id="favorite-button" aria-label="Toggle current market favorite">☆</button>
                 </div>
-                <div class="chart-toolbar">
-                  <div class="timeframes" aria-label="Chart timeframe">
-                    <button class="timeframe active" data-timeframe="30sec">30 sec</button>
-                    <button class="timeframe" data-timeframe="1min">1 min</button>
-                  </div>
-                  <button class="chart-menu" id="chart-menu" aria-label="Chart display options">⌗</button>
+                <div class="im-stats chart-range" aria-label="24 hour market stats">
+                  <div><small>24H HIGH</small><b id="chart-high">$4,742.85</b></div>
+                  <div><small>24H LOW</small><b id="chart-low">$4,709.30</b></div>
+                  <div><small>24H VOLUME</small><b id="chart-volume">128.4K oz</b></div>
                 </div>
               </div>
-              <div class="chart-price-row">
-                  <div><strong id="chart-price">$3,342.58</strong><span class="chart-price-change positive" id="chart-change">+$12.32 (+0.37%)</span></div>
-                  <div class="chart-range"><span>24H HIGH <strong id="chart-high">$3,375.01</strong></span><span>24H LOW <strong id="chart-low">$3,310.15</strong></span></div>
-                  <span class="candle-countdown" id="candle-countdown" aria-live="off">NEXT CANDLE IN --:--</span>
-              </div>
-              <div class="chart-container">
-                <div class="chart-y-labels" id="chart-y-labels"></div>
-                <canvas id="candlestick-chart" aria-label="Interactive demo candlestick price chart"></canvas>
-                <div class="chart-x-labels"><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span></div>
-                <div class="chart-tooltip" id="chart-tooltip"></div>
-                <section class="trade-result" id="trade-result" aria-live="polite" hidden>
-                  <div class="trade-result-heading">
-                    <strong class="result-status" id="result-status">Demo order result</strong>
-                    <span class="result-tag demo-tag">DEMO</span>
-                    <button type="button" class="trade-result-close" id="dismiss-trade-result" aria-label="Dismiss trade result">×</button>
+
+              <div class="im-chart-card">
+                <div class="im-chart-toolbar">
+                  <div class="im-timeframes">
+                    <span class="im-chart-interval active" id="chart-interval-label">15s</span>
+                    <span class="im-market-feed" id="chart-feed-status">LIVE FEED</span>
                   </div>
-                  <strong class="result-outcome-amount" id="result-outcome-amount" hidden></strong>
-                </section>
+                  <div class="im-chart-right">
+                    <span class="im-chart-countdown candle-countdown" id="candle-countdown" aria-live="off">NEXT CANDLE IN 00:15</span>
+                    <div class="im-chart-tools chart-navigation" aria-label="Chart zoom and navigation controls">
+                      <button type="button" data-chart-control="time-out" aria-label="Zoom out horizontally">−</button>
+                      <button type="button" data-chart-control="time-in" aria-label="Zoom in horizontally">+</button>
+                      <button type="button" data-chart-control="price-out" aria-label="Zoom out vertically">▾</button>
+                      <button type="button" data-chart-control="price-in" aria-label="Zoom in vertically">▴</button>
+                      <button type="button" class="chart-reset" data-chart-control="reset" aria-label="Reset chart view">⟲</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="chart-container im-chart-wrap">
+                  <canvas id="index-chart" class="im-chart-canvas" aria-label="Interactive indexmarkets-style candlestick price chart"></canvas>
+                  <div class="im-chart-overlay-labels" aria-hidden="true">
+                    <span id="chart-y-axis-label" class="im-y-axis-label"></span>
+                  </div>
+                  <section class="trade-result" id="trade-result" aria-live="polite" hidden>
+                    <div class="trade-result-heading">
+                      <strong class="result-status" id="result-status">Demo order result</strong>
+                      <span class="result-tag demo-tag">DEMO</span>
+                      <button type="button" class="trade-result-close" id="dismiss-trade-result" aria-label="Dismiss trade result">×</button>
+                    </div>
+                    <strong class="result-outcome-amount" id="result-outcome-amount" hidden></strong>
+                  </section>
+                </div>
+
+                <div class="result-executing chart-execution-status" id="result-executing" role="status" aria-live="polite" hidden>
+                  <span></span><strong id="result-executing-message">Submitting demo order…</strong>
+                </div>
+
+                <div class="im-chart-legend chart-legend">
+                  <span><i class="legend-candle-up"></i> Bullish</span>
+                  <span><i class="legend-candle-down"></i> Bearish</span>
+                  <span class="im-chart-hint">Drag to pan · Scroll to zoom · Shift+scroll price</span>
+                </div>
               </div>
-              <div class="result-executing chart-execution-status" id="result-executing" role="status" aria-live="polite" hidden>
-                <span></span><strong id="result-executing-message">Submitting demo order…</strong>
-              </div>
-              <div class="chart-navigation" aria-label="Chart zoom and navigation controls">
-                <span class="chart-navigation-label">TIME</span>
-                <button type="button" data-chart-control="time-out" aria-label="Zoom out horizontally">−</button>
-                <button type="button" data-chart-control="time-in" aria-label="Zoom in horizontally">+</button>
-                <span class="chart-navigation-label">PRICE</span>
-                <button type="button" data-chart-control="price-out" aria-label="Zoom out vertically">−</button>
-                <button type="button" data-chart-control="price-in" aria-label="Zoom in vertically">+</button>
-                <button type="button" class="chart-reset" data-chart-control="reset">Reset</button>
-                <span class="chart-navigation-hint">Drag to pan · Scroll to zoom time · Shift+scroll to zoom price</span>
-              </div>
-              <div class="chart-legend"><span><i class="legend-candle-up"></i> Bullish</span><span><i class="legend-candle-down"></i> Bearish</span></div>
+              <button class="chart-menu" id="chart-menu" hidden aria-label="Chart display options">⌗</button>
             </section>
 
             <aside class="panel order-panel">
@@ -226,7 +239,7 @@
               <div class="order-market-label">MARKET <span>Market order <span class="market-order-dot"></span></span></div>
               <div class="order-instrument">
                 <span class="order-coin" id="order-coin">Au</span>
-                <div><strong id="order-market-name">XAUUSD</strong><span id="order-market-price">$3,342.58</span></div>
+                <div><strong id="order-market-name">XAUUSD</strong><span id="order-market-price">$4,726.40</span></div>
                 <span class="order-market-live"><i></i>Demo</span>
               </div>
               <label class="amount-label" for="trade-amount">AMOUNT <span>KES</span></label>
@@ -234,7 +247,7 @@
               <div class="amount-presets"><button data-amount="500">500</button><button data-amount="1000">1,000</button><button data-amount="5000">5,000</button><button data-amount="10000">10,000</button><button data-amount="max">Max</button></div>
               <div class="order-summary">
                 <div><span id="available-balance-label">Available demo funds</span><strong id="available-balance">KSh 10,000.00</strong></div>
-                <div><span>Position size</span><strong id="estimated-position">0.024659 XAU</strong></div>
+                <div><span>Position size</span><strong id="estimated-position">0.021158 XAU</strong></div>
                 <div><span>Demo fee <span class="info-tip" title="Estimated demo fee">i</span></span><strong id="estimated-fee">KSh 0.00</strong></div>
               </div>
               <div class="trade-actions">
@@ -252,20 +265,12 @@
 
           <section class="view-panel" id="markets-view" data-view-panel="Markets" hidden>
             <div class="view-heading">
-              <div><h1>Markets<span class="title-period">.</span></h1><p>Gold, EURUSD, and GBPUSD price snapshots.</p></div>
+              <div><h1>Markets<span class="title-period">.</span></h1><p>Gold (XAUUSD) price snapshot.</p></div>
             </div>
-            <section class="market-strip" aria-label="FX and gold markets">
+            <section class="market-strip" aria-label="Gold market">
               <article class="market-stat">
                 <div class="stat-heading"><span class="coin-icon gold">Au</span><span class="stat-name">Gold</span><span class="stat-symbol">XAUUSD</span></div>
-                <div class="stat-main"><strong id="xau-price">$3,342.58</strong><span class="change positive" id="xau-change">+0.37%</span></div>
-              </article>
-              <article class="market-stat">
-                <div class="stat-heading"><span class="coin-icon euro">€</span><span class="stat-name">Euro</span><span class="stat-symbol">EURUSD</span></div>
-                <div class="stat-main"><strong id="eur-price">151.35</strong><span class="change positive" id="eur-change">+0.12%</span></div>
-              </article>
-              <article class="market-stat">
-                <div class="stat-heading"><span class="coin-icon pound">£</span><span class="stat-name">Pound</span><span class="stat-symbol">GBPUSD</span></div>
-                <div class="stat-main"><strong id="gbp-price">$1.2742</strong><span class="change positive" id="gbp-change">+0.18%</span></div>
+                <div class="stat-main"><strong id="xau-price">$4,726.40</strong><span class="change positive" id="xau-change">+0.18%</span></div>
               </article>
               <article class="market-stat market-strip-meta">
                 <div class="live-feed"><span class="live-dot"></span> MARKET FEED <span class="feed-live">SIM</span></div>
