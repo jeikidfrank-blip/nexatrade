@@ -23,7 +23,6 @@ const state = {
   demoDeposits: [],
   watchlist: ["XAU", "EUR", "GBP"],
   showingHistory: false,
-  chartStyle: "candle",
   candles: [],
   visibleCandles: 64,
   candleOffset: 0,
@@ -138,33 +137,51 @@ function initTheme() {
   setTheme(getSavedTheme() || document.documentElement.dataset.theme || "dark");
 }
 
+
 function generateCandles(market) {
   const candles = [];
   const interval = getTimeframeInterval();
-  const scale = state.timeframe === "1min" ? 0.0007 : 0.00045;
+  const scale = state.timeframe === "1min" ? 0.00035 : 0.00025;
   const step = market.price * scale * 0.3;
   const historyCount = 360;
-  let close = market.price + (Math.random() - 0.5) * step * 18;
+
+  let close = market.price;
   const lastIntervalStart = Math.floor(Date.now() / interval) * interval;
+
   for (let index = 0; index < historyCount; index += 1) {
     const open = close;
-    const drift = (Math.random() - 0.5) * step + (market.change / 100) * market.price * 0.002;
-    close = Math.max(0.0001, open + drift);
-    if (index === historyCount - 1) close = market.price;
+
+    // Smaller random movements create smoother candles
+    const randomMove = (Math.random() - 0.5) * step * 0.45;
+
+    // Gentle movement toward the market's general direction
+    const trend = (market.change / 100) * market.price * 0.0005;
+
+    close = Math.max(0.0001, open + randomMove + trend);
+
+    if (index === historyCount - 1) {
+      close = market.price;
+    }
+
     const bodyHigh = Math.max(open, close);
     const bodyLow = Math.min(open, close);
-    const wick = market.price * scale * (0.08 + Math.random() * 0.32);
+
+    // Smaller, more controlled candle wicks
+    const wick = market.price * scale * (0.03 + Math.random() * 0.08);
+
     candles.push({
       open,
       close,
-      high: bodyHigh + wick * (0.3 + Math.random()),
-      low: Math.max(0.0001, bodyLow - wick * (0.3 + Math.random())),
+      high: bodyHigh + wick,
+      low: Math.max(0.0001, bodyLow - wick),
       startedAt: lastIntervalStart - (historyCount - 1 - index) * interval,
     });
   }
+
   const last = candles[candles.length - 1];
   last.high = Math.max(last.high, market.price);
   last.low = Math.min(last.low, market.price);
+
   state.candles = candles;
   state.visibleCandles = Math.min(64, candles.length);
   state.candleOffset = 0;
@@ -198,41 +215,17 @@ function renderWatchlist() {
 function renderMarketStrip() {
   [["XAU", "xau"], ["EUR", "eur"], ["GBP", "gbp"]].forEach(([id, short]) => {
     const market = marketById(id);
-    $(`#${short}-price`).textContent = formatExactPrice(market, market.price);
-    const change = $(`#${short}-change`);
-    change.textContent = formatChange(market.change);
-    change.className = `change ${market.change >= 0 ? "positive" : "negative"}`;
-    drawSparkline($(`#spark-${short}`), market);
+    if (!market) return;
+    const priceEl = $(`#${short}-price`);
+    const changeEl = $(`#${short}-change`);
+    if (priceEl) priceEl.textContent = formatExactPrice(market, market.price);
+    if (changeEl) {
+      changeEl.textContent = formatChange(market.change);
+      changeEl.className = `change ${market.change >= 0 ? "positive" : "negative"}`;
+    }
   });
-  $("#last-updated").textContent = "just now";
-}
-
-function drawSparkline(canvas, market) {
-  const rect = canvas.getBoundingClientRect();
-  if (!rect.width || !rect.height) return;
-  const ratio = window.devicePixelRatio || 1;
-  canvas.width = Math.round(rect.width * ratio);
-  canvas.height = Math.round(rect.height * ratio);
-  const context = canvas.getContext("2d");
-  context.scale(ratio, ratio);
-  const width = rect.width;
-  const height = rect.height;
-  const values = Array.from({ length: 20 }, (_, index) => {
-    const trend = (index / 19 - 0.5) * market.change * 0.002;
-    return market.price * (1 + trend + Math.sin(index * 1.6 + market.price) * market.volatility * 2);
-  });
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  context.beginPath();
-  values.forEach((value, index) => {
-    const x = (index / (values.length - 1)) * width;
-    const y = height - 2 - ((value - min) / (max - min || 1)) * (height - 5);
-    if (index === 0) context.moveTo(x, y);
-    else context.lineTo(x, y);
-  });
-  context.strokeStyle = market.change >= 0 ? "#36cb9b" : "#ec727a";
-  context.lineWidth = 1.5;
-  context.stroke();
+  const lastUpdated = $("#last-updated");
+  if (lastUpdated) lastUpdated.textContent = "just now";
 }
 
 
@@ -319,7 +312,7 @@ function syncActiveMarketCandle(price) {
   if (!candle) return;
 
   let guard = 0;
-  while (Date.now() - candle.startedAt >= interval && guard < 500) {
+  while (Date.now() >= candle.startedAt + interval && guard < 500) {
     const nextOpen = candle.close;
     const startedAt = candle.startedAt + interval;
     if (state.candleOffset > 0 && state.candles.length < 2000) state.candleOffset += 1;
@@ -351,10 +344,18 @@ function tickLiveChart() {
   if (!state.initialized || !state.candles.length) return;
   const market = activeMarket();
   if (!market) return;
-  const magnitude = state.timeframe === "1min" ? 0.22 : 0.28;
-  const drift = (Math.random() - 0.5) * market.volatility * magnitude;
-  const revert = (market.dayOpen - market.price) / market.dayOpen * 0.01;
-  const nextPrice = Math.max(0.0001, market.price * (1 + drift + revert));
+
+  const magnitude = state.timeframe === "1min" ? 0.00008 : 0.00005;
+
+  const drift = (Math.random() - 0.5) * magnitude;
+
+  const revert = ((market.dayOpen - market.price) / market.dayOpen) * 0.0001;
+
+  const nextPrice = Math.max(
+    market.dayOpen * 0.5,
+    market.price * (1 + drift + revert)
+  );
+
   syncActiveMarketCandle(nextPrice);
   renderCandleCountdown();
   renderMarketStrip();
@@ -437,67 +438,35 @@ function drawChart() {
 
   const upColor = isLight ? "#0fa37a" : "#15d85c";
   const downColor = isLight ? "#e0455a" : "#ff4545";
-  const lineColor = isLight ? "#0fa37a" : "#18c6ff";
 
-  if (state.chartStyle === "line") {
-    chartContext.beginPath();
-    candles.forEach((candle, index) => {
-      const x = plot.left + index * xStep + xStep / 2;
-      const y = yFor(candle.close);
-      if (index === 0) chartContext.moveTo(x, y);
-      else chartContext.lineTo(x, y);
-    });
-    chartContext.lineTo(plot.left + plot.width, height - plot.bottom);
-    chartContext.lineTo(plot.left, height - plot.bottom);
-    chartContext.closePath();
-    const fill = chartContext.createLinearGradient(0, 0, 0, height);
-    fill.addColorStop(0, isLight ? "rgba(15,163,122,.18)" : "rgba(24,198,255,.18)");
-    fill.addColorStop(1, "rgba(0,0,0,0)");
-    chartContext.fillStyle = fill;
-    chartContext.fill();
+  candles.forEach((candle, index) => {
+    const center = plot.left + index * xStep + xStep / 2;
+    const rising = candle.close >= candle.open;
+    const color = rising ? upColor : downColor;
+    const openY = yFor(candle.open);
+    const closeY = yFor(candle.close);
+    const highY = yFor(candle.high);
+    const lowY = yFor(candle.low);
+    const top = Math.min(openY, closeY);
+    const bottom = Math.max(openY, closeY);
+    const bodyHeight = Math.max(1, bottom - top);
+    const candleWidth = Math.max(3, Math.min(12, xStep * 0.72));
 
+    chartContext.strokeStyle = color;
+    chartContext.fillStyle = color;
+    chartContext.lineWidth = 1.2;
     chartContext.beginPath();
-    candles.forEach((candle, index) => {
-      const x = plot.left + index * xStep + xStep / 2;
-      const y = yFor(candle.close);
-      if (index === 0) chartContext.moveTo(x, y);
-      else chartContext.lineTo(x, y);
-    });
-    chartContext.strokeStyle = lineColor;
-    chartContext.lineWidth = 1.8;
-    chartContext.lineJoin = "round";
-    chartContext.lineCap = "round";
+    chartContext.moveTo(center, highY);
+    chartContext.lineTo(center, top);
+    chartContext.moveTo(center, bottom);
+    chartContext.lineTo(center, lowY);
     chartContext.stroke();
-  } else {
-    candles.forEach((candle, index) => {
-      const center = plot.left + index * xStep + xStep / 2;
-      const rising = candle.close >= candle.open;
-      const color = rising ? upColor : downColor;
-      const openY = yFor(candle.open);
-      const closeY = yFor(candle.close);
-      const highY = yFor(candle.high);
-      const lowY = yFor(candle.low);
-      const top = Math.min(openY, closeY);
-      const bottom = Math.max(openY, closeY);
-      const bodyHeight = Math.max(1.5, bottom - top);
-      const candleWidth = Math.max(3, Math.min(12, xStep * 0.72));
 
-      chartContext.strokeStyle = color;
-      chartContext.fillStyle = color;
-      chartContext.lineWidth = 1.2;
-      chartContext.beginPath();
-      chartContext.moveTo(center, highY);
-      chartContext.lineTo(center, top);
-      chartContext.moveTo(center, bottom);
-      chartContext.lineTo(center, lowY);
-      chartContext.stroke();
-
-      chartContext.fillRect(center - candleWidth / 2, top, candleWidth, bodyHeight);
-      chartContext.strokeStyle = isLight ? "rgba(0,0,0,.08)" : "rgba(255,255,255,.1)";
-      chartContext.lineWidth = 0.6;
-      chartContext.strokeRect(center - candleWidth / 2, top, candleWidth, bodyHeight);
-    });
-  }
+    chartContext.fillRect(center - candleWidth / 2, top, candleWidth, bodyHeight);
+    chartContext.strokeStyle = isLight ? "rgba(0,0,0,.08)" : "rgba(255,255,255,.1)";
+    chartContext.lineWidth = 0.6;
+    chartContext.strokeRect(center - candleWidth / 2, top, candleWidth, bodyHeight);
+  });
 
   const currentPrice = activeMarket().price;
   const clampedY = Math.min(height - plot.bottom, Math.max(plot.top, yFor(currentPrice)));
@@ -2046,12 +2015,15 @@ function initialize() {
   $("#menu-backdrop").addEventListener("click", () => setNavigationMenuOpen(false));
   $("#notifications-button").addEventListener("click", () => toast("You’re all caught up. Market updates are for demo purposes."));
   $("#help-button").addEventListener("click", () => toast("Demo trades use demo prices and do not reach an exchange."));
-  $("#chart-menu").addEventListener("click", () => {
-    state.chartStyle = state.chartStyle === "candle" ? "line" : "candle";
-    $("#chart-menu").title = state.chartStyle === "candle" ? "Switch to line chart" : "Switch to candlestick chart";
-    drawChart();
-    toast(`Chart display: ${state.chartStyle === "candle" ? "candlesticks" : "line"}.`);
-  });
+  const chartMenuButton = $("#chart-menu");
+  if (chartMenuButton) {
+    chartMenuButton.title = "Candlestick chart";
+    chartMenuButton.setAttribute("aria-label", "Candlestick chart");
+    chartMenuButton.addEventListener("click", () => {
+      drawChart();
+      toast("Chart display: candlesticks.");
+    });
+  }
 
   $$("[data-chart-control]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -2164,51 +2136,90 @@ function toggleWatch(id) {
 
 function setAuthMode(mode) {
   const isSignUp = mode === "signup";
-  $("#auth-title").innerHTML = isSignUp ? 'Create your NexaTrade account<span class="title-period">.</span>' : 'Welcome back<span class="title-period">.</span>';
-  $("#auth-name-field").hidden = !isSignUp;
-  $("#auth-phone-field").hidden = !isSignUp;
-  $("#auth-confirm-field").hidden = !isSignUp;
-  $("#auth-name").required = isSignUp;
-  $("#auth-confirm").required = isSignUp;
-  $("#auth-password").autocomplete = isSignUp ? "new-password" : "current-password";
-  $("#auth-submit").innerHTML = `${isSignUp ? "Create account" : "Sign in"} <span>→</span>`;
+  const authTitle = $("#auth-title");
+  const nameField = $("#auth-name-field");
+  const phoneField = $("#auth-phone-field");
+  const confirmField = $("#auth-confirm-field");
+  const nameInput = $("#auth-name");
+  const confirmInput = $("#auth-confirm");
+  const passwordInput = $("#auth-password");
+  const submitButton = $("#auth-submit");
+  const authError = $("#auth-error");
+  const authMessage = $("#auth-message");
+  const authForm = $("#auth-form");
+
+  if (authTitle) authTitle.innerHTML = isSignUp ? 'Create your NexaTrade account<span class="title-period">.</span>' : 'Welcome back<span class="title-period">.</span>';
+  if (nameField) nameField.hidden = !isSignUp;
+  if (phoneField) phoneField.hidden = !isSignUp;
+  if (confirmField) confirmField.hidden = !isSignUp;
+  if (nameInput) nameInput.required = isSignUp;
+  if (confirmInput) confirmInput.required = isSignUp;
+  if (passwordInput) passwordInput.autocomplete = isSignUp ? "new-password" : "current-password";
+  if (submitButton) submitButton.innerHTML = `${isSignUp ? "Create account" : "Sign in"} <span>→</span>`;
   $$(".auth-tab").forEach((button) => button.classList.toggle("active", button.dataset.authMode === mode));
-  $("#auth-error").hidden = true;
-  $("#auth-error").textContent = "";
-  $("#auth-message").hidden = true;
-  $("#auth-message").textContent = "";
-  $("#auth-form").dataset.mode = mode;
+  if (authError) {
+    authError.hidden = true;
+    authError.textContent = "";
+  }
+  if (authMessage) {
+    authMessage.hidden = true;
+    authMessage.textContent = "";
+  }
+  if (authForm) authForm.dataset.mode = mode;
 }
 
 function showAuthError(message) {
-  $("#auth-message").hidden = true;
-  $("#auth-error").textContent = message;
-  $("#auth-error").hidden = false;
+  const authMessage = $("#auth-message");
+  const authError = $("#auth-error");
+  if (authMessage) {
+    authMessage.hidden = true;
+    authMessage.textContent = "";
+  }
+  if (authError) {
+    authError.textContent = String(message || "Something went wrong.");
+    authError.hidden = false;
+  }
 }
 
 function showAuthMessage(message) {
-  $("#auth-error").hidden = true;
-  $("#auth-message").textContent = message;
-  $("#auth-message").hidden = false;
+  const authError = $("#auth-error");
+  const authMessage = $("#auth-message");
+  if (authError) {
+    authError.hidden = true;
+    authError.textContent = "";
+  }
+  if (authMessage) {
+    authMessage.textContent = String(message || "");
+    authMessage.hidden = false;
+  }
 }
 
 function startDashboard() {
-  if (!state.initialized) {
-    initialize();
-    state.initialized = true;
-  } else {
-    renderMarketStrip();
-    renderWatchlist();
-    renderChart();
-    renderCandleCountdown();
-    renderBalance();
-    renderPositions();
-    renderDemoDeposits();
+  try {
+    if (!state.initialized) {
+      initialize();
+      state.initialized = true;
+    } else {
+      renderMarketStrip();
+      renderWatchlist();
+      renderChart();
+      renderCandleCountdown();
+      renderBalance();
+      renderPositions();
+      renderDemoDeposits();
+    }
+  } catch (error) {
+    console.error("Could not initialize dashboard UI:", error);
+    toast(getErrorMessage(error, "Could not initialize the dashboard."), true);
   }
   if (!state.marketUpdateInterval) state.marketUpdateInterval = window.setInterval(updateMarkets, 3000);
   if (!state.candleTimerInterval) state.candleTimerInterval = window.setInterval(renderCandleCountdown, 1000);
   if (!state.liveTickInterval) state.liveTickInterval = window.setInterval(tickLiveChart, 800);
-  updateMarkets();
+  try {
+    updateMarkets();
+  } catch (error) {
+    console.error("Could not refresh markets:", error);
+  }
   if (!state.sentimentInterval) state.sentimentInterval = window.setInterval(setSentiment, 9000);
 }
 
@@ -2240,7 +2251,6 @@ function resetUserDemoState() {
   state.showingHistory = false;
   state.activeMarket = "XAU";
   state.timeframe = "30sec";
-  state.chartStyle = "candle";
   state.isSubmittingTrade = false;
   state.tradeDisplay = null;
   const profileDetails = $("#profile-details");
@@ -2287,7 +2297,11 @@ async function enterDashboard(user) {
   setProfileMessage("");
   renderAccountMode();
   document.body.classList.add("authenticated");
-  startDashboard();
+  try {
+    startDashboard();
+  } catch (error) {
+    console.error("Could not start dashboard after sign-in:", error);
+  }
   return true;
 }
 
