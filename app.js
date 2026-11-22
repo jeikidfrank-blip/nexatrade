@@ -303,12 +303,15 @@ function syncActiveMarketCandle(price) {
   if (!state.candles.length) return;
   const market = activeMarket();
   if (!market) return;
-  const interval = getTimeframeInterval();
+  const interval = Number(getTimeframeInterval());
+  if (!Number.isFinite(interval) || interval <= 0) return;
   const safePrice = Math.max(0.0001, Number(price));
+  if (!Number.isFinite(safePrice)) return;
   let candle = state.candles[state.candles.length - 1];
   if (!candle) return;
 
-  while (Date.now() - candle.startedAt >= interval) {
+  let guard = 0;
+  while (Date.now() - candle.startedAt >= interval && guard < 500) {
     const nextOpen = candle.close;
     const startedAt = candle.startedAt + interval;
     if (state.candleOffset > 0 && state.candles.length < 2000) state.candleOffset += 1;
@@ -324,6 +327,7 @@ function syncActiveMarketCandle(price) {
       state.candles.shift();
       state.candleOffset = Math.min(state.candleOffset, Math.max(0, state.candles.length - 12));
     }
+    guard += 1;
   }
 
   candle.close = safePrice;
@@ -347,7 +351,23 @@ function tickLiveChart() {
   renderCandleCountdown();
   renderMarketStrip();
   renderWatchlist();
-  renderChart();
+  const chartPrice = $("#chart-price");
+  const chartChange = $("#chart-change");
+  const chartHigh = $("#chart-high");
+  const chartLow = $("#chart-low");
+  const orderPrice = $("#order-market-price");
+  if (chartPrice) chartPrice.textContent = formatExactPrice(market, market.price);
+  if (chartChange) {
+    const changeAmount = market.price * market.change / 100;
+    chartChange.textContent = `${changeAmount >= 0 ? "+" : "−"}${formatExactPrice(market, Math.abs(changeAmount))} (${formatChange(market.change)})`;
+    chartChange.className = `chart-price-change ${market.change >= 0 ? "positive" : "negative"}`;
+  }
+  if (chartHigh) chartHigh.textContent = formatExactPrice(market, Math.max(market.dayHigh, market.price));
+  if (chartLow) chartLow.textContent = formatExactPrice(market, Math.min(market.dayLow, market.price));
+  if (orderPrice) orderPrice.textContent = formatExactPrice(market, market.price);
+  updateOrderEstimate();
+  renderChartLabels();
+  drawChart();
 }
 
 function drawChart() {
