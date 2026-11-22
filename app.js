@@ -156,10 +156,13 @@ function generateCandles(market) {
   const interval = getTimeframeInterval();
   const key = `${market.id}:${state.timeframe}`;
   let candles = state.chartSeries.get(key);
-  const stale = candles && candles.length
-    && Date.now() - candles[candles.length - 1].startedAt > interval * 240;
+  const validSeries = Array.isArray(candles) && candles.length >= 12 && candles.every((item) =>
+    item && [item.open, item.high, item.low, item.close, item.startedAt].every(Number.isFinite)
+    && item.high >= Math.max(item.open, item.close) && item.low <= Math.min(item.open, item.close)
+  );
+  const stale = validSeries && Date.now() - candles[candles.length - 1].startedAt > interval * 240;
 
-  if (!candles || !candles.length || stale) {
+  if (!validSeries || stale) {
     const random = createChartRandom(key);
     const volatility = { "30sec": 0.00045, "1min": 0.0007, "5min": 0.0016 }[state.timeframe];
     const step = Math.max(market.price * volatility, market.price * market.volatility * 0.45);
@@ -332,10 +335,19 @@ function syncActiveMarketCandle(price) {
   const market = activeMarket();
   if (!market) return;
   const interval = getTimeframeInterval();
-  const safePrice = Math.max(0.0001, Number(price));
+  const numericPrice = Number(price);
+  if (!Number.isFinite(numericPrice) || numericPrice <= 0) return;
+  const safePrice = numericPrice;
   let candle = state.candles[state.candles.length - 1];
-  if (!candle) return;
+  if (!candle || ![candle.open, candle.high, candle.low, candle.close, candle.startedAt].every(Number.isFinite)) return;
 
+  const missed = Math.floor((Date.now() - candle.startedAt) / interval);
+  if (missed > 240) {
+    const start = Math.floor(Date.now() / interval) * interval;
+    candle = { open: safePrice, close: safePrice, high: safePrice, low: safePrice, startedAt: start };
+    state.candles = [candle];
+    state.candleOffset = 0;
+  }
   while (Date.now() - candle.startedAt >= interval) {
     const nextOpen = candle.close;
     const startedAt = candle.startedAt + interval;
@@ -357,6 +369,8 @@ function syncActiveMarketCandle(price) {
   candle.close = safePrice;
   candle.high = Math.max(candle.high, safePrice);
   candle.low = Math.min(candle.low, safePrice);
+  const key = `${market.id}:${state.timeframe}`;
+  state.chartSeries.set(key, state.candles);
   market.price = safePrice;
   market.change = (market.price / market.dayOpen - 1) * 100;
   market.dayHigh = Math.max(market.dayHigh, market.price);
@@ -367,15 +381,22 @@ function tickLiveChart() {
   if (!state.initialized || !state.candles.length) return;
   const market = activeMarket();
   if (!market) return;
-  const magnitude = state.timeframe === "30sec" ? 0.28 : state.timeframe === "1min" ? 0.22 : 0.16;
-  const drift = (Math.random() - 0.5) * market.volatility * magnitude;
-  const revert = (market.dayOpen - market.price) / market.dayOpen * 0.01;
-  const nextPrice = Math.max(0.0001, market.price * (1 + drift + revert));
-  syncActiveMarketCandle(nextPrice);
-  renderCandleCountdown();
-  renderMarketStrip();
-  renderWatchlist();
-  renderChart();
+  try {
+    const magnitude = state.timeframe === "30sec" ? 0.28 : state.timeframe === "1min" ? 0.22 : 0.16;
+    const drift = (Math.random() - 0.5) * market.volatility * magnitude;
+    const revert = (market.dayOpen - market.price) / market.dayOpen * 0.01;
+    const nextPrice = Math.max(0.0001, market.price * (1 + drift + revert));
+    syncActiveMarketCandle(nextPrice);
+    renderCandleCountdown();
+    renderMarketStrip();
+    renderWatchlist();
+    renderChart();
+  } catch (error) {
+    console.error("Chart update failed; rebuilding simulated candles:", error);
+    state.chartSeries.delete(`${market.id}:${state.timeframe}`);
+    generateCandles(market);
+    renderChart();
+  }
 }
 
 function drawChart() {
@@ -686,13 +707,6 @@ function renderAccountMode() {
   updateOrderEstimate();
 }
 
-function getAutomaticTradeLevels(side, market) {
-  const factor = side === "buy" ? 10 : 0.1;
-  const stopLoss = side === "buy" ? Math.max(0.0001, market.price * 0.5) : market.price * 2;
-  const takeProfit = side === "buy" ? market.price * factor : Math.max(0.0001, market.price * 0.5);
-  return { stopLoss, takeProfit };
-}
-
 async function loadDemoBalance() {
   const { data, error } = await supabaseClient
     .from("demo_accounts")
@@ -740,8 +754,6 @@ function mapPositionRow(row) {
     amount: Number(row.amount),
     quantity: Number(row.quantity),
     entryPrice: Number(row.entry_price),
-    stopLoss: Number(row.stop_loss),
-    takeProfit: Number(row.take_profit),
     entryFee: Number(row.entry_fee),
     exitPrice: row.exit_price === null ? null : Number(row.exit_price),
     pnl: row.pnl === null ? null : Number(row.pnl),
@@ -756,7 +768,7 @@ function mapPositionRow(row) {
 async function loadDemoPositions() {
   const { data, error } = await supabaseClient
     .from("demo_positions")
-    .select("id,market,side,amount,quantity,entry_price,stop_loss,take_profit,entry_fee,exit_price,pnl,pnl_multiplier,status,opened_at,closed_at")
+    .select("id,market,side,amount,quantity,entry_price,entry_fee,exit_price,pnl,pnl_multiplier,status,opened_at,closed_at")
     .eq("user_id", state.userId)
     .order("opened_at", { ascending: false })
     .limit(500);
@@ -1107,8 +1119,6 @@ async function placeTrade(side) {
     return;
   }
 
-  const { stopLoss, takeProfit } = getAutomaticTradeLevels(side, market);
-
   const executionStartedAt = Date.now();
   state.isSubmittingTrade = true;
   showTradeResult({ status: "pending", side, marketId: market.id, operation: "open" });
@@ -1125,8 +1135,6 @@ async function placeTrade(side) {
         p_market: market.id,
         p_side: side,
         p_amount: amount,
-        p_stop_loss: stopLoss,
-        p_take_profit: takeProfit,
       }
     );
 
@@ -1138,75 +1146,15 @@ async function placeTrade(side) {
     state.showingHistory = false;
 
     if (isDemo) {
-      // Immediately settle the newly opened demo trade.
-      const { data: closeData, error: closeError } = await supabaseClient.rpc(
-        "demo_close_position",
-        { p_position_id: openedPosition.id }
-      );
-
-      if (closeError) throw closeError;
-
-      if (!closeData || !closeData.position) {
-        throw new Error("The server did not return the settled trade.");
-      }
-
-      const position = mapPositionRow(closeData.position);
-      const balance = Number(closeData.balance_after);
-
-      if (!Number.isFinite(balance) || balance < 0) {
-        throw new Error("The server returned an invalid balance.");
-      }
-
-      state.balance = balance;
-
+      state.balance = await loadDemoBalance();
       await loadDemoPositions();
-
-      resultDisplay = {
-        status: "closed",
-        side: position.side,
-        marketId: position.marketId,
-        position,
-        outcome: position.outcome,
-      };
-
-      notification = `Demo trade ${position.outcome.toUpperCase()}: ${position.pnl >= 0 ? "+" : "−"
-        }${money(Math.abs(position.pnl))}.`;
-
+      resultDisplay = { status: "open", side, marketId: market.id, position: openedPosition };
+      notification = "Demo position opened.";
     } else {
-      // Immediately settle the real-test trade.
-      const { data: closeData, error: closeError } = await supabaseClient.rpc(
-        "real_test_close_position",
-        { p_position_id: openedPosition.id }
-      );
-
-      if (closeError) throw closeError;
-
-      if (!closeData || !closeData.position) {
-        throw new Error("The server did not return the settled trade.");
-      }
-
-      const position = mapPositionRow(closeData.position);
-      const balance = Number(closeData.balance_after);
-
-      if (!Number.isFinite(balance) || balance < 0) {
-        throw new Error("The server returned an invalid balance.");
-      }
-
-      state.realTestBalance = balance;
-
+      state.realTestBalance = await loadRealTestBalance();
       await loadRealTestPositions();
-
-      resultDisplay = {
-        status: "closed",
-        side: position.side,
-        marketId: position.marketId,
-        position,
-        outcome: position.outcome,
-      };
-
-      notification = `Trade ${position.outcome.toUpperCase()}: ${
-        position.pnl >= 0 ? "+" : "−"
-      }${money(Math.abs(position.pnl))}.`;
+      resultDisplay = { status: "open", side, marketId: market.id, position: openedPosition };
+      notification = "Test position opened.";
     }
 
     renderBalance();
@@ -1322,7 +1270,9 @@ async function updateMarkets() {
     (data || []).forEach((quote) => {
       const market = marketById(quote.market);
       if (!market) return;
-      market.price = Number(quote.price);
+      const quotePrice = Number(quote.price);
+      if (!Number.isFinite(quotePrice) || quotePrice <= 0) return;
+      market.price = quotePrice;
       market.change = (market.price / market.dayOpen - 1) * 100;
       market.dayHigh = Math.max(market.dayHigh, market.price);
       market.dayLow = Math.min(market.dayLow, market.price);
