@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#090d12"><title>NexaTrade Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <main id="login-screen" class="login-wrap">
+    <form id="login-form" class="login-card">
+      <div class="brand"><span class="brand-mark">N</span><span>NEXA<span>TRADE</span></span><small>ADMIN</small></div>
+      <p class="eyebrow">SECURE ADMINISTRATION</p><h1>Welcome back<span>.</span></h1>
+      <p class="muted">Sign in with your authorized administrator email and password.</p>
+      <label>Email address<input id="email" type="email" autocomplete="username" value="Leez234ke@gmail.com" required></label>
+      <label>Password<input id="password" type="password" autocomplete="current-password" required placeholder="Your admin password"></label>
+      <p id="login-error" class="error" role="alert" hidden></p>
+      <button class="primary" type="submit" id="login-submit">Sign in securely <b>→</b></button>
+      <p class="hint">Use this same sign-in page from any device. Admin access is verified by Supabase, not by the email field alone.</p>
+      <a class="back-link" href="index.html">← Back to NexaTrade</a>
+    </form>
+  </main>
+  <div id="admin-app" class="app" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="admin.html"><span class="brand-mark">N</span><span>NEXA<span>TRADE</span></span><small>ADMIN</small></a>
+      <p class="nav-caption">WORKSPACE</p>
+      <button class="nav active" data-page="overview">▦ <span>Overview</span></button>
+      <button class="nav" data-page="users">♙ <span>Users management</span></button>
+      <button class="nav" data-page="settings">⚙ <span>Trading settings</span></button>
+      <button class="nav" data-page="activity">◷ <span>Admin activity</span></button>
+      <div class="side-bottom"><span class="online-dot"></span> Secure admin session <button id="logout">Sign out ↗</button></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div><p class="eyebrow">NEXATRADE CONTROL CENTRE</p><h1 id="page-title">Overview</h1></div><div class="admin-chip"><span class="online-dot"></span><span id="admin-email">Administrator</span></div></header>
+      <section id="page-overview" class="page">
+        <div class="stats">
+          <article class="stat"><span>Total registered users</span><strong id="stat-users">—</strong><small>All NexaTrade accounts</small></article>
+          <article class="stat"><span>Standard accounts</span><strong id="stat-standard">—</strong><small>Global account category</small></article>
+          <article class="stat"><span>VIP accounts</span><strong id="stat-vip">—</strong><small>Premium account category</small></article>
+          <article class="stat"><span>Restricted accounts</span><strong id="stat-restricted">—</strong><small>Suspended or blocked</small></article>
+        </div>
+        <div class="panel"><div class="panel-head"><div><h2>Recently registered users</h2><p>New registrations appear here after refresh.</p></div><button class="ghost" id="overview-refresh">Refresh ↻</button></div><div id="recent-users" class="table-wrap"><p class="empty">Loading users…</p></div></div>
+      </section>
+      <section id="page-users" class="page" hidden>
+        <div class="panel"><div class="panel-head"><div><h2>All users</h2><p>Manage every account registered on NexaTrade.</p></div><button class="ghost" id="users-refresh">Refresh ↻</button></div>
+          <div class="toolbar"><input id="user-search" type="search" placeholder="Search name, email or user ID"><select id="user-filter"><option value="all">All accounts</option><option value="standard">Standard</option><option value="vip">VIP</option><option value="suspended">Suspended</option><option value="blocked">Blocked</option></select></div>
+          <div id="users-table" class="table-wrap"><p class="empty">Loading users…</p></div>
+        </div>
+      </section>
+      <section id="page-settings" class="page" hidden>
+        <div class="settings-grid">
+          <article class="panel setting"><p class="eyebrow">GLOBAL SIMULATION CONTROL</p><h2>Standard account win rate</h2><p>One shared setting for every Standard account.</p><label>Win rate (%)<input id="standard-rate" type="number" min="0" max="100" step="1" value="50"></label></article>
+          <article class="panel setting"><p class="eyebrow">GLOBAL SIMULATION CONTROL</p><h2>VIP account win rate</h2><p>One shared setting for every VIP account.</p><label>Win rate (%)<input id="vip-rate" type="number" min="0" max="100" step="1" value="65"></label></article>
+        </div>
+        <div class="panel"><div class="panel-head"><div><h2>Save simulation settings</h2><p>Changes apply to new simulated trades after the backend integration is enabled.</p></div><button class="primary compact" id="save-rates">Save settings</button></div><p id="settings-message" class="muted"></p></div>
+        <p class="notice">Win-rate settings are global simulation parameters, not a promise of individual trade outcomes. This platform is simulated.</p>
+      </section>
+      <section id="page-activity" class="page" hidden><div class="panel"><div class="panel-head"><div><h2>Admin activity</h2><p>Audit trail of administrator actions.</p></div><button class="ghost" id="activity-refresh">Refresh ↻</button></div><div id="activity-list"><p class="empty">Loading activity…</p></div></div></section>
+      <div id="toast" class="toast" role="status"></div>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script><script src="admin.js"></script>
+</body></html>
