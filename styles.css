@@ -886,3 +886,87 @@ button, input, select { font: inherit; }
 [data-theme="light"] .result-executing.chart-execution-status { background: #f3f7fb; border-color: var(--line); }
 [data-theme="light"] .theme-option { background: #f3f7fb; }
 [data-theme="light"] .profile-save { box-shadow: 0 6px 18px #4b6fff22; }
+
+
+/* Responsive simulated chart layout */
+.chart-panel { min-width: 0; overflow: hidden; }
+.chart-heading { min-width: 0; flex-wrap: wrap; row-gap: 10px; }
+.chart-toolbar { min-width: 0; margin-left: auto; flex-wrap: wrap; }
+.market-title { min-width: 0; }
+.market-select { max-width: 100%; }
+.chart-price-row { min-width: 0; flex-wrap: wrap; gap: 8px 14px; }
+.chart-range { flex-wrap: wrap; }
+.candle-countdown { margin-left: auto; }
+
+.chart-container {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) 20px;
+  gap: 0 6px;
+  width: 100%;
+  min-width: 0;
+  height: clamp(280px, 36vw, 420px);
+  padding: 10px 10px 7px;
+}
+.chart-y-labels {
+  position: static;
+  grid-column: 1;
+  grid-row: 1;
+  width: auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: clamp(7px, .7vw, 9px);
+}
+#candlestick-chart {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.chart-x-labels {
+  position: static;
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  height: 20px;
+  overflow: hidden;
+}
+.chart-x-labels span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.chart-tooltip { max-width: calc(100% - 16px); white-space: nowrap; }
+.chart-navigation { flex-wrap: wrap; }
+.chart-navigation-hint { white-space: normal; text-align: right; }
+
+@media (max-width: 740px) {
+  .chart-container {
+    grid-template-columns: 52px minmax(0, 1fr);
+    height: clamp(280px, 60vw, 360px);
+  }
+}
+@media (max-width: 520px) {
+  .chart-heading { align-items: center; }
+  .chart-price-row { align-items: center; }
+  .chart-container {
+    grid-template-columns: 48px minmax(0, 1fr);
+    height: clamp(250px, 70vw, 340px);
+    padding: 9px 8px 7px;
+  }
+  .chart-y-labels { font-size: 7px; }
+  .chart-x-labels { font-size: 7px; }
+}
+@media (max-width: 360px) {
+  .chart-container {
+    grid-template-columns: 42px minmax(0, 1fr);
+    height: 250px;
+    padding-right: 6px;
+    padding-left: 6px;
+    column-gap: 4px;
+  }
+  .chart-x-labels span:nth-child(2),
+  .chart-x-labels span:nth-child(4) { display: none; }
+}
