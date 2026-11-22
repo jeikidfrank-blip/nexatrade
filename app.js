@@ -426,20 +426,14 @@ function drawChart() {
     return;
   }
 
-  const values = candles.flatMap((candle) => [candle.high, candle.low, candle.open, candle.close]);
-  values.push(market.price);
-  let min = Math.min(...values);
-  let max = Math.max(...values);
+  const priceBounds = getChartPriceBounds(candles);
+  let min = priceBounds.min;
+  let max = priceBounds.max;
   let range = max - min;
   if (!Number.isFinite(range) || range <= 0) {
     range = Math.max(Math.abs(market.price) * 0.001, 0.0001);
     min = market.price - range / 2;
     max = market.price + range / 2;
-  } else {
-    const padding = range * 0.1;
-    min -= padding;
-    max += padding;
-    range += padding * 2;
   }
 
   const yFor = (value) => plot.top + plot.height - ((value - min) / range) * plot.height;
