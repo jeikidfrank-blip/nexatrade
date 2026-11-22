@@ -1,13 +1,15 @@
 "use strict";
 
-// Demo price data for the available market.
+// Demo price data for USD currency pairs.
 const markets = [
   { id: "XAU", name: "Gold", symbol: "XAUUSD", price: 3342.58, change: 0.37, icon: "Au", iconClass: "xau", color: "#e7c96f", volatility: 0.0007 },
+  { id: "EUR", name: "Euro", symbol: "EURUSD", price: 1.0846, change: 0.12, icon: "€", iconClass: "eur", color: "#79b2ff", volatility: 0.0004 },
+  { id: "GBP", name: "Pound", symbol: "GBPUSD", price: 1.2742, change: 0.18, icon: "£", iconClass: "gbp", color: "#ba9bff", volatility: 0.00045 },
 ];
 
 const state = {
   activeMarket: "XAU",
-  timeframe: "30sec",
+  timeframe: "1min",
   balance: 10000, realTestBalance: 0,
   realTestTransactions: [],
   realTestPositions: [],
@@ -19,7 +21,7 @@ const state = {
   positions: [],
   history: [],
   demoDeposits: [],
-  watchlist: ["XAU"],
+  watchlist: ["XAU", "EUR", "GBP"],
   showingHistory: false,
   chartStyle: "candle",
   candles: [],
@@ -53,7 +55,7 @@ const amountInput = $("#trade-amount");
 const chartCanvas = $("#candlestick-chart");
 const chartContext = chartCanvas.getContext("2d");
 const compactCurrency = new Intl.NumberFormat("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const timeframeDurations = { "30sec": 30_000 };
+const timeframeDurations = { "30sec": 30_000, "1min": 60_000, "5min": 300_000 };
 const supabaseConfig = window.NEXATRADE_SUPABASE_CONFIG || {};
 let supabaseClient = null;
 let supabaseSetupError = "";
@@ -136,7 +138,7 @@ function initTheme() {
 function generateCandles(market) {
   const candles = [];
   const interval = getTimeframeInterval();
-  const scale = 0.00045;
+  const scale = { "30sec": 0.00045, "1min": 0.0007, "5min": 0.0016 }[state.timeframe];
   const step = market.price * scale * 0.3;
   const historyCount = 360;
   let close = market.price + (Math.random() - 0.5) * step * 18;
@@ -169,10 +171,8 @@ function generateCandles(market) {
 
 function renderWatchlist() {
   const container = $("#watchlist");
-  if (!container) return;
   container.replaceChildren();
-  const watchlist = state.watchlist.length ? state.watchlist : [state.activeMarket];
-  watchlist.forEach((id) => {
+  state.watchlist.forEach((id) => {
     const market = marketById(id);
     if (!market) return;
     const button = document.createElement("button");
@@ -186,39 +186,32 @@ function renderWatchlist() {
     button.addEventListener("click", () => selectMarket(id));
     container.append(button);
   });
-  const addWatch = $("#add-watch");
-  if (addWatch) {
-    addWatch.title = "Gold is the only available market";
-    addWatch.setAttribute("aria-label", addWatch.title);
-    addWatch.textContent = "•";
-    addWatch.disabled = true;
-  }
+  const isWatched = state.watchlist.includes(state.activeMarket);
+  $("#add-watch").title = isWatched ? "Remove current market from watchlist" : "Add current market to watchlist";
+  $("#add-watch").setAttribute("aria-label", $("#add-watch").title);
+  $("#add-watch").textContent = isWatched ? "−" : "+";
 }
 
 function renderMarketStrip() {
-  const market = marketById("XAU") || activeMarket();
-  if (!market) return;
-  const price = $("#xau-price");
-  const change = $("#xau-change");
-  if (price) price.textContent = formatExactPrice(market, market.price);
-  if (change) {
+  [["XAU", "xau"], ["EUR", "eur"], ["GBP", "gbp"]].forEach(([id, short]) => {
+    const market = marketById(id);
+    $(`#${short}-price`).textContent = formatExactPrice(market, market.price);
+    const change = $(`#${short}-change`);
     change.textContent = formatChange(market.change);
     change.className = `change ${market.change >= 0 ? "positive" : "negative"}`;
-  }
-  drawSparkline($("#spark-xau"), market);
+    drawSparkline($(`#spark-${short}`), market);
+  });
   $("#last-updated").textContent = "just now";
 }
 
 function drawSparkline(canvas, market) {
-  if (!canvas || !market) return;
   const rect = canvas.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
   const ratio = window.devicePixelRatio || 1;
   canvas.width = Math.round(rect.width * ratio);
   canvas.height = Math.round(rect.height * ratio);
   const context = canvas.getContext("2d");
-  if (!context) return;
-  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  context.scale(ratio, ratio);
   const width = rect.width;
   const height = rect.height;
   const values = Array.from({ length: 20 }, (_, index) => {
@@ -350,7 +343,7 @@ function tickLiveChart() {
   if (!state.initialized || !state.candles.length) return;
   const market = activeMarket();
   if (!market) return;
-  const magnitude = 0.28;
+  const magnitude = state.timeframe === "30sec" ? 0.28 : state.timeframe === "1min" ? 0.22 : 0.16;
   const drift = (Math.random() - 0.5) * market.volatility * magnitude;
   const revert = (market.dayOpen - market.price) / market.dayOpen * 0.01;
   const nextPrice = Math.max(0.0001, market.price * (1 + drift + revert));
@@ -583,59 +576,32 @@ function resetChartViewport() {
 
 function renderChart() {
   const market = activeMarket();
-  if (!market) return;
-  const selectedCoinIcon = $("#selected-coin-icon");
-  if (selectedCoinIcon) {
-    selectedCoinIcon.textContent = market.icon;
-    selectedCoinIcon.style.color = market.color;
-    selectedCoinIcon.style.background = `${market.color}24`;
-  }
-  const marketSelect = $("#market-select");
-  if (marketSelect) marketSelect.value = market.id;
-  const chartMarketName = $("#chart-market-name");
-  if (chartMarketName) chartMarketName.textContent = market.name;
+  $("#chart-market-name").textContent = market.name;
+  $("#market-select").value = market.id;
+  $("#selected-coin-icon").textContent = market.icon;
+  $("#selected-coin-icon").style.color = market.color;
+  $("#selected-coin-icon").style.background = `${market.color}24`;
+  $("#chart-price").textContent = formatExactPrice(market, market.price);
   const changeAmount = market.price * market.change / 100;
-  const chartPrice = $("#chart-price");
-  if (chartPrice) chartPrice.textContent = formatExactPrice(market, market.price);
-  const chartChange = $("#chart-change");
-  if (chartChange) {
-    chartChange.textContent = `${changeAmount >= 0 ? "+" : "−"}${formatExactPrice(market, Math.abs(changeAmount))} (${formatChange(market.change)})`;
-    chartChange.className = `chart-price-change ${market.change >= 0 ? "positive" : "negative"}`;
+  const change = $("#chart-change");
+  change.textContent = `${changeAmount >= 0 ? "+" : "−"}${formatExactPrice(market, Math.abs(changeAmount))} (${formatChange(market.change)})`;
+  change.className = `chart-price-change ${market.change >= 0 ? "positive" : "negative"}`;
+  $("#chart-high").textContent = formatExactPrice(market, Math.max(market.dayHigh, market.price));
+  $("#chart-low").textContent = formatExactPrice(market, Math.min(market.dayLow, market.price));
+  $("#order-coin").textContent = market.icon;
+  $("#order-coin").style.color = market.color;
+  $("#order-coin").style.background = `${market.color}24`;
+  $("#order-market-name").textContent = market.symbol;
+  $("#order-market-price").textContent = formatExactPrice(market, market.price);
+  $(".sentiment-heading > span").textContent = market.symbol;
+  if ($("#buy-trade").dataset.market !== market.id) {
+    $("#buy-trade").innerHTML = `Buy ${market.symbol} <span>↗</span>`;
+    $("#sell-trade").innerHTML = `Sell ${market.symbol} <span>↘</span>`;
+    $("#buy-trade").dataset.market = market.id;
+    $("#sell-trade").dataset.market = market.id;
   }
-  const chartHigh = $("#chart-high");
-  const chartLow = $("#chart-low");
-  if (chartHigh) chartHigh.textContent = formatExactPrice(market, Math.max(market.dayHigh, market.price));
-  if (chartLow) chartLow.textContent = formatExactPrice(market, Math.min(market.dayLow, market.price));
-  const orderCoin = $("#order-coin");
-  if (orderCoin) {
-    orderCoin.textContent = market.icon;
-    orderCoin.style.color = market.color;
-    orderCoin.style.background = `${market.color}24`;
-  }
-  const orderMarketName = $("#order-market-name");
-  if (orderMarketName) orderMarketName.textContent = market.symbol;
-  const orderMarketPrice = $("#order-market-price");
-  if (orderMarketPrice) orderMarketPrice.textContent = formatExactPrice(market, market.price);
-  const sentimentHeading = $(".sentiment-heading > span");
-  if (sentimentHeading) sentimentHeading.textContent = market.symbol;
-  const buyTrade = $("#buy-trade");
-  const sellTrade = $("#sell-trade");
-  if (buyTrade && sellTrade) {
-    buyTrade.innerHTML = `Buy ${market.symbol} <span>↗</span>`;
-    sellTrade.innerHTML = `Sell ${market.symbol} <span>↘</span>`;
-    buyTrade.dataset.market = market.id;
-    sellTrade.dataset.market = market.id;
-  }
-  const favoriteButton = $("#favorite-button");
-  if (favoriteButton) {
-    const isWatched = state.watchlist.includes(market.id);
-    favoriteButton.classList.toggle("active", isWatched);
-    favoriteButton.textContent = isWatched ? "★" : "☆";
-    favoriteButton.disabled = markets.length <= 1;
-    favoriteButton.title = markets.length <= 1 ? "Gold is the only available market" : "";
-  }
-  const countdown = $("#candle-countdown");
-  if (countdown) countdown.textContent = `NEXT CANDLE IN ${countdownText()}`;
+  $("#favorite-button").classList.toggle("active", state.watchlist.includes(market.id));
+  $("#favorite-button").textContent = state.watchlist.includes(market.id) ? "★" : "☆";
   renderChartLabels();
   drawChart();
   updateOrderEstimate();
@@ -1082,10 +1048,9 @@ function setSentiment() {
 }
 
 function selectMarket(id) {
-  const market = marketById(id) || markets[0];
-  if (!market) return;
-  state.activeMarket = market.id;
-  generateCandles(market);
+  if (!marketById(id)) return;
+  state.activeMarket = id;
+  generateCandles(activeMarket());
   renderWatchlist();
   renderChart();
   renderPositions();
@@ -1998,8 +1963,8 @@ function initialize() {
 
   $$(".timeframe").forEach((button) => {
     button.addEventListener("click", () => {
-      state.timeframe = "30sec";
-      $$(".timeframe").forEach((item) => item.classList.toggle("active", item.dataset.timeframe === "30sec"));
+      $$(".timeframe").forEach((item) => item.classList.toggle("active", item === button));
+      state.timeframe = button.dataset.timeframe;
       generateCandles(activeMarket());
       renderChart();
       renderCandleCountdown();
@@ -2022,12 +1987,9 @@ function initialize() {
   amountInput.addEventListener("input", updateOrderEstimate);
   $("#buy-trade").addEventListener("click", () => placeTrade("buy"));
   $("#sell-trade").addEventListener("click", () => placeTrade("sell"));
-  const favoriteButton = $("#favorite-button");
-  if (favoriteButton) favoriteButton.addEventListener("click", () => toggleWatch(activeMarket().id));
-  const marketSelect = $("#market-select");
-  if (marketSelect) marketSelect.addEventListener("change", (event) => selectMarket(event.target.value));
-  const addWatch = $("#add-watch");
-  if (addWatch) addWatch.addEventListener("click", () => toggleWatch(activeMarket().id));
+  $("#favorite-button").addEventListener("click", () => toggleWatch(activeMarket().id));
+  $("#market-select").addEventListener("change", (event) => selectMarket(event.target.value));
+  $("#add-watch").addEventListener("click", () => toggleWatch(activeMarket().id));
   $("#view-all-positions").addEventListener("click", () => {
     state.showingHistory = !state.showingHistory;
     renderPositions();
@@ -2173,12 +2135,14 @@ function initialize() {
 }
 
 function toggleWatch(id) {
-  const market = marketById(id) || markets[0];
-  if (!market) return;
-  state.watchlist = [market.id];
+  if (state.watchlist.includes(id)) {
+    state.watchlist = state.watchlist.filter((item) => item !== id);
+    toast(`${id} removed from your watchlist.`);
+  } else {
+    state.watchlist.push(id);
+    toast(`${id} added to your watchlist.`);
+  }
   renderWatchlist();
-  renderChart();
-  if (markets.length <= 1) toast(`${market.symbol} is the only available market.`);
   renderChart();
 }
 
@@ -2256,21 +2220,18 @@ function resetUserDemoState() {
   state.positions = [];
   state.history = [];
   state.demoDeposits = [];
-  state.watchlist = ["XAU"];
+  state.watchlist = ["XAU", "EUR", "GBP"];
   state.showingHistory = false;
   state.activeMarket = "XAU";
-  state.timeframe = "30sec";
+  state.timeframe = "1min";
   state.chartStyle = "candle";
   state.isSubmittingTrade = false;
   state.tradeDisplay = null;
-  const profileDetails = $("#profile-details");
-  const profileButton = $("#profile-button");
-  if (profileDetails) profileDetails.hidden = true;
-  if (profileButton) profileButton.setAttribute("aria-expanded", "false");
+  $("#profile-details").hidden = true;
+  $("#profile-button").setAttribute("aria-expanded", "false");
   generateCandles(activeMarket());
   $$(".timeframe").forEach((button) => button.classList.toggle("active", button.dataset.timeframe === state.timeframe));
-  const tradeResult = $("#trade-result");
-  if (tradeResult) tradeResult.hidden = true;
+  $("#trade-result").hidden = true;
 }
 
 async function enterDashboard(user) {

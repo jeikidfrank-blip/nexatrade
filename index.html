@@ -170,15 +170,19 @@
                   <div class="market-title">
                     <h2 id="chart-market-name">Gold</h2>
                     <select class="market-select" id="market-select" aria-label="Select market">
-                      <option value="XAU" selected>XAUUSD</option>
+                          <option value="XAU">XAUUSD</option>
+                      <option value="EUR">EURUSD</option>
+                      <option value="GBP">GBPUSD</option>
                     </select>
-                    <span class="instrument-label">Spot market <span class="instrument-dot"></span> USD · 30 sec</span>
+                    <span class="instrument-label">Spot market <span class="instrument-dot"></span> USD</span>
                   </div>
                   <button class="favorite-button" id="favorite-button" aria-label="Toggle current market favorite">☆</button>
                 </div>
                 <div class="chart-toolbar">
                   <div class="timeframes" aria-label="Chart timeframe">
-                    <button class="timeframe active" data-timeframe="30sec">30 sec</button>
+                    <button class="timeframe" data-timeframe="30sec">30 sec</button>
+                    <button class="timeframe active" data-timeframe="1min">1 min</button>
+                    <button class="timeframe" data-timeframe="5min">5 min</button>
                   </div>
                   <button class="chart-menu" id="chart-menu" aria-label="Chart display options">⌗</button>
                 </div>
@@ -249,18 +253,28 @@
 
           <section class="view-panel" id="markets-view" data-view-panel="Markets" hidden>
             <div class="view-heading">
-              <div><h1>Markets<span class="title-period">.</span></h1><p>Gold (XAUUSD) price snapshot.</p></div>
+              <div><h1>Markets<span class="title-period">.</span></h1><p>Gold, EURUSD, and GBPUSD price snapshots.</p></div>
             </div>
-            <section class="market-strip" aria-label="Gold market">
+            <section class="market-strip" aria-label="FX and gold markets">
               <article class="market-stat">
                 <div class="stat-heading"><span class="coin-icon gold">Au</span><span class="stat-name">Gold</span><span class="stat-symbol">XAUUSD</span></div>
                 <div class="stat-main"><strong id="xau-price">$3,342.58</strong><span class="change positive" id="xau-change">+0.37%</span></div>
                 <div class="sparkline-wrap"><span>24H TREND</span><canvas class="sparkline" id="spark-xau" aria-label="Gold 24-hour price trend"></canvas></div>
               </article>
+              <article class="market-stat">
+                <div class="stat-heading"><span class="coin-icon euro">€</span><span class="stat-name">Euro</span><span class="stat-symbol">EURUSD</span></div>
+                <div class="stat-main"><strong id="eur-price">151.35</strong><span class="change positive" id="eur-change">+0.12%</span></div>
+                <div class="sparkline-wrap"><span>24H TREND</span><canvas class="sparkline" id="spark-eur" aria-label="Euro US dollar 24-hour price trend"></canvas></div>
+              </article>
+              <article class="market-stat">
+                <div class="stat-heading"><span class="coin-icon pound">£</span><span class="stat-name">Pound</span><span class="stat-symbol">GBPUSD</span></div>
+                <div class="stat-main"><strong id="gbp-price">$1.2742</strong><span class="change positive" id="gbp-change">+0.18%</span></div>
+                <div class="sparkline-wrap"><span>24H TREND</span><canvas class="sparkline" id="spark-gbp" aria-label="Pound US dollar 24-hour price trend"></canvas></div>
+              </article>
               <article class="market-stat market-strip-meta">
                 <div class="live-feed"><span class="live-dot"></span> MARKET FEED <span class="feed-live">SIM</span></div>
-                <div class="feed-value">Gold price updates automatically</div>
-                <div class="feed-caption">Demo data · <span id="last-updated">just now</span> · 30 sec chart</div>
+                <div class="feed-value">Prices update automatically</div>
+                <div class="feed-caption">Demo data · <span id="last-updated">just now</span></div>
               </article>
             </section>
           </section>
