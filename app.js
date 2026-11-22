@@ -813,7 +813,7 @@ async function loadRealTestTransactions() {
 async function loadRealTestPositions() {
   const { data, error } = await supabaseClient
     .from("real_test_positions")
-    .select("id,market,side,amount,quantity,entry_price,stop_loss,take_profit,entry_fee,exit_price,pnl,status,opened_at,closed_at")
+    .select("id,market,side,amount,quantity,entry_price,entry_fee,exit_price,pnl,status,opened_at,closed_at")
     .eq("user_id", state.userId)
     .order("opened_at", { ascending: false })
     .limit(500);
