@@ -163,40 +163,40 @@
           </section>
 
           <div class="dashboard-grid">
-            <section class="panel chart-panel">
+            <section class="panel chart-panel" aria-label="Simulated market chart">
               <div class="panel-heading chart-heading">
                 <div class="selected-market">
                   <div class="selected-coin-icon" id="selected-coin-icon">Au</div>
                   <div class="market-title">
                     <h2 id="chart-market-name">Gold</h2>
                     <select class="market-select" id="market-select" aria-label="Select market">
-                          <option value="XAU">XAUUSD</option>
+                      <option value="XAU">XAUUSD</option>
                       <option value="EUR">EURUSD</option>
                       <option value="GBP">GBPUSD</option>
                     </select>
-                    <span class="instrument-label">Spot market <span class="instrument-dot"></span> USD</span>
+                    <span class="instrument-label">SIMULATED <span class="instrument-dot"></span> USD</span>
                   </div>
                   <button class="favorite-button" id="favorite-button" aria-label="Toggle current market favorite">☆</button>
                 </div>
                 <div class="chart-toolbar">
-                  <div class="timeframes" aria-label="Chart timeframe">
-                    <button class="timeframe" data-timeframe="30sec">30 sec</button>
-                    <button class="timeframe active" data-timeframe="1min">1 min</button>
-                    <button class="timeframe" data-timeframe="5min">5 min</button>
+                  <div class="timeframes" role="group" aria-label="Chart timeframe">
+                    <button type="button" class="timeframe" data-timeframe="30sec">30 sec</button>
+                    <button type="button" class="timeframe active" data-timeframe="1min">1 min</button>
+                    <button type="button" class="timeframe" data-timeframe="5min">5 min</button>
                   </div>
-                  <button class="chart-menu" id="chart-menu" aria-label="Chart display options">⌗</button>
+                  <button type="button" class="chart-menu" id="chart-menu" aria-label="Chart display options" title="Switch chart display">⌗</button>
                 </div>
               </div>
-              <div class="chart-price-row">
-                  <div><strong id="chart-price">$3,342.58</strong><span class="chart-price-change positive" id="chart-change">+$12.32 (+0.37%)</span></div>
-                  <div class="chart-range"><span>24H HIGH <strong id="chart-high">$3,375.01</strong></span><span>24H LOW <strong id="chart-low">$3,310.15</strong></span></div>
-                  <span class="candle-countdown" id="candle-countdown" aria-live="off">NEXT CANDLE IN --:--</span>
+              <div class="chart-price-row" aria-label="Current simulated market price and 24-hour range">
+                <div><strong id="chart-price">$3,342.58</strong><span class="chart-price-change positive" id="chart-change">+$12.32 (+0.37%)</span></div>
+                <div class="chart-range"><span>24H HIGH <strong id="chart-high">$3,375.01</strong></span><span>24H LOW <strong id="chart-low">$3,310.15</strong></span></div>
+                <span class="candle-countdown" id="candle-countdown" aria-live="off">NEXT CANDLE IN --:--</span>
               </div>
-              <div class="chart-container">
-                <div class="chart-y-labels" id="chart-y-labels"></div>
-                <canvas id="candlestick-chart" aria-label="Interactive demo candlestick price chart"></canvas>
-                <div class="chart-x-labels"><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span></div>
-                <div class="chart-tooltip" id="chart-tooltip"></div>
+              <div class="chart-container" role="group" aria-label="Simulated price chart for the selected market">
+                <div class="chart-y-labels" id="chart-y-labels" aria-hidden="true"></div>
+                <canvas id="candlestick-chart" role="img" aria-label="Interactive simulated candlestick chart for the selected market">Simulated prices for the selected market are drawn here.</canvas>
+                <div class="chart-x-labels" aria-hidden="true"><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span><span data-chart-time></span></div>
+                <div class="chart-tooltip" id="chart-tooltip" role="tooltip"></div>
                 <section class="trade-result" id="trade-result" aria-live="polite" hidden>
                   <div class="trade-result-heading">
                     <strong class="result-status" id="result-status">Demo order result</strong>
@@ -209,17 +209,17 @@
               <div class="result-executing chart-execution-status" id="result-executing" role="status" aria-live="polite" hidden>
                 <span></span><strong id="result-executing-message">Submitting demo order…</strong>
               </div>
-              <div class="chart-navigation" aria-label="Chart zoom and navigation controls">
+              <div class="chart-navigation" role="group" aria-label="Chart zoom and navigation controls">
                 <span class="chart-navigation-label">TIME</span>
-                <button type="button" data-chart-control="time-out" aria-label="Zoom out horizontally">−</button>
-                <button type="button" data-chart-control="time-in" aria-label="Zoom in horizontally">+</button>
+                <button type="button" data-chart-control="time-out" aria-label="Zoom out horizontally" title="Show more time">−</button>
+                <button type="button" data-chart-control="time-in" aria-label="Zoom in horizontally" title="Show less time">+</button>
                 <span class="chart-navigation-label">PRICE</span>
-                <button type="button" data-chart-control="price-out" aria-label="Zoom out vertically">−</button>
-                <button type="button" data-chart-control="price-in" aria-label="Zoom in vertically">+</button>
+                <button type="button" data-chart-control="price-out" aria-label="Zoom out vertically" title="Show a wider price range">−</button>
+                <button type="button" data-chart-control="price-in" aria-label="Zoom in vertically" title="Show a narrower price range">+</button>
                 <button type="button" class="chart-reset" data-chart-control="reset">Reset</button>
                 <span class="chart-navigation-hint">Drag to pan · Scroll to zoom time · Shift+scroll to zoom price</span>
               </div>
-              <div class="chart-legend"><span><i class="legend-candle-up"></i> Bullish</span><span><i class="legend-candle-down"></i> Bearish</span></div>
+              <div class="chart-legend" aria-label="Candlestick legend"><span><i class="legend-candle-up"></i> Bullish</span><span><i class="legend-candle-down"></i> Bearish</span></div>
             </section>
 
             <aside class="panel order-panel">
