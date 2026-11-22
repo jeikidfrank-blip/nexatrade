@@ -300,29 +300,29 @@ function drawChart() {
   ctx.fillStyle = "#080e18";
   ctx.fillRect(0, 0, width, height);
 
-  const left = 8;
-  const right = 74;
-  const top = 12;
-  const bottom = 28;
+  const left = 6;
+  const right = 52;
+  const top = 6;
+  const bottom = 18;
   const plotW = Math.max(20, width - left - right);
   const plotH = Math.max(20, height - top - bottom);
   if (!candles.length) {
     ctx.fillStyle = "#8e9db2";
-    ctx.font = '12px "IBM Plex Sans", sans-serif';
-    ctx.fillText("Waiting for feed…", 18, 28);
+    ctx.font = '10px "IBM Plex Sans", sans-serif';
+    ctx.fillText("Waiting for feed…", 12, 20);
     return;
   }
 
   const bounds = getChartPriceBounds(candles);
   const priceToY = (price) => top + ((bounds.max - price) / Math.max(bounds.max - bounds.min, 0.000001)) * plotH;
   const slot = plotW / candles.length;
-  const bodyW = Math.max(3, Math.min(12, slot * 0.62));
+  const bodyW = Math.max(2.5, Math.min(11, slot * 0.64));
 
   // grid
   ctx.strokeStyle = "rgba(42, 58, 77, 0.55)";
   ctx.lineWidth = 1;
   ctx.fillStyle = "#718097";
-  ctx.font = '11px "IBM Plex Mono", monospace';
+  ctx.font = '9px "IBM Plex Mono", monospace';
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   const yTicks = 5;
@@ -333,11 +333,12 @@ function drawChart() {
     ctx.moveTo(left, Math.round(y) + 0.5);
     ctx.lineTo(left + plotW, Math.round(y) + 0.5);
     ctx.stroke();
-    ctx.fillText(formatChartAxisPrice(price), width - 6, y);
+    ctx.fillText(formatChartAxisPrice(price), width - 4, y);
   }
   const xTicks = Math.min(6, Math.max(2, Math.floor(candles.length / 12)));
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
+  ctx.font = '8px "IBM Plex Mono", monospace';
   for (let i = 0; i <= xTicks; i += 1) {
     const idx = Math.min(candles.length - 1, Math.floor((candles.length - 1) * (i / xTicks)));
     const c = candles[idx];
@@ -348,7 +349,7 @@ function drawChart() {
     ctx.lineTo(Math.round(x) + 0.5, top + plotH);
     ctx.stroke();
     ctx.fillStyle = "#718097";
-    ctx.fillText(formatChartTimeLabel(c.startedAt, true), x, top + plotH + 8);
+    ctx.fillText(formatChartTimeLabel(c.startedAt, true), x, top + plotH + 4);
   }
 
   // candles
@@ -378,9 +379,9 @@ function drawChart() {
   // current price line/label
   const last = candles[candles.length - 1];
   const current = market ? market.price : last.close;
-  const y = Math.max(top + 8, Math.min(top + plotH - 8, priceToY(current)));
-  const up = current >= last.open;
-  const lineColor = up ? "#17e66a" : "#ff4b52";
+  const y = Math.max(top + 6, Math.min(top + plotH - 6, priceToY(current)));
+  const upNow = current >= last.open;
+  const lineColor = upNow ? "#17e66a" : "#ff4b52";
   ctx.strokeStyle = lineColor;
   ctx.setLineDash([4, 4]);
   ctx.beginPath();
@@ -389,15 +390,15 @@ function drawChart() {
   ctx.stroke();
   ctx.setLineDash([]);
   const label = formatChartAxisPrice(current);
-  ctx.font = 'bold 11px "IBM Plex Mono", monospace';
-  const labelW = Math.ceil(ctx.measureText(label).width) + 12;
-  const labelX = width - right + 2;
+  ctx.font = 'bold 9px "IBM Plex Mono", monospace';
+  const labelW = Math.ceil(ctx.measureText(label).width) + 8;
+  const labelX = width - right + 1;
   ctx.fillStyle = lineColor;
-  ctx.fillRect(labelX, y - 10, labelW, 20);
+  ctx.fillRect(labelX, y - 8, labelW, 16);
   ctx.fillStyle = "#04150d";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(label, labelX + 6, y);
+  ctx.fillText(label, labelX + 4, y);
 
   const overlay = $("#chart-y-axis-label");
   if (overlay) {
