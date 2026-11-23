@@ -438,10 +438,11 @@ function ensureChart() {
     });
     canvas.addEventListener("wheel", (event) => {
       event.preventDefault();
+      const direction = event.deltaY < 0 ? 1 : -1;
       if (event.shiftKey) {
-        zoomChartPrice(event.deltaY < 0 ? 1 : -1);
+        zoomChartPrice(direction);
       } else {
-        zoomChartTime(event.deltaY < 0 ? 1 : -1);
+        zoomChartTime(direction);
       }
     }, { passive: false });
   }
@@ -465,7 +466,7 @@ function refreshChartViewport() {
 
 function zoomChartTime(direction = 1) {
   const dir = Number(direction) >= 0 ? 1 : -1;
-  const factor = dir > 0 ? 0.86 : 1.16;
+  const factor = dir > 0 ? 0.9 : 1.111;
   state.visibleCandles = Math.max(12, Math.min(240, Math.round((state.visibleCandles || 48) * factor)));
   drawChart();
 }
@@ -672,9 +673,10 @@ function generateCandles(market) {
 
     const bodyHigh = Math.max(open, close);
     const bodyLow = Math.min(open, close);
-    const body = Math.max(Math.abs(open - close), market.price * baseVol * 0.15);
-    const wickUp = body * (0.08 + Math.random() * 0.22) + market.price * baseVol * (0.01 + Math.random() * 0.05);
-    const wickDown = body * (0.08 + Math.random() * 0.22) + market.price * baseVol * (0.01 + Math.random() * 0.05);
+    const body = Math.max(Math.abs(open - close), market.price * baseVol * 0.12);
+    const maxWick = Math.max(body * 0.18, market.price * baseVol * 0.06);
+    const wickUp = Math.min(maxWick, body * (0.03 + Math.random() * 0.1) + market.price * baseVol * (0.005 + Math.random() * 0.02));
+    const wickDown = Math.min(maxWick, body * (0.03 + Math.random() * 0.1) + market.price * baseVol * (0.005 + Math.random() * 0.02));
 
     candles.push({
       open,
@@ -782,11 +784,15 @@ function syncActiveMarketCandle(price) {
   while (Date.now() >= candle.startedAt + interval && guard < 500) {
     const nextOpen = sanitizeMarketPrice(candle.close, market, reference);
     const startedAt = candle.startedAt + interval;
+    const bodyHigh = Math.max(nextOpen, safePrice);
+    const bodyLow = Math.min(nextOpen, safePrice);
+    const body = Math.max(Math.abs(nextOpen - safePrice), safePrice * 0.00003);
+    const wickCap = body * 0.12;
     candle = {
       open: nextOpen,
       close: safePrice,
-      high: Math.max(nextOpen, safePrice),
-      low: Math.min(nextOpen, safePrice),
+      high: bodyHigh + wickCap,
+      low: Math.max(0.0001, bodyLow - wickCap),
       startedAt,
     };
     state.candles.push(candle);
@@ -797,8 +803,13 @@ function syncActiveMarketCandle(price) {
   }
 
   candle.close = safePrice;
-  candle.high = Math.max(Number(candle.high) || safePrice, safePrice, Number(candle.open) || safePrice);
-  candle.low = Math.min(Number(candle.low) || safePrice, safePrice, Number(candle.open) || safePrice);
+  const open = Number(candle.open) || safePrice;
+  const bodyHigh = Math.max(open, safePrice);
+  const bodyLow = Math.min(open, safePrice);
+  const body = Math.max(Math.abs(open - safePrice), safePrice * 0.00003);
+  const wickCap = Math.max(body * 0.18, safePrice * 0.00008);
+  candle.high = Math.min(Math.max(Number(candle.high) || bodyHigh, bodyHigh), bodyHigh + wickCap);
+  candle.low = Math.max(Math.min(Number(candle.low) || bodyLow, bodyLow), Math.max(0.0001, bodyLow - wickCap));
   market.price = safePrice;
   if (!isPlausibleMarketPrice(market.dayOpen, reference)) {
     market.dayOpen = reference;
@@ -820,15 +831,15 @@ function tickLiveChart() {
   if (!last) return;
   const interval = getTimeframeInterval();
   const progress = interval > 0 ? Math.max(0, Math.min(1, (Date.now() - last.startedAt) / interval)) : 0;
-  const baseVol = Math.max(0.00003, (market.volatility || 0.0007) * 0.22);
+  const baseVol = Math.max(0.00002, (market.volatility || 0.0007) * 0.16);
   const noise = (Math.random() - 0.5) * baseVol;
-  const pulse = Math.sin(Date.now() / 2200) * baseVol * 0.12;
-  const revert = ((market.dayOpen - market.price) / Math.max(market.dayOpen, 0.0001)) * 0.01 * baseVol;
-  const momentum = ((Number(last.close) - Number(last.open)) / Math.max(Number(last.open) || market.price, 0.0001)) * 0.08 * baseVol;
-  const micro = 0;
+  const pulse = Math.sin(Date.now() / 2400) * baseVol * 0.08;
+  const revert = ((market.dayOpen - market.price) / Math.max(market.dayOpen, 0.0001)) * 0.008 * baseVol;
+  const momentum = ((Number(last.close) - Number(last.open)) / Math.max(Number(last.open) || market.price, 0.0001)) * 0.05 * baseVol;
+  const delta = Math.max(-baseVol * 0.55, Math.min(baseVol * 0.55, noise + pulse + revert + momentum));
   const reference = getChartReferencePrice(market);
   const basePrice = sanitizeMarketPrice(market.price, market, reference);
-  const nextPrice = sanitizeMarketPrice(basePrice * (1 + noise + pulse + revert + momentum + micro), market, reference);
+  const nextPrice = sanitizeMarketPrice(basePrice * (1 + delta), market, reference);
 
   syncActiveMarketCandle(nextPrice);
   market.dayVolume = (market.dayVolume || 128400) + Math.round(20 + Math.random() * 140 + progress * 30);
