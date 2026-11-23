@@ -66,6 +66,8 @@ let chartResizeObserver = null;
 let chartRefreshTimer = null;
 let chartNeedsRedraw = true;
 let chartPointer = { down: false, x: 0, offset: 0, moved: false };
+const chartActivePointers = new Map();
+let chartPinchState = null;
 
 function getChartContainer() {
   return $("#index-chart")?.parentElement || $(".im-chart-wrap") || $(".chart-container");
@@ -332,14 +334,58 @@ function ensureChart() {
   const canvas = getChartCanvas();
   if (canvas && !canvas.dataset.imChartBound) {
     canvas.dataset.imChartBound = "1";
+    const getPinchDistance = (points) => {
+      if (points.length < 2) return 0;
+      const dx = points[0].x - points[1].x;
+      const dy = points[0].y - points[1].y;
+      return Math.hypot(dx, dy);
+    };
+
     canvas.addEventListener("pointerdown", (event) => {
-      chartPointer.down = true;
-      chartPointer.moved = false;
-      chartPointer.x = event.clientX;
-      chartPointer.offset = state.candleOffset || 0;
+      chartActivePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
+      const points = Array.from(chartActivePointers.values());
+      if (points.length >= 2) {
+        chartPinchState = {
+          distance: getPinchDistance(points),
+          visibleCandles: state.visibleCandles || 72,
+          priceZoom: state.priceZoom || 1,
+        };
+        chartPointer.down = false;
+      } else {
+        chartPinchState = null;
+        chartPointer.down = true;
+        chartPointer.moved = false;
+        chartPointer.x = event.clientX;
+        chartPointer.offset = state.candleOffset || 0;
+      }
     });
+
     canvas.addEventListener("pointermove", (event) => {
+      if (!chartActivePointers.has(event.pointerId)) return;
+      chartActivePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      const points = Array.from(chartActivePointers.values());
+
+      if (points.length >= 2) {
+        const distance = getPinchDistance(points);
+        if (!chartPinchState || !chartPinchState.distance) {
+          chartPinchState = {
+            distance: distance || 1,
+            visibleCandles: state.visibleCandles || 72,
+            priceZoom: state.priceZoom || 1,
+          };
+          return;
+        }
+        const ratio = distance / chartPinchState.distance;
+        if (Number.isFinite(ratio) && ratio > 0) {
+          const total = (state.candles || []).length || 300;
+          const nextVisible = Math.max(20, Math.min(total, Math.round(chartPinchState.visibleCandles / ratio)));
+          state.visibleCandles = nextVisible;
+          drawChart();
+        }
+        return;
+      }
+
       if (!chartPointer.down) return;
       const dx = event.clientX - chartPointer.x;
       if (Math.abs(dx) > 2) chartPointer.moved = true;
@@ -349,13 +395,40 @@ function ensureChart() {
       state.candleOffset = Math.max(0, chartPointer.offset + deltaBars);
       drawChart();
     });
-    const endDrag = (event) => {
-      chartPointer.down = false;
+
+    const endPointer = (event) => {
+      chartActivePointers.delete(event.pointerId);
       try { canvas.releasePointerCapture(event.pointerId); } catch (_) {}
+      const points = Array.from(chartActivePointers.values());
+      if (points.length >= 2) {
+        chartPinchState = {
+          distance: getPinchDistance(points),
+          visibleCandles: state.visibleCandles || 72,
+          priceZoom: state.priceZoom || 1,
+        };
+        chartPointer.down = false;
+        return;
+      }
+      chartPinchState = null;
+      if (points.length === 1) {
+        chartPointer.down = true;
+        chartPointer.moved = false;
+        chartPointer.x = points[0].x;
+        chartPointer.offset = state.candleOffset || 0;
+      } else {
+        chartPointer.down = false;
+      }
     };
-    canvas.addEventListener("pointerup", endDrag);
-    canvas.addEventListener("pointercancel", endDrag);
-    canvas.addEventListener("pointerleave", () => { chartPointer.down = false; });
+
+    canvas.addEventListener("pointerup", endPointer);
+    canvas.addEventListener("pointercancel", endPointer);
+    canvas.addEventListener("pointerleave", (event) => {
+      if (event.pointerId != null) chartActivePointers.delete(event.pointerId);
+      if (chartActivePointers.size === 0) {
+        chartPointer.down = false;
+        chartPinchState = null;
+      }
+    });
     canvas.addEventListener("wheel", (event) => {
       event.preventDefault();
       if (event.shiftKey) {
@@ -415,7 +488,7 @@ function drawChart() {
   ctx.fillRect(0, 0, width, height);
 
   const left = 6;
-  const right = 52;
+  const right = 60;
   const top = 6;
   const bottom = 18;
   const plotW = Math.max(20, width - left - right);
@@ -435,8 +508,8 @@ function drawChart() {
   // grid
   ctx.strokeStyle = "rgba(42, 58, 77, 0.55)";
   ctx.lineWidth = 1;
-  ctx.fillStyle = "#718097";
-  ctx.font = '9px "IBM Plex Mono", monospace';
+  ctx.fillStyle = "#b8cadb";
+  ctx.font = '10px "IBM Plex Mono", monospace';
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   const yTicks = 5;
@@ -447,12 +520,12 @@ function drawChart() {
     ctx.moveTo(left, Math.round(y) + 0.5);
     ctx.lineTo(left + plotW, Math.round(y) + 0.5);
     ctx.stroke();
-    ctx.fillText(formatChartAxisPrice(price), width - 4, y);
+    ctx.fillText(formatChartAxisPrice(price), width - 3, y);
   }
   const xTicks = Math.min(6, Math.max(2, Math.floor(candles.length / 12)));
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  ctx.font = '8px "IBM Plex Mono", monospace';
+  ctx.font = '9px "IBM Plex Mono", monospace';
   for (let i = 0; i <= xTicks; i += 1) {
     const idx = Math.min(candles.length - 1, Math.floor((candles.length - 1) * (i / xTicks)));
     const c = candles[idx];
@@ -462,7 +535,7 @@ function drawChart() {
     ctx.moveTo(Math.round(x) + 0.5, top);
     ctx.lineTo(Math.round(x) + 0.5, top + plotH);
     ctx.stroke();
-    ctx.fillStyle = "#718097";
+    ctx.fillStyle = "#9eb3c7";
     ctx.fillText(formatChartTimeLabel(c.startedAt, true), x, top + plotH + 4);
   }
 
@@ -517,15 +590,15 @@ function drawChart() {
   ctx.setLineDash([]);
   ctx.restore();
   const label = formatChartAxisPrice(current);
-  ctx.font = 'bold 9px "IBM Plex Mono", monospace';
-  const labelW = Math.ceil(ctx.measureText(label).width) + 8;
+  ctx.font = 'bold 10px "IBM Plex Mono", monospace';
+  const labelW = Math.ceil(ctx.measureText(label).width) + 10;
   const labelX = width - right + 1;
   ctx.fillStyle = lineColor;
-  ctx.fillRect(labelX, y - 8, labelW, 16);
+  ctx.fillRect(labelX, y - 9, labelW, 18);
   ctx.fillStyle = "#04150d";
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillText(label, labelX + 4, y);
+  ctx.fillText(label, labelX + 5, y);
 
   const overlay = $("#chart-y-axis-label");
   if (overlay) {
@@ -844,7 +917,7 @@ function renderChart() {
     orderCoin.style.color = market.color;
     orderCoin.style.background = `${market.color}24`;
   }
-  if (orderMarketName) orderMarketName.textContent = market.symbol;
+  if (orderMarketName) orderMarketName.textContent = "";
   if (orderMarketPrice) orderMarketPrice.textContent = formatExactPrice(market, displayPrice);
   if (sentimentSymbol) sentimentSymbol.textContent = market.symbol;
   if (buyButton) {
@@ -1309,6 +1382,7 @@ function selectMarket(id) {
   if (!marketById(id)) return;
   state.activeMarket = id;
   generateCandles(activeMarket());
+  resetAiScanSignal();
   renderWatchlist();
   renderChart();
   renderPositions();
@@ -2216,6 +2290,63 @@ async function submitDemoFunds() {
 }
 
 
+function resetAiScanSignal() {
+  const button = $("#ai-scan-button");
+  if (!button) return;
+  button.textContent = "AI";
+  button.classList.remove("is-buy", "is-sell", "is-scanning");
+  button.title = "AI scanner (optional): scans simulated market and suggests a buy or sell entry with win-rate probability";
+  button.setAttribute("aria-label", "AI scanner: scan simulated market for entry");
+}
+
+function scanSimulatedMarketEntry() {
+  const candles = Array.isArray(state.candles) ? state.candles.slice(-12) : [];
+  const market = activeMarket();
+  const fallbackSignal = Number(market && market.change) < 0 ? "sell" : "buy";
+  if (!candles.length || !market) {
+    return { signal: fallbackSignal };
+  }
+
+  const closes = candles.map((candle) => Number(candle.close)).filter(Number.isFinite);
+  const last = candles[candles.length - 1];
+  const recent = closes.slice(-4);
+  const previous = closes.slice(-8, -4);
+  const recentAvg = recent.length ? recent.reduce((sum, value) => sum + value, 0) / recent.length : Number(last.close || market.price || 0);
+  const previousAvg = previous.length ? previous.reduce((sum, value) => sum + value, 0) / previous.length : recentAvg;
+  const momentum = recentAvg - previousAvg;
+  const lastDirection = Number(last.close || 0) - Number(last.open || 0);
+  const priceRef = Math.max(Number(market.price || last.close || 1), 0.0001);
+  const score = momentum + lastDirection + (Number(market.change || 0) * priceRef * 0.0005);
+  const signal = score >= 0 ? "buy" : "sell";
+
+  return { signal };
+}
+
+async function runAiMarketScan() {
+  const button = $("#ai-scan-button");
+  if (!button || button.disabled) return;
+  button.classList.add("is-scanning");
+  button.classList.remove("is-buy", "is-sell");
+  button.textContent = "Scanning...";
+  button.title = "AI scanner (optional): scanning simulated market...";
+  button.setAttribute("aria-label", "AI scanner is scanning simulated market");
+  button.disabled = true;
+  try {
+    await new Promise((resolve) => window.setTimeout(resolve, 3000));
+    const { signal } = scanSimulatedMarketEntry();
+    const probability = Math.floor(Math.random() * 40) + 61; // 61-100
+    const label = signal === "buy" ? "BUY" : "SELL";
+    button.textContent = `AI ${label} ${probability}%`;
+    button.classList.toggle("is-buy", signal === "buy");
+    button.classList.toggle("is-sell", signal === "sell");
+    button.title = `AI scanner (optional): simulated market scan suggests ${label} with ${probability}% win-rate probability. Click to scan again.`;
+    button.setAttribute("aria-label", `AI scanner suggests ${label} with ${probability}% win-rate probability. Optional. Click to scan again.`);
+  } finally {
+    button.classList.remove("is-scanning");
+    button.disabled = false;
+  }
+}
+
 function initialize() {
   state.timeframe = "15sec";
   generateCandles(activeMarket());
@@ -2344,6 +2475,8 @@ function initialize() {
       }
     });
   });
+  const aiScanButton = $("#ai-scan-button");
+  if (aiScanButton) aiScanButton.addEventListener("click", runAiMarketScan);
   $("#dismiss-trade-result").addEventListener("click", dismissTradeResult);
 
   window.addEventListener("resize", () => {

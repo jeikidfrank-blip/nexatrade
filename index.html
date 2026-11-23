@@ -235,12 +235,10 @@
             </section>
 
             <aside class="panel order-panel">
-              <div class="panel-heading order-heading"><div><h2>Quick trade</h2><span id="order-mode-description">Demo market position</span></div><span class="demo-tag" id="order-mode-tag">DEMO</span></div>
+              <div class="panel-heading order-heading"><div><h2 id="order-panel-title"></h2><span id="order-mode-description">Demo market position</span></div><span class="demo-tag" id="order-mode-tag">DEMO</span></div>
               <div class="order-market-label">MARKET <span>Market order <span class="market-order-dot"></span></span></div>
               <div class="order-instrument">
-                <span class="order-coin" id="order-coin">Au</span>
-                <div><strong id="order-market-name">XAUUSD</strong><span id="order-market-price">$4,726.40</span></div>
-                <span class="order-market-live"><i></i>Demo</span>
+                <button type="button" class="ai-scan-button" id="ai-scan-button" title="AI scanner (optional): scans simulated market and suggests a buy or sell entry" aria-label="AI scanner: scan simulated market for entry">AI</button>
               </div>
               <label class="amount-label" for="trade-amount">AMOUNT <span>KES</span></label>
               <div class="amount-input-wrap"><span>KSh</span><input id="trade-amount" type="number" min="100" step="100" value="100" inputmode="decimal" aria-label="Trade amount in Kenya shillings" /></div>
