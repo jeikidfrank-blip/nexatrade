@@ -2488,6 +2488,10 @@ function initialize() {
     if (event.key === "Escape") {
       closeFundsModal();
       setNavigationMenuOpen(false);
+      const notificationsMenu = $("#notifications-menu");
+      const notificationsButton = $("#notifications-button");
+      if (notificationsMenu) notificationsMenu.hidden = true;
+      if (notificationsButton) notificationsButton.setAttribute("aria-expanded", "false");
     }
   });
 
@@ -2496,7 +2500,52 @@ function initialize() {
     setNavigationMenuOpen(!document.body.classList.contains("menu-open"));
   });
   $("#menu-backdrop").addEventListener("click", () => setNavigationMenuOpen(false));
-  $("#notifications-button").addEventListener("click", () => toast("You’re all caught up. Market updates are for demo purposes."));
+  const notificationsButton = $("#notifications-button");
+  const notificationsMenu = $("#notifications-menu");
+  const toggleNotificationsMenu = (forceOpen) => {
+    if (!notificationsMenu || !notificationsButton) return;
+    const open = typeof forceOpen === "boolean" ? forceOpen : notificationsMenu.hidden;
+    notificationsMenu.hidden = !open;
+    notificationsButton.setAttribute("aria-expanded", String(open));
+    if (open) {
+      const menuBalance = $("#notifications-mpesa-balance");
+      if (menuBalance) menuBalance.textContent = money(state.realTestBalance);
+    }
+  };
+  const refreshMpesaBalanceFromMenu = async (buttonEl) => {
+    const btn = buttonEl || $("#refresh-mpesa-balance");
+    if (!supabaseClient || !state.userId) { toast("Sign in to refresh M-Pesa balance.", true); return; }
+    if (btn) { btn.disabled = true; btn.textContent = "Refreshing..."; }
+    try {
+      state.realTestBalance = await loadRealTestBalance();
+      renderBalance();
+      toast("M-Pesa balance refreshed.");
+    } catch (error) {
+      toast(`Could not refresh M-Pesa balance: ${getErrorMessage(error, "Request failed.")}`, true);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "Refresh M-Pesa balance"; }
+    }
+  };
+
+  if (notificationsButton) {
+    notificationsButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleNotificationsMenu();
+    });
+  }
+  $("#refresh-mpesa-balance")?.addEventListener("click", () => refreshMpesaBalanceFromMenu());
+  $("#open-messages-app")?.addEventListener("click", () => {
+    if (!state.userId) { toast("Sign in to open the Messages app.", true); return; }
+    if (!state.isVip) { toast("Messages app is available for VIP accounts only.", true); return; }
+    window.location.href = "messages.html";
+  });
+  document.addEventListener("click", (event) => {
+    if (!notificationsMenu || notificationsMenu.hidden) return;
+    const wrap = notificationsButton ? notificationsButton.closest(".notification-wrap") : null;
+    if (wrap && wrap.contains(event.target)) return;
+    toggleNotificationsMenu(false);
+  });
+
   $("#help-button").addEventListener("click", () => toast("Demo trades use demo prices and do not reach an exchange."));
   const chartMenuButton = $("#chart-menu");
   if (chartMenuButton) {
@@ -2680,6 +2729,20 @@ function resetUserDemoState() {
   if (tradeResult) tradeResult.hidden = true;
 }
 
+async function loadMyAccountProfile() {
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient.rpc("nexatrade_get_my_account");
+    if (error) throw error;
+    state.userAccountType = String((data && data.account_type) || "standard").toLowerCase();
+    state.isVip = !!(data && (data.is_vip === true || state.userAccountType === "vip"));
+    if (data && data.phone && !state.userPhone) state.userPhone = String(data.phone);
+  } catch (_) {
+    state.userAccountType = state.userAccountType || "standard";
+    state.isVip = !!state.isVip;
+  }
+}
+
 async function enterDashboard(user) {
   try {
     if (state.userId !== user.id) resetUserDemoState();
@@ -2712,6 +2775,7 @@ async function enterDashboard(user) {
   const avatar = $("#profile-avatar");
   if (avatar) avatar.textContent = name.charAt(0).toUpperCase();
   setProfileMessage("");
+  await loadMyAccountProfile();
   renderAccountMode();
   document.body.classList.add("authenticated");
   try {

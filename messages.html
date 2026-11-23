@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>NexaTrade Messages</title>
+  <link rel="stylesheet" href="messages.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="messages.js" defer></script>
+</head>
+<body>
+  <div class="phone-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a class="back-link" href="index.html" aria-label="Back to NexaTrade">←</a>
+        <h1>Messages</h1>
+      </div>
+      <div class="header-actions">
+        <button id="balanceNotifyBtn" class="icon-btn notify-btn" type="button" aria-label="Notifications and M-Pesa balance" title="Notifications">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7M13.73 21a2 2 0 01-3.46 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="notifyDot" class="notify-dot" hidden></span>
+        </button>
+        <button id="refreshBtn" class="icon-btn" type="button" aria-label="Refresh messages" title="Refresh">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 10-3.1 6.8M21 3v6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="avatar-mini" id="headerAvatar">V</div>
+      </div>
+      <div id="notifyMenu" class="notify-menu" hidden>
+        <div class="notify-menu-head">M-Pesa balance</div>
+        <div id="mpesaBalanceValue" class="notify-balance">—</div>
+        <button id="refreshMpesaBtn" class="menu-action" type="button">Refresh M-Pesa balance</button>
+        <div class="notify-menu-note">VIP messages inbox</div>
+      </div>
+    </header>
+
+    <main id="mainContent" class="content">
+      <section id="statePanel" class="state-panel">
+        <p id="stateMessage" class="state-message">Loading...</p>
+        <button id="signInBtn" class="primary-btn" type="button" hidden>Open NexaTrade to sign in</button>
+      </section>
+
+      <section id="inboxView" class="inbox-view" hidden>
+        <div class="search-bar" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span>Search messages</span>
+        </div>
+        <div id="threadList" class="thread-list" aria-label="Messages"></div>
+        <button class="fab" type="button" aria-label="Start chat"><svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z" fill="currentColor"/></svg><span>Start chat</span></button>
+      </section>
+
+      <section id="threadView" class="thread-view" hidden>
+        <div class="thread-header">
+          <button id="backToInbox" class="icon-btn" type="button" aria-label="Back">←</button>
+          <div class="thread-avatar" id="threadAvatar">M</div>
+          <div class="thread-meta">
+            <div id="threadTitle" class="thread-title">MPESA</div>
+            <div id="threadSubtitle" class="thread-subtitle">Withdrawal messages</div>
+          </div>
+        </div>
+        <div id="messageBubbles" class="message-bubbles"></div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
