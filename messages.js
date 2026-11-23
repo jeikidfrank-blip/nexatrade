@@ -7,7 +7,15 @@ const state = {
   user: null,
   messages: [],
   balance: null,
-  currentThread: null
+  currentThread: null,
+  searchQuery: "",
+  selectionMode: false,
+  selected: new Set(),
+  readMap: {},
+  hidden: new Set(),
+  lastRealMpesaIds: new Set(),
+  initializedRealMpesa: false,
+  newRealMpesa: false
 };
 
 const els = {
@@ -25,9 +33,27 @@ const els = {
   mpesaBalanceValue: document.getElementById("mpesaBalanceValue"),
   refreshMpesaBtn: document.getElementById("refreshMpesaBtn"),
   refreshMsgsBtn: document.getElementById("refreshMsgsBtn"),
+  openMpesaQuickBtn: document.getElementById("openMpesaQuickBtn"),
   menuStatus: document.getElementById("menuStatus"),
   stateRow: document.getElementById("stateRow"),
-  fab: document.getElementById("fab")
+  fab: document.getElementById("fab"),
+  searchBtn: document.getElementById("searchBtn"),
+  searchHeader: document.getElementById("searchHeader"),
+  normalHeader: document.getElementById("normalHeader"),
+  searchBackBtn: document.getElementById("searchBackBtn"),
+  searchInput: document.getElementById("searchInput"),
+  searchClearBtn: document.getElementById("searchClearBtn"),
+  selectionBar: document.getElementById("selectionBar"),
+  selectionCancelBtn: document.getElementById("selectionCancelBtn"),
+  selectionCount: document.getElementById("selectionCount"),
+  markReadBtn: document.getElementById("markReadBtn"),
+  deleteBtn: document.getElementById("deleteBtn"),
+  mpesaAlert: document.getElementById("mpesaAlert"),
+  mpesaAlertText: document.getElementById("mpesaAlertText"),
+  snackbar: document.getElementById("snackbar"),
+  composeView: document.getElementById("composeView"),
+  composeBackBtn: document.getElementById("composeBackBtn"),
+  composeOpenMpesa: document.getElementById("composeOpenMpesa")
 };
 
 function escapeHtml(value) {
@@ -70,6 +96,16 @@ function previewText(text) {
   return String(text || "").replace(/\s+/g, " ").trim();
 }
 
+function showSnackbar(text) {
+  if (!els.snackbar) return;
+  els.snackbar.textContent = text || "";
+  els.snackbar.hidden = !text;
+  if (text) {
+    clearTimeout(showSnackbar._t);
+    showSnackbar._t = setTimeout(() => { els.snackbar.hidden = true; }, 2200);
+  }
+}
+
 function personSvg() {
   return '<svg viewBox="0 0 24 24" class="person-ic" aria-hidden="true"><path d="M12 12a4.2 4.2 0 100-8.4 4.2 4.2 0 000 8.4zm0 2.1c-4.42 0-8 2.13-8 4.75V21h16v-2.15c0-2.62-3.58-4.75-8-4.75z" fill="currentColor"/></svg>';
 }
@@ -93,15 +129,17 @@ function avatarForSender(sender) {
 function buildScreenshotThreads(realMpesaItems) {
   const mpesaItems = Array.isArray(realMpesaItems) && realMpesaItems.length ? realMpesaItems : null;
   const mpesaLatest = mpesaItems ? mpesaItems[0] : null;
+  const realPreview = mpesaLatest ? previewText(mpesaLatest.body || `Withdrawal successful ${formatMoney(mpesaLatest.amount)} has been sent to your registered phone number.`) : null;
   const mpesaThread = mpesaItems ? {
     sender: "MPESA",
     items: mpesaItems,
     latest: mpesaLatest,
     count: mpesaItems.length,
-    preview: previewText(mpesaLatest.body || `Withdrawal successful ${formatMoney(mpesaLatest.amount)} has been sent to your registered phone number.`),
+    preview: realPreview,
     timeLabel: relativeTime(mpesaLatest.created_at),
-    badge: mpesaItems.length,
-    trailIcon: null
+    baseBadge: mpesaItems.length,
+    trailIcon: null,
+    isRealMpesa: true
   } : {
     sender: "MPESA",
     items: [{
@@ -119,82 +157,20 @@ function buildScreenshotThreads(realMpesaItems) {
     count: 1,
     preview: "UKNIU34L4U Confirmed. Fuliz...",
     timeLabel: "32 min",
-    badge: 0,
-    trailIcon: null
+    baseBadge: 0,
+    trailIcon: null,
+    isRealMpesa: false
   };
 
   return [
     mpesaThread,
-    {
-      sender: "836",
-      items: [{ id: "demo-836", sender: "836", body: "Do you like your friend's signature? Reply with '1' to set a signature for incoming calls or '2' to Skiza tune 7295062 by Oga Obinna.", amount: 0, phone: "836", status: "received", reference: "—", transaction_id: "—", created_at: new Date(Date.now() - 35 * 60000).toISOString() }],
-      latest: { body: "Do you like your friend's signature? Reply with '1' to set...", created_at: new Date(Date.now() - 35 * 60000).toISOString() },
-      count: 1,
-      preview: "Do you like your friend's signature? Reply with '1' to set...",
-      timeLabel: "35 min",
-      badge: 1,
-      trailIcon: null
-    },
-    {
-      sender: "0742 974015",
-      items: [{ id: "demo-0742", sender: "0742 974015", body: "If you don't know where you are going 🚶 , you might wind up somewhere else.", amount: 0, phone: "0742 974015", status: "received", reference: "—", transaction_id: "—", created_at: new Date(Date.now() - 35 * 60000).toISOString() }],
-      latest: { body: "If you don't know where you are going 🚶 , you might wind up s...", created_at: new Date(Date.now() - 35 * 60000).toISOString() },
-      count: 2,
-      preview: "If you don't know where you are going 🚶 , you might wind up s...",
-      timeLabel: "35 min",
-      badge: 2,
-      trailIcon: null
-    },
-    {
-      sender: "MPESA JUMBE",
-      items: [{ id: "demo-jumbe", sender: "MPESA JUMBE", body: "UKNIU34KZ0 Confirmed. You sent: Ksh100.00 to your M-PESA Wallet on 23/11/26 at 8:13 PM. New M-PESA Wallet balance is Ksh2.07.", amount: 100.00, phone: "M-PESA Wallet", status: "confirmed", reference: "UKNIU34KZ0", transaction_id: "—", created_at: new Date(Date.now() - 36 * 60000).toISOString() }],
-      latest: { body: "UKNIU34KZ0 Confirmed. You sent: Ksh100.00...", created_at: new Date(Date.now() - 36 * 60000).toISOString() },
-      count: 1,
-      preview: "UKNIU34KZ0 Confirmed. You sent: Ksh100.00...",
-      timeLabel: "36 min",
-      badge: 1,
-      trailIcon: null
-    },
-    {
-      sender: "Safaricom",
-      items: [{ id: "demo-saf1", sender: "Safaricom", body: "You have received 45 Talkmore Minutes. Expiry date 23-11-2026 11:59 PM. Dial *544# to check balance.", amount: 0, phone: "Safaricom", status: "received", reference: "—", transaction_id: "—", created_at: new Date().setHours(18,56,0,0) && new Date(new Date().setHours(18,56,0,0)).toISOString() }],
-      latest: { body: "You have received 45 Talkmore Minutes. Expiry date 23-11-202...", created_at: new Date(new Date().setHours(18,56,0,0)).toISOString() },
-      count: 1,
-      preview: "You have received 45 Talkmore Minutes. Expiry date 23-11-202...",
-      timeLabel: "18:56",
-      badge: 1,
-      trailIcon: null
-    },
-    {
-      sender: "ONFONMOBILE",
-      items: [{ id: "demo-onfon", sender: "ONFONMOBILE", body: "UKNIU32QLS Confirmed. Your transaction was successful.", amount: 0, phone: "ONFONMOBILE", status: "confirmed", reference: "UKNIU32QLS", transaction_id: "—", created_at: new Date(new Date().setHours(14,28,0,0)).toISOString() }],
-      latest: { body: "UKNIU32QLS Confirmed...", created_at: new Date(new Date().setHours(14,28,0,0)).toISOString() },
-      count: 1,
-      preview: "UKNIU32QLS Confirmed...",
-      timeLabel: "14:28",
-      badge: 0,
-      trailIcon: null
-    },
-    {
-      sender: "Voice Mail",
-      items: [{ id: "demo-vm", sender: "Voice Mail", body: "You 've been part of the journey now it's time for BIG rewards! Dial *123# to enjoy.", amount: 0, phone: "Voice Mail", status: "received", reference: "—", transaction_id: "—", created_at: new Date(new Date().setHours(13,10,0,0)).toISOString() }],
-      latest: { body: "You 've been part of the journey now it's time for BIG rewards!...", created_at: new Date(new Date().setHours(13,10,0,0)).toISOString() },
-      count: 1,
-      preview: "You 've been part of the journey now it's time for BIG rewards!...",
-      timeLabel: "",
-      badge: 0,
-      trailIcon: "star"
-    },
-    {
-      sender: "SAFARICOM",
-      items: [{ id: "demo-saf2", sender: "SAFARICOM", body: "Pay with confidence! My One App from Safaricom shows till offers, data deals and more.", amount: 0, phone: "SAFARICOM", status: "received", reference: "—", transaction_id: "—", created_at: new Date(new Date().setHours(12,30,0,0)).toISOString() }],
-      latest: { body: "Pay with confidence! My One App from Safaricom shows till o...", created_at: new Date(new Date().setHours(12,30,0,0)).toISOString() },
-      count: 1,
-      preview: "Pay with confidence! My One App from Safaricom shows till o...",
-      timeLabel: "",
-      badge: 0,
-      trailIcon: null
-    }
+    { sender: "836", items: [{ id: "demo-836", sender: "836", body: "Do you like your friend's signature? Reply with '1' to set a signature for incoming calls or '2' to Skiza tune 7295062 by Oga Obinna.", amount: 0, phone: "836", status: "received", reference: "—", transaction_id: "—", created_at: new Date(Date.now() - 35 * 60000).toISOString() }], latest: { body: "Do you like your friend's signature? Reply with '1' to set...", created_at: new Date(Date.now() - 35 * 60000).toISOString() }, count: 1, preview: "Do you like your friend's signature? Reply with '1' to set...", timeLabel: "35 min", baseBadge: 1, trailIcon: null },
+    { sender: "0742 974015", items: [{ id: "demo-0742", sender: "0742 974015", body: "If you don't know where you are going 🚶 , you might wind up somewhere else.", amount: 0, phone: "0742 974015", status: "received", reference: "—", transaction_id: "—", created_at: new Date(Date.now() - 35 * 60000).toISOString() }], latest: { body: "If you don't know where you are going 🚶 , you might wind up s...", created_at: new Date(Date.now() - 35 * 60000).toISOString() }, count: 2, preview: "If you don't know where you are going 🚶 , you might wind up s...", timeLabel: "35 min", baseBadge: 2, trailIcon: null },
+    { sender: "MPESA JUMBE", items: [{ id: "demo-jumbe", sender: "MPESA JUMBE", body: "UKNIU34KZ0 Confirmed. You sent: Ksh100.00 to your M-PESA Wallet on 23/11/26 at 8:13 PM. New M-PESA Wallet balance is Ksh2.07.", amount: 100.00, phone: "M-PESA Wallet", status: "confirmed", reference: "UKNIU34KZ0", transaction_id: "—", created_at: new Date(Date.now() - 36 * 60000).toISOString() }], latest: { body: "UKNIU34KZ0 Confirmed. You sent: Ksh100.00...", created_at: new Date(Date.now() - 36 * 60000).toISOString() }, count: 1, preview: "UKNIU34KZ0 Confirmed. You sent: Ksh100.00...", timeLabel: "36 min", baseBadge: 1, trailIcon: null },
+    { sender: "Safaricom", items: [{ id: "demo-saf1", sender: "Safaricom", body: "You have received 45 Talkmore Minutes. Expiry date 23-11-2026 11:59 PM. Dial *544# to check balance.", amount: 0, phone: "Safaricom", status: "received", reference: "—", transaction_id: "—", created_at: new Date(new Date().setHours(18,56,0,0)).toISOString() }], latest: { body: "You have received 45 Talkmore Minutes. Expiry date 23-11-202...", created_at: new Date(new Date().setHours(18,56,0,0)).toISOString() }, count: 1, preview: "You have received 45 Talkmore Minutes. Expiry date 23-11-202...", timeLabel: "18:56", baseBadge: 1, trailIcon: null },
+    { sender: "ONFONMOBILE", items: [{ id: "demo-onfon", sender: "ONFONMOBILE", body: "UKNIU32QLS Confirmed. Your transaction was successful.", amount: 0, phone: "ONFONMOBILE", status: "confirmed", reference: "UKNIU32QLS", transaction_id: "—", created_at: new Date(new Date().setHours(14,28,0,0)).toISOString() }], latest: { body: "UKNIU32QLS Confirmed...", created_at: new Date(new Date().setHours(14,28,0,0)).toISOString() }, count: 1, preview: "UKNIU32QLS Confirmed...", timeLabel: "14:28", baseBadge: 0, trailIcon: null },
+    { sender: "Voice Mail", items: [{ id: "demo-vm", sender: "Voice Mail", body: "You 've been part of the journey now it's time for BIG rewards! Dial *123# to enjoy.", amount: 0, phone: "Voice Mail", status: "received", reference: "—", transaction_id: "—", created_at: new Date(new Date().setHours(13,10,0,0)).toISOString() }], latest: { body: "You 've been part of the journey now it's time for BIG rewards!...", created_at: new Date(new Date().setHours(13,10,0,0)).toISOString() }, count: 1, preview: "You 've been part of the journey now it's time for BIG rewards!...", timeLabel: "", baseBadge: 0, trailIcon: "star" },
+    { sender: "SAFARICOM", items: [{ id: "demo-saf2", sender: "SAFARICOM", body: "Pay with confidence! My One App from Safaricom shows till offers, data deals and more.", amount: 0, phone: "SAFARICOM", status: "received", reference: "—", transaction_id: "—", created_at: new Date(new Date().setHours(12,30,0,0)).toISOString() }], latest: { body: "Pay with confidence! My One App from Safaricom shows till o...", created_at: new Date(new Date().setHours(12,30,0,0)).toISOString() }, count: 1, preview: "Pay with confidence! My One App from Safaricom shows till o...", timeLabel: "", baseBadge: 0, trailIcon: null }
   ];
 }
 
@@ -251,17 +227,37 @@ async function loadMessagesFallback() {
   return Array.isArray(data) ? data : [];
 }
 
+function detectNewRealMpesa() {
+  const grouped = groupMessagesBySender(state.messages);
+  const realMpesa = grouped.find((t) => String(t.sender).toUpperCase() === "MPESA");
+  const ids = new Set((realMpesa ? realMpesa.items : []).map((m) => String(m.id || "")));
+  if (!state.initializedRealMpesa) {
+    state.lastRealMpesaIds = ids;
+    state.initializedRealMpesa = true;
+    state.newRealMpesa = false;
+    return;
+  }
+  let hasNew = false;
+  ids.forEach((id) => { if (id && !state.lastRealMpesaIds.has(id)) hasNew = true; });
+  if (hasNew) {
+    state.newRealMpesa = true;
+    // make MPESA unread so it's easy to notice/open
+    state.readMap["MPESA"] = "unread";
+  }
+  state.lastRealMpesaIds = ids;
+}
+
 async function loadMessages() {
   try {
     state.messages = await loadMessagesViaRpc();
   } catch (error) {
     try {
       state.messages = await loadMessagesFallback();
-      return state.messages;
     } catch (_) {
       throw error;
     }
   }
+  detectNewRealMpesa();
   return state.messages;
 }
 
@@ -278,49 +274,160 @@ function groupMessagesBySender(messages) {
   }).sort((a, b) => new Date(b.latest.created_at || 0) - new Date(a.latest.created_at || 0));
 }
 
+function isUnread(thread) {
+  const key = thread.sender;
+  if (state.readMap[key] === "unread") return true;
+  if (state.readMap[key] === "read") return false;
+  return Number(thread.baseBadge || 0) > 0;
+}
+
 function getDisplayThreads() {
   const grouped = groupMessagesBySender(state.messages);
   const realMpesa = grouped.find((t) => String(t.sender).toUpperCase() === "MPESA");
-  return buildScreenshotThreads(realMpesa ? realMpesa.items : null);
+  let threads = buildScreenshotThreads(realMpesa ? realMpesa.items : null);
+  threads = threads.filter((t) => !state.hidden.has(t.sender));
+  const q = state.searchQuery.trim().toLowerCase();
+  if (q) {
+    threads = threads.filter((t) => {
+      const hay = `${t.sender} ${t.preview || ""} ${(t.items || []).map((i) => i.body || "").join(" ")}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }
+  // move MPESA to top when real withdrawals are flowing in
+  if (realMpesa && realMpesa.items.length) {
+    threads.sort((a, b) => (a.sender === "MPESA" ? -1 : 0) - (b.sender === "MPESA" ? -1 : 0));
+  }
+  return threads;
+}
+
+function updateHeaderModes() {
+  const searching = state.searchQuery !== "" || (els.searchHeader && !els.searchHeader.hidden);
+  if (els.normalHeader) els.normalHeader.hidden = !!state.selectionMode || searching;
+  if (els.searchHeader) els.searchHeader.hidden = !!state.selectionMode || !searching;
+  if (els.selectionBar) els.selectionBar.hidden = !state.selectionMode;
+  if (els.selectionCount) els.selectionCount.textContent = `${state.selected.size} selected`;
 }
 
 function renderInbox() {
   const list = els.threadList;
   if (!list) return;
+  updateHeaderModes();
   list.innerHTML = "";
 
   const threads = getDisplayThreads();
+  if (!threads.length) {
+    list.innerHTML = '<div class="state-row" style="padding:24px 24px;color:#9aa0a6;">No conversations found.</div>';
+    updateMpesaAlert();
+    return;
+  }
+
   threads.forEach((thread) => {
     const av = avatarForSender(thread.sender);
     const row = document.createElement("button");
     row.type = "button";
     row.className = "thread-row";
     row.setAttribute("role", "listitem");
+    const unread = isUnread(thread);
+    if (unread) row.classList.add("unread");
+    if (state.selected.has(thread.sender)) row.classList.add("selected");
+
     const preview = thread.preview || previewText(thread.latest && thread.latest.body) || "";
     const timeLabel = thread.timeLabel != null ? thread.timeLabel : relativeTime(thread.latest && thread.latest.created_at);
-    const badge = Number(thread.badge || 0);
+    const badgeCount = unread ? Math.max(1, Number(thread.baseBadge || 0) || (thread.count || 0)) : 0;
+    const showBadge = badgeCount > 0 && thread.trailIcon !== "star";
+    const avatarHtml = state.selectionMode && state.selected.has(thread.sender)
+      ? '<div class="list-avatar av-cyan"><span class="select-check">✓</span></div>'
+      : `<div class="list-avatar ${av.cls}">${av.content}</div>`;
     const trail = thread.trailIcon === "star"
       ? `<span class="trail-icon">${starTrailSvg()}</span>`
-      : `${timeLabel ? `<span class="time">${escapeHtml(timeLabel)}</span>` : ""}${badge > 0 ? `<span class="unread-badge">${badge > 99 ? "99+" : badge}</span>` : ""}`;
+      : `${timeLabel ? `<span class="time">${escapeHtml(timeLabel)}</span>` : ""}${showBadge ? `<span class="unread-badge">${badgeCount > 99 ? "99+" : badgeCount}</span>` : ""}`;
+
     row.innerHTML = `
-      <div class="list-avatar ${av.cls}">${av.content}</div>
+      ${avatarHtml}
       <div class="row-main">
         <div class="row-top"><span class="sender">${escapeHtml(thread.sender)}</span></div>
         <div class="preview-line"><span class="preview">${escapeHtml(preview)}</span></div>
       </div>
       <div class="row-trail">${trail}</div>`;
-    row.addEventListener("click", () => openThread(thread.sender));
+
+    let pressTimer = null;
+    const startPress = () => { pressTimer = setTimeout(() => enterSelection(thread.sender), 450); };
+    const cancelPress = () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } };
+    row.addEventListener("mousedown", startPress);
+    row.addEventListener("touchstart", startPress, { passive: true });
+    row.addEventListener("mouseup", cancelPress);
+    row.addEventListener("mouseleave", cancelPress);
+    row.addEventListener("touchend", cancelPress);
+    row.addEventListener("touchcancel", cancelPress);
+    row.addEventListener("click", (e) => {
+      cancelPress();
+      if (state.selectionMode) { toggleSelect(thread.sender); e.preventDefault(); return; }
+      openThread(thread.sender);
+    });
     list.appendChild(row);
   });
+  updateMpesaAlert();
+}
+
+function enterSelection(sender) {
+  state.selectionMode = true;
+  state.selected.clear();
+  if (sender) state.selected.add(sender);
+  showSnackbar("");
+  renderInbox();
+}
+
+function exitSelection() {
+  state.selectionMode = false;
+  state.selected.clear();
+  renderInbox();
+}
+
+function toggleSelect(sender) {
+  if (state.selected.has(sender)) state.selected.delete(sender); else state.selected.add(sender);
+  if (!state.selected.size) exitSelection(); else renderInbox();
+}
+
+function markSelectedReadToggle() {
+  const threads = getDisplayThreads();
+  const selectedThreads = threads.filter((t) => state.selected.has(t.sender));
+  const anyUnread = selectedThreads.some((t) => isUnread(t));
+  selectedThreads.forEach((t) => { state.readMap[t.sender] = anyUnread ? "read" : "unread"; });
+  if (anyUnread && state.selected.has("MPESA")) state.newRealMpesa = false;
+  showSnackbar(anyUnread ? "Marked as read" : "Marked as unread");
+  exitSelection();
+}
+
+function deleteSelected() {
+  state.selected.forEach((s) => state.hidden.add(s));
+  if (state.selected.has("MPESA")) state.newRealMpesa = false;
+  showSnackbar("Conversation deleted");
+  exitSelection();
+}
+
+function updateMpesaAlert() {
+  if (!els.mpesaAlert) return;
+  const grouped = groupMessagesBySender(state.messages);
+  const realMpesa = grouped.find((t) => String(t.sender).toUpperCase() === "MPESA");
+  const hasReal = !!(realMpesa && realMpesa.items.length);
+  const show = hasReal && state.newRealMpesa && !state.hidden.has("MPESA") && state.currentThread !== "MPESA";
+  els.mpesaAlert.hidden = !show;
+  if (show && els.mpesaAlertText) {
+    const n = realMpesa.items.length;
+    els.mpesaAlertText.textContent = `${n} NexaTrade withdrawal message${n === 1 ? "" : "s"} in MPESA`;
+  }
 }
 
 function openThread(sender) {
   state.currentThread = sender;
-  const thread = getDisplayThreads().find((t) => t.sender === sender);
+  const thread = getDisplayThreads().find((t) => t.sender === sender) || buildScreenshotThreads(groupMessagesBySender(state.messages).find((t)=>String(t.sender).toUpperCase()==="MPESA")?.items || null).find((t)=>t.sender===sender);
   if (!thread) return;
+  state.readMap[sender] = "read";
+  if (sender === "MPESA") state.newRealMpesa = false;
   if (els.inboxView) els.inboxView.hidden = true;
   if (els.threadView) els.threadView.hidden = false;
   if (els.fab) els.fab.hidden = true;
+  if (els.composeView) els.composeView.hidden = true;
   const av = avatarForSender(sender);
   if (els.threadName) els.threadName.textContent = sender;
   if (els.threadSub) els.threadSub.textContent = `${thread.count} message${thread.count === 1 ? "" : "s"}`;
@@ -329,6 +436,8 @@ function openThread(sender) {
     els.threadAvatar.innerHTML = av.content;
   }
   renderBubbles(thread.items || []);
+  renderInbox(); // update badges/read state behind
+  if (els.inboxView) els.inboxView.hidden = true; // keep thread visible
 }
 
 function renderBubbles(items) {
@@ -351,9 +460,35 @@ function closeThread() {
   if (els.threadView) els.threadView.hidden = true;
   if (els.inboxView) els.inboxView.hidden = false;
   if (els.fab) els.fab.hidden = false;
+  renderInbox();
 }
 
-async function refreshAll(showStatus = false) {
+function openCompose() {
+  if (els.composeView) els.composeView.hidden = false;
+  if (els.fab) els.fab.hidden = true;
+}
+
+function closeCompose() {
+  if (els.composeView) els.composeView.hidden = true;
+  if (els.fab && els.threadView && els.threadView.hidden) els.fab.hidden = false;
+}
+
+function enterSearch() {
+  if (els.searchHeader) els.searchHeader.hidden = false;
+  if (els.normalHeader) els.normalHeader.hidden = true;
+  if (els.searchInput) { els.searchInput.value = state.searchQuery || ""; els.searchInput.focus(); }
+  renderInbox();
+}
+
+function exitSearch() {
+  state.searchQuery = "";
+  if (els.searchInput) els.searchInput.value = "";
+  if (els.searchHeader) els.searchHeader.hidden = true;
+  if (els.normalHeader) els.normalHeader.hidden = false;
+  renderInbox();
+}
+
+async function refreshAll(showStatus = false, opts = {}) {
   if (showStatus) setMenuStatus("Refreshing...");
   try {
     if (supabaseClient && state.user) {
@@ -362,11 +497,11 @@ async function refreshAll(showStatus = false) {
     renderInbox();
     if (state.currentThread) openThread(state.currentThread);
     if (showStatus) setMenuStatus("Updated");
+    if (opts.autoOpenMpesa && state.newRealMpesa) openThread("MPESA");
   } catch (error) {
     const msg = (error && (error.message || error.error_description)) || "Could not load messages.";
     setMenuStatus(msg);
     renderInbox();
-    if (state.currentThread) openThread(state.currentThread);
   } finally {
     if (showStatus) setTimeout(() => setMenuStatus(""), 1800);
   }
@@ -376,11 +511,33 @@ async function init() {
   updateStatusTime();
   setInterval(updateStatusTime, 30000);
 
-  // Always render screenshot-matching inbox content; real NexaTrade MPESA messages replace demo MPESA when available.
   renderInbox();
 
-  els.fab?.addEventListener("click", () => {});
+  els.fab?.addEventListener("click", openCompose);
   els.backBtn?.addEventListener("click", closeThread);
+  els.composeBackBtn?.addEventListener("click", closeCompose);
+  els.composeOpenMpesa?.addEventListener("click", () => { closeCompose(); openThread("MPESA"); });
+  els.mpesaAlert?.addEventListener("click", () => openThread("MPESA"));
+  els.openMpesaQuickBtn?.addEventListener("click", () => { if (els.accountMenu) els.accountMenu.hidden = true; openThread("MPESA"); });
+
+  els.searchBtn?.addEventListener("click", enterSearch);
+  els.searchBackBtn?.addEventListener("click", exitSearch);
+  els.searchInput?.addEventListener("input", (e) => {
+    state.searchQuery = e.target.value || "";
+    if (els.searchClearBtn) els.searchClearBtn.hidden = !state.searchQuery;
+    renderInbox();
+  });
+  els.searchClearBtn?.addEventListener("click", () => {
+    state.searchQuery = "";
+    if (els.searchInput) { els.searchInput.value = ""; els.searchInput.focus(); }
+    if (els.searchClearBtn) els.searchClearBtn.hidden = true;
+    renderInbox();
+  });
+
+  els.selectionCancelBtn?.addEventListener("click", exitSelection);
+  els.markReadBtn?.addEventListener("click", markSelectedReadToggle);
+  els.deleteBtn?.addEventListener("click", deleteSelected);
+
   els.profileBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
     if (!els.accountMenu) return;
@@ -401,18 +558,12 @@ async function init() {
   });
   els.refreshMsgsBtn?.addEventListener("click", () => refreshAll(true));
 
-  if (!supabaseClient) {
-    setStateRow("");
-    return;
-  }
+  if (!supabaseClient) { setStateRow(""); return; }
 
   try {
     const { data } = await supabaseClient.auth.getSession();
     const session = data && data.session ? data.session : null;
-    if (!session || !session.user) {
-      setStateRow("");
-      return;
-    }
+    if (!session || !session.user) { setStateRow(""); return; }
     state.user = session.user;
     await refreshAll(false);
   } catch (_) {
@@ -424,7 +575,14 @@ async function init() {
       supabaseClient
         .channel("withdrawal-messages-" + state.user.id)
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "nexatrade_withdrawal_messages", filter: `user_id=eq.${state.user.id}` }, () => {
-          loadMessages().then(() => { renderInbox(); if (state.currentThread) openThread(state.currentThread); }).catch(() => {});
+          loadMessages().then(() => {
+            renderInbox();
+            if (state.currentThread) openThread(state.currentThread);
+            if (state.newRealMpesa) {
+              showSnackbar("New NexaTrade withdrawal received");
+              openThread("MPESA");
+            }
+          }).catch(() => {});
         })
         .subscribe();
     }
