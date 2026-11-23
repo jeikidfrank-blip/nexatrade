@@ -347,6 +347,13 @@ h1 { margin-top: 9px; font-family: var(--font-display); font-size: 27px; line-he
 .trade-result-close { width: 24px; height: 24px; flex: 0 0 auto; margin: -5px -7px -5px 0; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #bec9d4; font-size: 19px; line-height: 1; cursor: pointer; }
 .trade-result-close:hover { background: #1b2832; color: #e8edf2; }
 .trade-result p { color: #ccd6de; font-size: 11px; line-height: 1.55; }
+.trade-result.is-notice { width: min(560px, calc(100% - 48px)); gap: 14px; padding: 24px 28px; text-align: center; }
+.trade-result.is-notice .trade-result-heading { justify-content: center; }
+.trade-result.is-notice .result-status { font-size: 22px; letter-spacing: .4px; }
+.trade-result.is-notice .trade-result-close { position: absolute; top: 10px; right: 10px; margin: 0; }
+.trade-result.is-notice .result-notice-message { display: block; color: #e8f5ee; font-size: 15px; font-weight: 600; line-height: 1.6; }
+.trade-result.is-notice .result-notice-message[hidden] { display: none; }
+.trade-result.is-notice.is-error .result-notice-message { color: #ffd6d9; }
 .result-executing { display: flex; align-items: center; gap: 9px; color: #c4ced8; font-size: 10px; }
 .result-executing[hidden] { display: none; }
 .result-executing span { width: 13px; height: 13px; border: 2px solid #39524c; border-top-color: var(--green); border-radius: 50%; animation: trade-spin .75s linear infinite; }

@@ -2,6 +2,7 @@ const config = window.NEXATRADE_SUPABASE_CONFIG;
 const supabaseClient = window.supabase.createClient(config.url, config.publishableKey);
 
 const message = document.getElementById("dashboardMessage");
+const globalMessage = document.getElementById("globalMessage");
 const tbody = document.getElementById("usersTable");
 const balanceMessage = document.getElementById("balanceMessage");
 
@@ -9,487 +10,575 @@ let allUsers = [];
 let activeProfileUser = null;
 
 function setMessage(element, text, type = "info") {
-    if (!element) return;
-    element.textContent = text || "";
-    element.classList.remove("info", "success", "error");
-    if (type) element.classList.add(type);
-}
-
-async function protectDashboard() {
-    const { data, error } = await supabaseClient.auth.getSession();
-    if (error || !data.session) {
-        window.location.replace("index.html");
-        return false;
-    }
-
-    const { error: adminError } = await supabaseClient.rpc("admin_get_settings");
-    if (adminError) {
-        await supabaseClient.auth.signOut();
-        window.location.replace("index.html");
-        return false;
-    }
-
-    return true;
-}
-
-function createCell(content) {
-    const cell = document.createElement("td");
-    if (content instanceof Node) {
-        cell.appendChild(content);
-    } else {
-        cell.textContent = content == null || content === "" ? "—" : String(content);
-    }
-    return cell;
+  if (!element) return;
+  element.textContent = text || "";
+  element.className = `message ${type}`.trim();
 }
 
 function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>"']/g, (character) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    }[character]));
+  return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[ch]));
 }
 
-function formatMoney(amount, currency = "$") {
-    const numeric = Number(amount);
-    if (!Number.isFinite(numeric)) return "—";
-    return `${currency}${numeric.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function formatDate(value) {
+  if (!value) return "—";
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleString();
 }
 
-function formatDepositMoney(amount) {
-    return "KSh " + Number(amount || 0).toLocaleString("en-KE", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
+function formatMoney(amount, currency = "KSh") {
+  const n = Number(amount);
+  const safe = Number.isFinite(n) ? n : 0;
+  try {
+    return new Intl.NumberFormat("en-KE", { style: "currency", currency: currency === "$" ? "USD" : "KES", maximumFractionDigits: 2 }).format(safe).replace("KES", currency === "$" ? "$" : "KSh");
+  } catch {
+    return `${currency} ${safe.toFixed(2)}`;
+  }
 }
 
-function badgeClass(kind, value) {
-    const normalized = String(value || "").toLowerCase();
-    if (kind === "account") {
-        return normalized === "vip" ? "account-badge vip" : "account-badge standard";
-    }
-    if (["active", "suspended", "blocked"].includes(normalized)) {
-        return `status-badge ${normalized}`;
-    }
-    return "status-badge unknown";
+function formatKsh(amount) {
+  const n = Number(amount);
+  const safe = Number.isFinite(n) ? n : 0;
+  return `KSh ${safe.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function getErrorMessage(error, fallback = "Something went wrong.") {
+  return (error && (error.message || error.error_description || error.details)) || fallback;
+}
+
+async function protectDashboard() {
+  const { data } = await supabaseClient.auth.getSession();
+  if (!data.session) {
+    window.location.replace("index.html");
+    return false;
+  }
+
+  const { error: adminError } = await supabaseClient.rpc("admin_get_settings");
+  if (adminError) {
+    const text = "Admin access check failed: " + adminError.message + ". Deploy/run admin SQL RPCs and ensure this account is recognized as admin.";
+    setMessage(message, text, "error");
+    setMessage(globalMessage, text, "error");
+    return false;
+  }
+
+  return true;
+}
+
+function normalizeUserField(user, keys, fallback = "") {
+  for (const key of keys) {
+    if (user && user[key] != null && user[key] !== "") return user[key];
+  }
+  return fallback;
 }
 
 function renderUsers() {
-    if (!tbody) return;
-    const query = document.getElementById("userSearch")?.value.trim().toLowerCase() || "";
-    const accountFilter = document.getElementById("accountFilter")?.value || "all";
-    const statusFilter = document.getElementById("statusFilter")?.value || "all";
+  if (!tbody) return;
+  const search = String(document.getElementById("userSearch")?.value || "").trim().toLowerCase();
+  const accountFilter = document.getElementById("accountFilter")?.value || "all";
+  const statusFilter = document.getElementById("statusFilter")?.value || "all";
 
-    const filtered = allUsers.filter((user) => {
-        const matchesSearch = [user.full_name, user.email, user.id, user.phone]
-            .some((value) => String(value || "").toLowerCase().includes(query));
-        const matchesAccount = accountFilter === "all" || String(user.account_type || "").toLowerCase() === accountFilter;
-        const matchesStatus = statusFilter === "all" || String(user.status || "").toLowerCase() === statusFilter;
-        return matchesSearch && matchesAccount && matchesStatus;
+  const filtered = allUsers.filter((user) => {
+    const fullName = String(normalizeUserField(user, ["full_name", "name", "fullName"], "")).toLowerCase();
+    const email = String(user.email || "").toLowerCase();
+    const id = String(user.id || "").toLowerCase();
+    const phone = String(normalizeUserField(user, ["phone", "phone_number"], "")).toLowerCase();
+    const accountType = String(user.account_type || "standard").toLowerCase();
+    const status = String(user.status || "active").toLowerCase();
+
+    if (search && !fullName.includes(search) && !email.includes(search) && !id.includes(search) && !phone.includes(search)) return false;
+    if (accountFilter !== "all" && accountType !== accountFilter) return false;
+    if (statusFilter !== "all" && status !== statusFilter) return false;
+    return true;
+  });
+
+  tbody.innerHTML = "";
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="5">No users match the current filters.</td></tr>';
+    return;
+  }
+
+  filtered.forEach((user) => {
+    const row = document.createElement("tr");
+    const name = normalizeUserField(user, ["full_name", "name", "fullName"], "Name not provided");
+    const email = user.email || "No email";
+    const phone = normalizeUserField(user, ["phone", "phone_number"], "");
+    const accountType = String(user.account_type || "standard");
+    const status = String(user.status || "active");
+
+    const userCell = document.createElement("td");
+    userCell.innerHTML = `<div class="user-cell"><strong>${escapeHtml(name)}</strong><span>${escapeHtml(email)}</span><small>${escapeHtml(phone || "No phone")} · ${escapeHtml(user.id || "")}</small></div>`;
+
+    const accountCell = document.createElement("td");
+    accountCell.innerHTML = `<span class="pill ${accountType.toLowerCase() === "vip" ? "vip" : "standard"}">${escapeHtml(accountType)}</span>`;
+
+    const statusCell = document.createElement("td");
+    const statusClass = ["active", "suspended", "blocked"].includes(status.toLowerCase()) ? status.toLowerCase() : "muted-pill";
+    statusCell.innerHTML = `<span class="pill ${statusClass}">${escapeHtml(status)}</span>`;
+
+    const dateCell = document.createElement("td");
+    dateCell.textContent = formatDate(user.created_at);
+
+    const actionCell = document.createElement("td");
+    actionCell.className = "actions-cell";
+    const select = document.createElement("select");
+    select.className = "user-action-select";
+    [["", "Select action"], ["vip", "Make VIP"], ["standard", "Make Standard"], ["active", "Activate"], ["suspended", "Suspend"], ["blocked", "Block"]].forEach(([v, label]) => {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = label;
+      select.appendChild(opt);
     });
 
-    tbody.innerHTML = "";
+    const applyBtn = document.createElement("button");
+    applyBtn.type = "button";
+    applyBtn.className = "user-action-button";
+    applyBtn.textContent = "Apply";
+    applyBtn.addEventListener("click", async () => {
+      const action = select.value;
+      if (!action) { setMessage(message, "Choose an action first.", "error"); return; }
+      let accountTypeUpdate = null;
+      let statusUpdate = null;
+      if (["vip", "standard"].includes(action)) accountTypeUpdate = action; else statusUpdate = action;
+      if (!confirm(`Confirm ${action} for ${email}?`)) return;
 
-    if (!filtered.length) {
-        const row = document.createElement("tr");
-        const cell = document.createElement("td");
-        cell.colSpan = 5;
-        cell.textContent = "No matching users found.";
-        row.appendChild(cell);
-        tbody.appendChild(row);
+      applyBtn.disabled = true;
+      applyBtn.textContent = "Saving...";
+      const { error } = await supabaseClient.rpc("admin_update_user", {
+        p_user_id: user.id,
+        p_account_type: accountTypeUpdate,
+        p_status: statusUpdate
+      });
+      applyBtn.disabled = false;
+      applyBtn.textContent = "Apply";
+
+      if (error) {
+        setMessage(message, "Update failed: " + getErrorMessage(error), "error");
         return;
-    }
-
-    filtered.forEach((user) => {
-        const row = document.createElement("tr");
-
-        const userCell = document.createElement("td");
-        const name = document.createElement("div");
-        name.className = "user-cell-main";
-        name.textContent = user.full_name || user.email || user.id || "Unnamed user";
-        const sub = document.createElement("div");
-        sub.className = "user-cell-sub";
-        sub.textContent = user.email || user.phone || user.id || "—";
-        userCell.append(name, sub);
-        row.appendChild(userCell);
-
-        const accountCell = document.createElement("td");
-        const accountBadge = document.createElement("span");
-        accountBadge.className = badgeClass("account", user.account_type || "standard");
-        accountBadge.textContent = user.account_type || "standard";
-        accountCell.appendChild(accountBadge);
-        row.appendChild(accountCell);
-
-        const statusCell = document.createElement("td");
-        const statusBadge = document.createElement("span");
-        statusBadge.className = badgeClass("status", user.status || "unknown");
-        statusBadge.textContent = user.status || "unknown";
-        statusCell.appendChild(statusBadge);
-        row.appendChild(statusCell);
-
-        row.appendChild(createCell(user.created_at ? new Date(user.created_at).toLocaleDateString() : "—"));
-
-        const actionCell = document.createElement("td");
-
-        const select = document.createElement("select");
-        select.className = "user-action-select";
-        [
-            ["", "Choose action"],
-            ["vip", "Upgrade to VIP"],
-            ["standard", "Set Standard"],
-            ["suspended", "Suspend account"],
-            ["blocked", "Block account"],
-            ["active", "Reactivate account"]
-        ].forEach(([value, label]) => {
-            const option = document.createElement("option");
-            option.value = value;
-            option.textContent = label;
-            select.appendChild(option);
-        });
-
-        const button = document.createElement("button");
-        button.className = "user-action-button";
-        button.type = "button";
-        button.textContent = "Apply";
-        button.addEventListener("click", async () => {
-            const action = select.value;
-            if (!action) {
-                setMessage(message, "Choose an action first.", "error");
-                return;
-            }
-
-            let accountType = null;
-            let status = null;
-            if (["vip", "standard"].includes(action)) accountType = action;
-            else status = action;
-
-            if (!confirm(`Confirm ${action} for ${user.email || user.id}?`)) return;
-
-            button.disabled = true;
-            button.textContent = "Saving...";
-            const { error } = await supabaseClient.rpc("admin_update_user", {
-                p_user_id: user.id,
-                p_account_type: accountType,
-                p_status: status
-            });
-
-            if (error) {
-                setMessage(message, "Update failed: " + error.message, "error");
-                button.disabled = false;
-                button.textContent = "Apply";
-                return;
-            }
-
-            setMessage(message, "User updated successfully.", "success");
-            await loadUsers();
-        });
-
-        const profileButton = document.createElement("button");
-        profileButton.className = "profile-button secondary-button";
-        profileButton.type = "button";
-        profileButton.textContent = "Profile & balances";
-        profileButton.addEventListener("click", () => showUserProfile(user));
-
-        actionCell.append(select, button, profileButton);
-        row.appendChild(actionCell);
-        tbody.appendChild(row);
+      }
+      setMessage(message, "User updated successfully.", "success");
+      await loadUsers();
+      await loadOverview();
     });
+
+    const profileBtn = document.createElement("button");
+    profileBtn.type = "button";
+    profileBtn.className = "profile-button secondary-button small-btn";
+    profileBtn.textContent = "Profile & balances";
+    profileBtn.addEventListener("click", () => showUserProfile(user));
+
+    actionCell.append(select, applyBtn, profileBtn);
+    row.append(userCell, accountCell, statusCell, dateCell, actionCell);
+    tbody.appendChild(row);
+  });
 }
 
 async function loadUsers() {
-    setMessage(message, "Loading registered users...", "info");
-    const { data, error } = await supabaseClient.rpc("admin_list_users");
-    if (error) {
-        setMessage(message, "Unable to load users: " + error.message, "error");
-        return;
-    }
-
-    allUsers = Array.isArray(data) ? data : [];
-    const total = allUsers.length;
-    const standard = allUsers.filter((u) => String(u.account_type || "").toLowerCase() === "standard").length;
-    const vip = allUsers.filter((u) => String(u.account_type || "").toLowerCase() === "vip").length;
-    const restricted = allUsers.filter((u) => ["suspended", "blocked"].includes(String(u.status || "").toLowerCase())).length;
-
-    const totalEl = document.getElementById("totalUsers");
-    const standardEl = document.getElementById("standardUsers");
-    const vipEl = document.getElementById("vipUsers");
-    const restrictedEl = document.getElementById("restrictedUsers");
-    if (totalEl) totalEl.textContent = String(total);
-    if (standardEl) standardEl.textContent = String(standard);
-    if (vipEl) vipEl.textContent = String(vip);
-    if (restrictedEl) restrictedEl.textContent = String(restricted);
-
+  setMessage(message, "Loading registered users...", "info");
+  const { data, error } = await supabaseClient.rpc("admin_list_users");
+  if (error) {
+    setMessage(message, "Unable to load users: " + getErrorMessage(error) + " (admin_list_users RPC must be available)", "error");
+    allUsers = [];
     renderUsers();
-    setMessage(message, `${total} registered users loaded.`, "success");
+    return;
+  }
+
+  allUsers = Array.isArray(data) ? data : (Array.isArray(data?.users) ? data.users : []);
+  const total = allUsers.length;
+  const vip = allUsers.filter((u) => String(u.account_type || "").toLowerCase() === "vip").length;
+  const restricted = allUsers.filter((u) => ["suspended", "blocked"].includes(String(u.status || "").toLowerCase())).length;
+
+  const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+  setText("totalUsers", String(total));
+  setText("vipUsers", String(vip));
+  setText("restrictedUsers", String(restricted));
+
+  renderUsers();
+  setMessage(message, `${total} users loaded.`, "success");
+}
+
+async function loadOverview() {
+  const { data, error } = await supabaseClient.rpc("admin_get_dashboard_overview");
+  const setText = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+  if (error) {
+    setText("demoOpenPositions", "—");
+    setText("realOpenPositions", "—");
+    setText("demoTotalBalance", "—");
+    setText("realTotalBalance", "—");
+    setText("overviewConfirmedDeposits", "—");
+    setText("overviewTodayDeposits", "Today: —");
+    return;
+  }
+  setText("demoOpenPositions", String(data?.demo_open_positions ?? 0));
+  setText("realOpenPositions", String(data?.real_test_open_positions ?? 0));
+  setText("demoTotalBalance", formatMoney(data?.demo_total_balance, "$"));
+  setText("realTotalBalance", formatMoney(data?.real_test_total_balance, "$"));
+  setText("overviewConfirmedDeposits", formatKsh(data?.megapay_total_confirmed ?? 0));
+  setText("overviewTodayDeposits", "Today: " + formatKsh(data?.megapay_today_confirmed ?? 0));
+  const completedEl = document.getElementById("completedDepositCount");
+  if (completedEl) completedEl.textContent = String(data?.megapay_completed_count ?? 0);
 }
 
 function setBalanceCardValue(id, valueText) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = valueText;
+  const el = document.getElementById(id);
+  if (el) el.textContent = valueText;
 }
 
 async function loadUserBalances(userId) {
-    setBalanceCardValue("demoBalanceValue", "Loading...");
-    setBalanceCardValue("realTestBalanceValue", "Loading...");
-    setMessage(balanceMessage, "Fetching demo and real test balances...", "info");
+  setBalanceCardValue("demoBalanceValue", "Loading...");
+  setBalanceCardValue("realTestBalanceValue", "Loading...");
+  setMessage(balanceMessage, "Fetching balances...", "info");
 
-    const { data, error } = await supabaseClient.rpc("admin_get_user_balances", { p_user_id: userId });
-    if (error) {
-        setBalanceCardValue("demoBalanceValue", "Unavailable");
-        setBalanceCardValue("realTestBalanceValue", "Unavailable");
-        setMessage(
-            balanceMessage,
-            "Balances unavailable: " + error.message + " (Run supabase-admin-balance-adjustments.sql in Supabase if this RPC is missing.)",
-            "error"
-        );
-        return null;
-    }
+  const { data, error } = await supabaseClient.rpc("admin_get_user_balances", { p_user_id: userId });
+  if (error) {
+    setBalanceCardValue("demoBalanceValue", "Unavailable");
+    setBalanceCardValue("realTestBalanceValue", "Unavailable");
+    setMessage(balanceMessage, "Balances unavailable: " + getErrorMessage(error) + " (run supabase-admin-balance-adjustments.sql in Supabase)", "error");
+    return null;
+  }
 
-    setBalanceCardValue("demoBalanceValue", formatMoney(data?.demo_balance));
-    setBalanceCardValue("realTestBalanceValue", formatMoney(data?.real_test_balance));
-    const demoState = data?.demo_account_exists ? "" : " Demo account will be created on first adjustment.";
-    const realState = data?.real_test_account_exists ? "" : " Real test account will be created on first adjustment.";
-    setMessage(balanceMessage, `Balances loaded.${demoState}${realState}`.trim(), "success");
-    return data;
+  setBalanceCardValue("demoBalanceValue", formatMoney(data?.demo_balance));
+  setBalanceCardValue("realTestBalanceValue", formatMoney(data?.real_test_balance));
+  const notes = [];
+  if (!data?.demo_account_exists) notes.push("Demo account will be created on first adjustment.");
+  if (!data?.real_test_account_exists) notes.push("Real test account will be created on first adjustment.");
+  setMessage(balanceMessage, ["Balances loaded.", ...notes].join(" ").trim(), "success");
+  return data;
 }
 
-async function adjustBalance(accountKey, user) {
-    if (!user?.id) return;
-    const isDemo = accountKey === "demo";
-    const modeEl = document.getElementById(isDemo ? "demoAdjustMode" : "realAdjustMode");
-    const amountEl = document.getElementById(isDemo ? "demoAdjustAmount" : "realAdjustAmount");
-    const button = document.getElementById(isDemo ? "applyDemoBalance" : "applyRealTestBalance");
-    if (!modeEl || !amountEl || !button) return;
+async function adjustBalance(accountKey) {
+  const user = activeProfileUser;
+  if (!user?.id) return;
+  const isDemo = accountKey === "demo";
+  const modeEl = document.getElementById(isDemo ? "demoAdjustMode" : "realAdjustMode");
+  const amountEl = document.getElementById(isDemo ? "demoAdjustAmount" : "realAdjustAmount");
+  const button = document.getElementById(isDemo ? "applyDemoBalance" : "applyRealTestBalance");
+  if (!modeEl || !amountEl || !button) return;
 
-    const rpcName = isDemo ? "admin_adjust_demo_balance" : "admin_adjust_real_test_balance";
-    const label = isDemo ? "Demo" : "Real test";
+  const rpcName = isDemo ? "admin_adjust_demo_balance" : "admin_adjust_real_test_balance";
+  const label = isDemo ? "Demo" : "Real test";
+  const mode = modeEl.value || "add";
+  const amount = Number(amountEl.value);
+  if (!Number.isFinite(amount) || amount < 0) {
+    setMessage(balanceMessage, `Enter a valid amount for ${label.toLowerCase()} balance.`, "error");
+    return;
+  }
+  if (!confirm(`Confirm ${mode} ${formatMoney(amount)} for ${label} account of ${user.email || user.id}?`)) return;
 
-    const mode = modeEl.value || "add";
-    const amount = Number(amountEl.value);
-    if (!Number.isFinite(amount) || amount < 0) {
-        setMessage(balanceMessage, `Enter a valid amount for ${label.toLowerCase()} balance.`, "error");
-        return;
-    }
+  button.disabled = true;
+  const prev = button.textContent;
+  button.textContent = "Applying...";
+  setMessage(balanceMessage, `Updating ${label.toLowerCase()} balance...`, "info");
 
-    if (!confirm(`Confirm ${mode} ${formatMoney(amount)} for ${label} account of ${user.email || user.id}?`)) {
-        return;
-    }
+  const { data, error } = await supabaseClient.rpc(rpcName, {
+    p_user_id: user.id,
+    p_mode: mode,
+    p_amount: amount,
+    p_note: "Adjusted from admin dashboard"
+  });
 
-    button.disabled = true;
-    const previousText = button.textContent;
-    button.textContent = "Applying...";
-    setMessage(balanceMessage, `Updating ${label.toLowerCase()} balance...`, "info");
+  button.disabled = false;
+  button.textContent = prev;
 
-    const { data, error } = await supabaseClient.rpc(rpcName, {
-        p_user_id: user.id,
-        p_mode: mode,
-        p_amount: amount,
-        p_note: "Adjusted from admin dashboard"
-    });
+  if (error) {
+    setMessage(balanceMessage, `${label} balance update failed: ${getErrorMessage(error)}`, "error");
+    return;
+  }
 
-    button.disabled = false;
-    button.textContent = previousText;
-
-    if (error) {
-        setMessage(balanceMessage, `${label} balance update failed: ${error.message}`, "error");
-        return;
-    }
-
-    amountEl.value = "";
-    await loadUserBalances(user.id);
-    const balance = data?.balance ?? data?.new_balance ?? data?.demo_balance ?? data?.real_test_balance;
-    setMessage(balanceMessage, `${label} balance updated successfully. New balance: ${formatMoney(balance)}.`, "success");
+  amountEl.value = "";
+  await loadUserBalances(user.id);
+  await loadOverview();
+  const balance = data?.balance ?? data?.new_balance;
+  setMessage(balanceMessage, `${label} balance updated successfully. New balance: ${formatMoney(balance)}. Changes are effective for the website.`, "success");
 }
 
 function showUserProfile(user) {
-    activeProfileUser = user;
-    const modal = document.getElementById("profileModal");
-    if (!modal) return;
+  activeProfileUser = user;
+  const modal = document.getElementById("profileModal");
+  if (!modal) return;
 
-    const name = user.full_name || "Name not provided";
-    const email = user.email || "Email unavailable";
-    const accountType = user.account_type || "standard";
-    const status = user.status || "active";
+  const name = normalizeUserField(user, ["full_name", "name", "fullName"], "Name not provided");
+  const email = user.email || "Email unavailable";
+  const accountType = String(user.account_type || "standard");
+  const status = String(user.status || "active");
 
-    document.getElementById("profileAvatar").textContent = (user.full_name || user.email || "U").charAt(0).toUpperCase();
-    document.getElementById("profileName").textContent = name;
-    document.getElementById("profileEmail").textContent = email;
-    document.getElementById("profilePhone").textContent = user.phone || "Not provided";
-    document.getElementById("profileAccount").textContent = accountType;
-    document.getElementById("profileStatus").textContent = status;
-    document.getElementById("profileDate").textContent = user.created_at ? new Date(user.created_at).toLocaleString() : "Unavailable";
-    document.getElementById("profileId").textContent = user.id || "Unavailable";
+  document.getElementById("profileAvatar").textContent = (name || email || "U").charAt(0).toUpperCase();
+  document.getElementById("profileName").textContent = name;
+  document.getElementById("profileEmail").textContent = email;
+  document.getElementById("profilePhone").textContent = normalizeUserField(user, ["phone", "phone_number"], "Not provided");
+  document.getElementById("profileAccount").textContent = accountType;
+  document.getElementById("profileStatus").textContent = status;
+  document.getElementById("profileDate").textContent = formatDate(user.created_at);
+  document.getElementById("profileId").textContent = user.id || "Unavailable";
 
-    const accountBadge = document.getElementById("profileAccountBadge");
-    const statusBadge = document.getElementById("profileStatusBadge");
-    if (accountBadge) {
-        accountBadge.textContent = accountType;
-        accountBadge.className = `pill ${String(accountType).toLowerCase() === "vip" ? "vip" : "standard"}`;
-    }
-    if (statusBadge) {
-        const normalized = String(status).toLowerCase();
-        statusBadge.textContent = status;
-        statusBadge.className = `pill ${["active", "suspended", "blocked"].includes(normalized) ? normalized : "muted-pill"}`;
-    }
+  const accountBadge = document.getElementById("profileAccountBadge");
+  const statusBadge = document.getElementById("profileStatusBadge");
+  if (accountBadge) {
+    accountBadge.textContent = accountType;
+    accountBadge.className = `pill ${accountType.toLowerCase() === "vip" ? "vip" : "standard"}`;
+  }
+  if (statusBadge) {
+    const normalized = status.toLowerCase();
+    statusBadge.textContent = status;
+    statusBadge.className = `pill ${["active", "suspended", "blocked"].includes(normalized) ? normalized : "muted-pill"}`;
+  }
 
-    modal.hidden = false;
-    if (user.id) loadUserBalances(user.id);
+  modal.hidden = false;
+  if (user.id) loadUserBalances(user.id);
 }
 
 function closeUserProfile() {
-    const modal = document.getElementById("profileModal");
-    if (modal) modal.hidden = true;
-    activeProfileUser = null;
-    setMessage(balanceMessage, "", "info");
+  const modal = document.getElementById("profileModal");
+  if (modal) modal.hidden = true;
+  activeProfileUser = null;
+  setMessage(balanceMessage, "", "info");
+}
+
+async function loadSimulationSettings() {
+  const settingsMessage = document.getElementById("settingsMessage");
+  const { data, error } = await supabaseClient.rpc("admin_get_settings");
+  if (error) {
+    setMessage(settingsMessage, "Unable to load settings: " + getErrorMessage(error), "error");
+    return;
+  }
+  const standardEl = document.getElementById("standardWinRate");
+  const vipEl = document.getElementById("vipWinRate");
+  if (standardEl) standardEl.value = data?.standard_win_rate ?? "";
+  if (vipEl) vipEl.value = data?.vip_win_rate ?? "";
+  setMessage(settingsMessage, "Simulation settings loaded.", "success");
+}
+
+async function saveSimulationSettings() {
+  const standard = Number(document.getElementById("standardWinRate")?.value);
+  const vip = Number(document.getElementById("vipWinRate")?.value);
+  const settingsMessage = document.getElementById("settingsMessage");
+  if (!Number.isFinite(standard) || !Number.isFinite(vip) || standard < 0 || standard > 100 || vip < 0 || vip > 100) {
+    setMessage(settingsMessage, "Both rates must be between 0 and 100.", "error");
+    return;
+  }
+  const saveButton = document.getElementById("saveSettings");
+  if (saveButton) { saveButton.disabled = true; saveButton.textContent = "Saving..."; }
+  const { error } = await supabaseClient.rpc("admin_save_settings", { p_standard_win_rate: standard, p_vip_win_rate: vip });
+  if (saveButton) { saveButton.disabled = false; saveButton.textContent = "Save simulation settings"; }
+  if (error) { setMessage(settingsMessage, "Save failed: " + getErrorMessage(error), "error"); return; }
+  setMessage(settingsMessage, "Simulation settings saved successfully.", "success");
+}
+
+function renderDepositRows(records) {
+  const receivedBody = document.getElementById("receivedDepositsBody");
+  const pendingBody = document.getElementById("pendingDepositsBody");
+  if (!receivedBody || !pendingBody) return;
+
+  const all = Array.isArray(records) ? records : [];
+  const confirmed = all.filter((d) => String(d.status || "").toLowerCase() === "completed" || d.credited_at);
+  const pendingLike = all.filter((d) => !(String(d.status || "").toLowerCase() === "completed" || d.credited_at));
+
+  const receivedTotal = confirmed.reduce((sum, d) => sum + Number(d.amount || 0), 0);
+  const pendingTotal = pendingLike.reduce((sum, d) => sum + Number(d.amount || 0), 0);
+  const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setText("receivedSectionTotal", formatKsh(receivedTotal));
+  setText("pendingSectionTotal", formatKsh(pendingTotal));
+
+  const rowHtml = (d) => `<tr>
+    <td>${escapeHtml(d.email || d.user_email || "—")}</td>
+    <td>${escapeHtml(d.phone || d.msisdn || "—")}</td>
+    <td>${formatKsh(d.amount)}</td>
+    <td><code class="mono">${escapeHtml(d.reference || "—")}</code></td>
+    <td><span class="pill ${String(d.status || "unknown").toLowerCase()}">${escapeHtml(d.status || "—")}</span></td>
+    <td>${formatDate(d.credited_at || d.created_at || d.updated_at)}</td>
+  </tr>`;
+
+  receivedBody.innerHTML = confirmed.length ? confirmed.map(rowHtml).join("") : '<tr><td colspan="6">No confirmed deposits.</td></tr>';
+  pendingBody.innerHTML = pendingLike.length ? pendingLike.map(rowHtml).join("") : '<tr><td colspan="6">No pending or other deposits.</td></tr>';
+}
+
+async function loadDepositRecords() {
+  const receivedBody = document.getElementById("receivedDepositsBody");
+  const pendingBody = document.getElementById("pendingDepositsBody");
+  if (receivedBody) receivedBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+  if (pendingBody) pendingBody.innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+
+  // Prefer detailed megapay list if available, fallback to admin_get_deposit_records
+  let records = null;
+  let summary = null;
+  const listRes = await supabaseClient.rpc("admin_list_megapay_deposits", { p_status: null, p_limit: 500 });
+  if (!listRes.error) {
+    records = Array.isArray(listRes.data) ? listRes.data : [];
+  }
+
+  const recRes = await supabaseClient.rpc("admin_get_deposit_records");
+  if (!recRes.error) {
+    summary = recRes.data || {};
+    if (!records) records = Array.isArray(summary.records) ? summary.records : [];
+  } else if (listRes.error) {
+    if (receivedBody) receivedBody.innerHTML = '<tr><td colspan="6">Could not load deposits.</td></tr>';
+    if (pendingBody) pendingBody.innerHTML = '<tr><td colspan="6">Could not load deposits.</td></tr>';
+    return;
+  }
+
+  renderDepositRows(records || []);
+
+  const all = records || [];
+  const confirmed = all.filter((d) => String(d.status || "").toLowerCase() === "completed" || d.credited_at);
+  const pendingLike = all.filter((d) => String(d.status || "").toLowerCase() === "pending");
+  const totalConfirmed = summary?.total_confirmed ?? confirmed.reduce((s, d) => s + Number(d.amount || 0), 0);
+  const todayConfirmed = summary?.today_confirmed ?? 0;
+  const pendingCount = summary?.pending_count ?? pendingLike.length;
+  const pendingTotal = summary?.pending_total ?? pendingLike.reduce((s, d) => s + Number(d.amount || 0), 0);
+
+  const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setText("totalConfirmedDeposits", formatKsh(totalConfirmed));
+  setText("todayConfirmedDeposits", formatKsh(todayConfirmed));
+  setText("pendingDepositCount", String(pendingCount));
+  setText("pendingDepositAmount", formatKsh(pendingTotal));
+  setText("completedDepositCount", String(confirmed.length));
+}
+
+function renderPositionsTable(rows, env) {
+  const body = document.getElementById("positionsTableBody");
+  if (!body) return;
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) {
+    body.innerHTML = '<tr><td colspan="9">No positions found.</td></tr>';
+    return;
+  }
+  body.innerHTML = list.map((p) => {
+    const status = String(p.status || "").toLowerCase();
+    const pnl = p.pnl == null ? "—" : `${Number(p.pnl) >= 0 ? "+" : ""}${formatMoney(p.pnl)}`;
+    const exit = p.exit_price == null ? "—" : String(p.exit_price);
+    const canClose = status === "open";
+    const action = canClose
+      ? `<button class="secondary-button small-btn close-position-btn" data-env="${env}" data-id="${escapeHtml(p.id)}">Close</button>`
+      : "—";
+    return `<tr>
+      <td><div class="user-cell"><strong>${escapeHtml(p.user_email || "—")}</strong><small>${escapeHtml(p.user_id || "")}</small></div></td>
+      <td>${escapeHtml(p.market || "—")}</td>
+      <td><span class="pill ${String(p.side || "").toLowerCase()}">${escapeHtml(p.side || "—")}</span></td>
+      <td>${formatMoney(p.amount)}</td>
+      <td>${p.entry_price ?? "—"}</td>
+      <td><div class="user-cell"><strong>${escapeHtml(exit)}</strong><small>${escapeHtml(pnl)}</small></div></td>
+      <td><span class="pill ${status}">${escapeHtml(p.status || "—")}</span></td>
+      <td>${formatDate(p.created_at || p.opened_at)}</td>
+      <td>${action}</td>
+    </tr>`;
+  }).join("");
+
+  body.querySelectorAll(".close-position-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.getAttribute("data-id");
+      const acc = btn.getAttribute("data-env");
+      if (!id) return;
+      if (!confirm(`Close this open ${acc === "demo" ? "demo" : "real test"} position? This action takes effect immediately.`)) return;
+      btn.disabled = true;
+      btn.textContent = "Closing...";
+      const rpc = acc === "demo" ? "admin_close_demo_position" : "admin_close_real_test_position";
+      const { error } = await supabaseClient.rpc(rpc, { p_position_id: id });
+      if (error) {
+        setMessage(document.getElementById("positionsMessage"), "Close failed: " + getErrorMessage(error), "error");
+        btn.disabled = false;
+        btn.textContent = "Close";
+        return;
+      }
+      setMessage(document.getElementById("positionsMessage"), "Position closed successfully. Balance/records updated.", "success");
+      await loadPositions();
+      await loadTransactions();
+      await loadOverview();
+    });
+  });
+}
+
+async function loadPositions() {
+  const env = document.getElementById("positionsAccount")?.value || "real_test";
+  const status = document.getElementById("positionsStatus")?.value || "all";
+  const msg = document.getElementById("positionsMessage");
+  const body = document.getElementById("positionsTableBody");
+  if (body) body.innerHTML = '<tr><td colspan="9">Loading...</td></tr>';
+  setMessage(msg, "Loading positions...", "info");
+
+  const rpc = env === "demo" ? "admin_list_demo_positions" : "admin_list_real_test_positions";
+  const { data, error } = await supabaseClient.rpc(rpc, { p_user_id: null, p_status: status, p_limit: 300 });
+  if (error) {
+    if (body) body.innerHTML = '<tr><td colspan="9">Positions unavailable.</td></tr>';
+    setMessage(msg, "Unable to load positions: " + getErrorMessage(error) + " (run updated admin integration SQL)", "error");
+    return;
+  }
+  const rows = Array.isArray(data) ? data : [];
+  renderPositionsTable(rows, env);
+  setMessage(msg, `${rows.length} ${env === "demo" ? "demo" : "real test"} positions loaded.`, "success");
+}
+
+async function loadTransactions() {
+  const env = document.getElementById("transactionsAccount")?.value || "real_test";
+  const msg = document.getElementById("transactionsMessage");
+  const body = document.getElementById("transactionsTableBody");
+  if (body) body.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+  setMessage(msg, "Loading transactions...", "info");
+
+  const rpc = env === "demo" ? "admin_list_demo_transactions" : "admin_list_real_test_transactions";
+  const { data, error } = await supabaseClient.rpc(rpc, { p_user_id: null, p_limit: 300 });
+  if (error) {
+    if (body) body.innerHTML = '<tr><td colspan="5">Transactions unavailable.</td></tr>';
+    setMessage(msg, "Unable to load transactions: " + getErrorMessage(error) + " (run updated admin integration SQL)", "error");
+    return;
+  }
+  const rows = Array.isArray(data) ? data : [];
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="5">No transactions found.</td></tr>';
+  } else {
+    body.innerHTML = rows.map((t) => `<tr>
+      <td><div class="user-cell"><strong>${escapeHtml(t.user_email || "—")}</strong><small>${escapeHtml(t.user_id || "")}</small></div></td>
+      <td><span class="pill ${String(t.transaction_type || "").toLowerCase()}">${escapeHtml(t.transaction_type || "—")}</span></td>
+      <td>${formatMoney(t.amount)}</td>
+      <td>${formatMoney(t.balance_after)}</td>
+      <td>${formatDate(t.created_at)}</td>
+    </tr>`).join("");
+  }
+  setMessage(msg, `${rows.length} ${env === "demo" ? "demo" : "real test"} transactions loaded.`, "success");
+}
+
+async function loadAll() {
+  setMessage(globalMessage, "Refreshing all dashboard data...", "info");
+  await Promise.allSettled([
+    loadUsers(),
+    loadOverview(),
+    loadSimulationSettings(),
+    loadDepositRecords(),
+    loadPositions(),
+    loadTransactions()
+  ]);
+  setMessage(globalMessage, "Dashboard data refreshed. Actions and records are integrated with NexaTrade data sources.", "success");
 }
 
 document.getElementById("closeProfile")?.addEventListener("click", closeUserProfile);
 document.getElementById("closeProfileBottom")?.addEventListener("click", closeUserProfile);
-document.getElementById("profileModal")?.addEventListener("click", (event) => {
-    if (event.target.id === "profileModal") closeUserProfile();
-});
-
-document.getElementById("refreshBalances")?.addEventListener("click", () => {
-    if (activeProfileUser?.id) loadUserBalances(activeProfileUser.id);
-});
-document.getElementById("applyDemoBalance")?.addEventListener("click", () => adjustBalance("demo", activeProfileUser));
-document.getElementById("applyRealTestBalance")?.addEventListener("click", () => adjustBalance("real", activeProfileUser));
-
-async function loadSimulationSettings() {
-    const settingsMessage = document.getElementById("settingsMessage");
-    const { data, error } = await supabaseClient.rpc("admin_get_settings");
-    if (error) {
-        setMessage(settingsMessage, "Unable to load settings: " + error.message, "error");
-        return;
-    }
-    const standardEl = document.getElementById("standardWinRate");
-    const vipEl = document.getElementById("vipWinRate");
-    if (standardEl) standardEl.value = data?.standard_win_rate ?? "";
-    if (vipEl) vipEl.value = data?.vip_win_rate ?? "";
-}
-
-async function saveSimulationSettings() {
-    const standard = Number(document.getElementById("standardWinRate")?.value);
-    const vip = Number(document.getElementById("vipWinRate")?.value);
-    const settingsMessage = document.getElementById("settingsMessage");
-
-    if (!Number.isFinite(standard) || !Number.isFinite(vip) || standard < 0 || standard > 100 || vip < 0 || vip > 100) {
-        setMessage(settingsMessage, "Both rates must be between 0 and 100.", "error");
-        return;
-    }
-
-    const saveButton = document.getElementById("saveSettings");
-    if (saveButton) {
-        saveButton.disabled = true;
-        saveButton.textContent = "Saving...";
-    }
-    const { error } = await supabaseClient.rpc("admin_save_settings", {
-        p_standard_win_rate: standard,
-        p_vip_win_rate: vip
-    });
-    if (saveButton) {
-        saveButton.disabled = false;
-        saveButton.textContent = "Save simulation settings";
-    }
-
-    if (error) {
-        setMessage(settingsMessage, "Save failed: " + error.message, "error");
-        return;
-    }
-    setMessage(settingsMessage, "Simulation settings saved successfully.", "success");
-}
+document.getElementById("profileModal")?.addEventListener("click", (e) => { if (e.target.id === "profileModal") closeUserProfile(); });
+document.getElementById("refreshBalances")?.addEventListener("click", () => { if (activeProfileUser?.id) loadUserBalances(activeProfileUser.id); });
+document.getElementById("applyDemoBalance")?.addEventListener("click", () => adjustBalance("demo"));
+document.getElementById("applyRealTestBalance")?.addEventListener("click", () => adjustBalance("real"));
 
 document.getElementById("saveSettings")?.addEventListener("click", saveSimulationSettings);
-
-function escapeDepositText(value) {
-    return String(value ?? "").replace(/[&<>"']/g, (character) => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-    }[character]));
-}
-
-async function loadDepositRecords() {
-    const receivedBody = document.getElementById("receivedDepositsBody");
-    const pendingBody = document.getElementById("pendingDepositsBody");
-    if (!receivedBody || !pendingBody) return;
-
-    receivedBody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
-    pendingBody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
-
-    const { data, error } = await supabaseClient.rpc("admin_get_deposit_records");
-    if (error) {
-        receivedBody.innerHTML = '<tr><td colspan="5">Could not load records.</td></tr>';
-        pendingBody.innerHTML = '<tr><td colspan="5">Could not load records.</td></tr>';
-        return;
-    }
-
-    const records = Array.isArray(data?.records) ? data.records : [];
-    const received = records.filter((deposit) => deposit.credited_at);
-    const pending = records.filter((deposit) => deposit.status === "pending");
-
-    const receivedTotal = received.reduce((sum, deposit) => sum + Number(deposit.amount || 0), 0);
-    const pendingTotal = pending.reduce((sum, deposit) => sum + Number(deposit.amount || 0), 0);
-
-    const receivedTotalEl = document.getElementById("receivedSectionTotal");
-    const pendingTotalEl = document.getElementById("pendingSectionTotal");
-    if (receivedTotalEl) receivedTotalEl.textContent = formatDepositMoney(receivedTotal);
-    if (pendingTotalEl) pendingTotalEl.textContent = formatDepositMoney(pendingTotal);
-
-    receivedBody.innerHTML = received.length
-        ? received.map((deposit) => `
-            <tr>
-                <td>${escapeDepositText(deposit.email || "—")}</td>
-                <td>${escapeDepositText(deposit.phone || "—")}</td>
-                <td>${formatDepositMoney(deposit.amount)}</td>
-                <td>${escapeDepositText(deposit.reference || "—")}</td>
-                <td>${deposit.credited_at ? new Date(deposit.credited_at).toLocaleString("en-KE") : "—"}</td>
-            </tr>
-        `).join("")
-        : '<tr><td colspan="5">No confirmed deposits received yet.</td></tr>';
-
-    pendingBody.innerHTML = pending.length
-        ? pending.map((deposit) => `
-            <tr>
-                <td>${escapeDepositText(deposit.email || "—")}</td>
-                <td>${escapeDepositText(deposit.phone || "—")}</td>
-                <td>${formatDepositMoney(deposit.amount)}</td>
-                <td>${escapeDepositText(deposit.reference || "—")}</td>
-                <td>${deposit.created_at ? new Date(deposit.created_at).toLocaleString("en-KE") : "—"}</td>
-            </tr>
-        `).join("")
-        : '<tr><td colspan="5">No pending deposits.</td></tr>';
-
-    const totalConfirmed = document.getElementById("totalConfirmedDeposits");
-    const todayConfirmed = document.getElementById("todayConfirmedDeposits");
-    const pendingCount = document.getElementById("pendingDepositCount");
-    const pendingAmount = document.getElementById("pendingDepositAmount");
-    if (totalConfirmed) totalConfirmed.textContent = formatDepositMoney(data?.total_confirmed);
-    if (todayConfirmed) todayConfirmed.textContent = formatDepositMoney(data?.today_confirmed);
-    if (pendingCount) pendingCount.textContent = Number(data?.pending_count || 0).toLocaleString("en-KE");
-    if (pendingAmount) pendingAmount.textContent = formatDepositMoney(data?.pending_total);
-}
-
-document.getElementById("refreshUsers")?.addEventListener("click", loadUsers);
+document.getElementById("refreshUsers")?.addEventListener("click", () => { loadUsers(); loadOverview(); });
 document.getElementById("userSearch")?.addEventListener("input", renderUsers);
 document.getElementById("accountFilter")?.addEventListener("change", renderUsers);
 document.getElementById("statusFilter")?.addEventListener("change", renderUsers);
-document.getElementById("refreshDeposits")?.addEventListener("click", loadDepositRecords);
+document.getElementById("refreshDeposits")?.addEventListener("click", () => { loadDepositRecords(); loadOverview(); });
+document.getElementById("refreshPositions")?.addEventListener("click", loadPositions);
+document.getElementById("positionsAccount")?.addEventListener("change", loadPositions);
+document.getElementById("positionsStatus")?.addEventListener("change", loadPositions);
+document.getElementById("refreshTransactions")?.addEventListener("click", loadTransactions);
+document.getElementById("transactionsAccount")?.addEventListener("change", loadTransactions);
+document.getElementById("refreshAll")?.addEventListener("click", loadAll);
 
 document.getElementById("logoutButton")?.addEventListener("click", async () => {
-    await supabaseClient.auth.signOut();
-    window.location.replace("index.html");
+  await supabaseClient.auth.signOut();
+  window.location.replace("index.html");
 });
 
 (async function startDashboard() {
-    const authorized = await protectDashboard();
-    if (authorized) {
-        await loadUsers();
-        await loadSimulationSettings();
-        await loadDepositRecords();
-    }
+  const authorized = await protectDashboard();
+  if (authorized) await loadAll();
 })();

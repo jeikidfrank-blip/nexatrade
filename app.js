@@ -1297,19 +1297,38 @@ function unrealizedPnl(position) {
 function renderTradeResult() {
   const display = state.tradeDisplay;
   const panel = $("#trade-result");
+  const notice = $("#result-notice-message");
+  const tag = $("#result-tag");
+  const amount = $("#result-outcome-amount");
 
   const isPending = Boolean(display && display.status === "pending");
-  const isOpen = Boolean(display && display.status === "open");
-
   panel.hidden = !display || isPending;
   $("#result-executing").hidden = !isPending;
 
-  if (!display) return;
+  if (notice) {
+    notice.hidden = true;
+    notice.textContent = "";
+  }
+  if (tag) tag.hidden = false;
+  if (amount) amount.hidden = true;
 
-  if (isPending) {
+  if (!display || isPending) return;
+
+  $("#dismiss-trade-result").hidden = false;
+
+  if (display.kind === "notice") {
+    const tone = display.tone === "error" ? "is-error" : "is-win";
+    panel.className = `trade-result is-notice ${tone}`;
+    $("#result-status").textContent = display.title || "Notice";
+    if (tag) tag.hidden = true;
+    if (notice) {
+      notice.textContent = display.message || "";
+      notice.hidden = !display.message;
+    }
     return;
   }
 
+  const isOpen = Boolean(display.status === "open");
   const isClosed = display.status === "closed";
   const isLive = isOpen && display.position;
 
@@ -1328,8 +1347,6 @@ function renderTradeResult() {
       : "is-error"
     }`;
 
-  $("#dismiss-trade-result").hidden = false;
-
   $("#result-status").textContent = isClosed
     ? pnl > 0
       ? `TRADE CLOSED · WIN ×${multiplier}`
@@ -1340,13 +1357,11 @@ function renderTradeResult() {
       ? "POSITION OPEN · LIVE P&L"
       : "TRADE NOT EXECUTED";
 
-  const amount = $("#result-outcome-amount");
-
-  amount.hidden = !isClosed && !isLive;
-
-  if (isClosed || isLive) {
-    amount.textContent =
-      `${pnl > 0 ? "+" : pnl < 0 ? "−" : ""}${money(Math.abs(pnl))}`;
+  if (amount) {
+    amount.hidden = !isClosed && !isLive;
+    if (isClosed || isLive) {
+      amount.textContent = `${pnl > 0 ? "+" : pnl < 0 ? "−" : ""}${money(Math.abs(pnl))}`;
+    }
   }
 }
 
@@ -2297,13 +2312,23 @@ async function submitDemoFunds() {
 
     closeFundsModal();
 
-    toast(
-      isSet
-        ? `Demo balance set to ${money(state.balance)}.`
-        : isDemo
-          ? `${money(amount)} added to your demo balance.`
-          : `${money(amount)} ${action === "withdrawal" ? "withdrawn from" : "added to"} your balance.`,
-    );
+    if (!isSet && !isDemo && action === "withdrawal") {
+      showTradeResult({
+        kind: "notice",
+        status: "notice",
+        tone: "success",
+        title: "Withdrawal successful",
+        message: `${money(amount)} has been sent to your registered phone number.`
+      });
+    } else {
+      toast(
+        isSet
+          ? `Demo balance set to ${money(state.balance)}.`
+          : isDemo
+            ? `${money(amount)} added to your demo balance.`
+            : `${money(amount)} added to your balance.`,
+      );
+    }
   } catch (error) {
     const message = getErrorMessage(error, "Could not update funds.");
     if (useExternalProvider) setFundsCheckoutResult(message, true);
