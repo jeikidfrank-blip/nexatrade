@@ -242,7 +242,26 @@
               <div class="panel-heading order-heading"><div><h2 id="order-panel-title"></h2><span id="order-mode-description">Demo market position</span></div><span class="demo-tag" id="order-mode-tag">DEMO</span></div>
               <div class="order-market-label">MARKET <span>Market order <span class="market-order-dot"></span></span></div>
               <div class="order-instrument">
-                <button type="button" class="ai-scan-button" id="ai-scan-button" title="AI scanner (optional): scans simulated market and suggests a buy or sell entry" aria-label="AI scanner: scan simulated market for entry">AI</button>
+                <button type="button" class="ai-scan-button" id="ai-scan-button" title="AI scanner (optional): scans simulated market and suggests a buy or sell entry with win-rate probability" aria-label="AI scanner: scan simulated market for entry">
+                  <span class="ai-logo" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="2.5" y="2.5" width="19" height="19" rx="6" fill="url(#ai-scan-logo-bg)"/>
+                      <path d="M12 6.2v2.1M12 15.7v2.1M6.2 12h2.1M15.7 12h2.1M8.1 8.1l1.5 1.5M14.4 14.4l1.5 1.5M15.9 8.1l-1.5 1.5M9.6 14.4l-1.5 1.5" stroke="rgba(255,255,255,.55)" stroke-width="1.2" stroke-linecap="round"/>
+                      <circle cx="12" cy="12" r="3.25" fill="#08111f" stroke="#7dd3fc" stroke-width="1.2"/>
+                      <path d="M10.55 13.45 12 9.7l1.45 3.75M11.05 12.45h1.9" stroke="#e0f2fe" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
+                      <defs>
+                        <linearGradient id="ai-scan-logo-bg" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+                          <stop stop-color="#2563eb"/>
+                          <stop offset="1" stop-color="#06b6d4"/>
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </span>
+                  <span class="ai-scan-copy">
+                    <span class="ai-scan-title">AI Scanner</span>
+                    <span class="ai-scan-status">Scan market</span>
+                  </span>
+                </button>
               </div>
               <label class="amount-label" for="trade-amount">AMOUNT <span>KES</span></label>
               <div class="amount-input-wrap"><span>KSh</span><input id="trade-amount" type="number" min="100" step="100" value="100" inputmode="decimal" aria-label="Trade amount in Kenya shillings" /></div>

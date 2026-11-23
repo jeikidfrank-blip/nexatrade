@@ -2293,7 +2293,9 @@ async function submitDemoFunds() {
 function resetAiScanSignal() {
   const button = $("#ai-scan-button");
   if (!button) return;
-  button.textContent = "AI";
+  const status = button.querySelector(".ai-scan-status");
+  if (status) status.textContent = "Scan market";
+  else button.textContent = "AI";
   button.classList.remove("is-buy", "is-sell", "is-scanning");
   button.title = "AI scanner (optional): scans simulated market and suggests a buy or sell entry with win-rate probability";
   button.setAttribute("aria-label", "AI scanner: scan simulated market for entry");
@@ -2325,9 +2327,11 @@ function scanSimulatedMarketEntry() {
 async function runAiMarketScan() {
   const button = $("#ai-scan-button");
   if (!button || button.disabled) return;
+  const status = button.querySelector(".ai-scan-status");
   button.classList.add("is-scanning");
   button.classList.remove("is-buy", "is-sell");
-  button.textContent = "Scanning...";
+  if (status) status.textContent = "Scanning market...";
+  else button.textContent = "Scanning...";
   button.title = "AI scanner (optional): scanning simulated market...";
   button.setAttribute("aria-label", "AI scanner is scanning simulated market");
   button.disabled = true;
@@ -2336,7 +2340,8 @@ async function runAiMarketScan() {
     const { signal } = scanSimulatedMarketEntry();
     const probability = Math.floor(Math.random() * 40) + 61; // 61-100
     const label = signal === "buy" ? "BUY" : "SELL";
-    button.textContent = `AI ${label} ${probability}%`;
+    if (status) status.textContent = `${label} signal · ${probability}% win`;
+    else button.textContent = `AI ${label} ${probability}%`;
     button.classList.toggle("is-buy", signal === "buy");
     button.classList.toggle("is-sell", signal === "sell");
     button.title = `AI scanner (optional): simulated market scan suggests ${label} with ${probability}% win-rate probability. Click to scan again.`;
