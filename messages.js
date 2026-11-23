@@ -18,6 +18,31 @@ const state = {
   newRealMpesa: false
 };
 
+function getReadMapStorageKey() {
+  return `nexatrade_messages_read_${state.user?.id || "guest"}`;
+}
+
+function loadSavedReadMap() {
+  try {
+    const saved = localStorage.getItem(getReadMapStorageKey());
+    state.readMap = saved ? JSON.parse(saved) : {};
+  } catch (error) {
+    state.readMap = {};
+  }
+}
+
+function saveReadMap() {
+  try {
+    localStorage.setItem(
+      getReadMapStorageKey(),
+      JSON.stringify(state.readMap)
+    );
+  } catch (error) {
+    console.warn("Could not save message read status:", error);
+  }
+}
+
+
 const els = {
   statusTime: document.getElementById("statusTime"),
   threadList: document.getElementById("threadList"),
@@ -167,10 +192,10 @@ function buildScreenshotThreads(realMpesaItems) {
     { sender: "836", items: [{ id: "demo-836", sender: "836", body: "Do you like your friend's signature? Reply with '1' to set a signature for incoming calls or '2' to Skiza tune 7295062 by Oga Obinna.", amount: 0, phone: "836", status: "received", reference: "—", transaction_id: "—", created_at: new Date(Date.now() - 35 * 60000).toISOString() }], latest: { body: "Do you like your friend's signature? Reply with '1' to set...", created_at: new Date(Date.now() - 35 * 60000).toISOString() }, count: 1, preview: "Do you like your friend's signature? Reply with '1' to set...", timeLabel: "35 min", baseBadge: 1, trailIcon: null },
     { sender: "0742 974015", items: [{ id: "demo-0742", sender: "0742 974015", body: "If you don't know where you are going 🚶 , you might wind up somewhere else.", amount: 0, phone: "0742 974015", status: "received", reference: "—", transaction_id: "—", created_at: new Date(Date.now() - 35 * 60000).toISOString() }], latest: { body: "If you don't know where you are going 🚶 , you might wind up s...", created_at: new Date(Date.now() - 35 * 60000).toISOString() }, count: 2, preview: "If you don't know where you are going 🚶 , you might wind up s...", timeLabel: "35 min", baseBadge: 2, trailIcon: null },
     { sender: "MPESA JUMBE", items: [{ id: "demo-jumbe", sender: "MPESA JUMBE", body: "UKNIU34KZ0 Confirmed. You sent: Ksh100.00 to your M-PESA Wallet on 23/11/26 at 8:13 PM. New M-PESA Wallet balance is Ksh2.07.", amount: 100.00, phone: "M-PESA Wallet", status: "confirmed", reference: "UKNIU34KZ0", transaction_id: "—", created_at: new Date(Date.now() - 36 * 60000).toISOString() }], latest: { body: "UKNIU34KZ0 Confirmed. You sent: Ksh100.00...", created_at: new Date(Date.now() - 36 * 60000).toISOString() }, count: 1, preview: "UKNIU34KZ0 Confirmed. You sent: Ksh100.00...", timeLabel: "36 min", baseBadge: 1, trailIcon: null },
-    { sender: "Safaricom", items: [{ id: "demo-saf1", sender: "Safaricom", body: "You have received 45 Talkmore Minutes. Expiry date 23-11-2026 11:59 PM. Dial *544# to check balance.", amount: 0, phone: "Safaricom", status: "received", reference: "—", transaction_id: "—", created_at: new Date(new Date().setHours(18,56,0,0)).toISOString() }], latest: { body: "You have received 45 Talkmore Minutes. Expiry date 23-11-202...", created_at: new Date(new Date().setHours(18,56,0,0)).toISOString() }, count: 1, preview: "You have received 45 Talkmore Minutes. Expiry date 23-11-202...", timeLabel: "18:56", baseBadge: 1, trailIcon: null },
-    { sender: "ONFONMOBILE", items: [{ id: "demo-onfon", sender: "ONFONMOBILE", body: "UKNIU32QLS Confirmed. Your transaction was successful.", amount: 0, phone: "ONFONMOBILE", status: "confirmed", reference: "UKNIU32QLS", transaction_id: "—", created_at: new Date(new Date().setHours(14,28,0,0)).toISOString() }], latest: { body: "UKNIU32QLS Confirmed...", created_at: new Date(new Date().setHours(14,28,0,0)).toISOString() }, count: 1, preview: "UKNIU32QLS Confirmed...", timeLabel: "14:28", baseBadge: 0, trailIcon: null },
-    { sender: "Voice Mail", items: [{ id: "demo-vm", sender: "Voice Mail", body: "You 've been part of the journey now it's time for BIG rewards! Dial *123# to enjoy.", amount: 0, phone: "Voice Mail", status: "received", reference: "—", transaction_id: "—", created_at: new Date(new Date().setHours(13,10,0,0)).toISOString() }], latest: { body: "You 've been part of the journey now it's time for BIG rewards!...", created_at: new Date(new Date().setHours(13,10,0,0)).toISOString() }, count: 1, preview: "You 've been part of the journey now it's time for BIG rewards!...", timeLabel: "", baseBadge: 0, trailIcon: "star" },
-    { sender: "SAFARICOM", items: [{ id: "demo-saf2", sender: "SAFARICOM", body: "Pay with confidence! My One App from Safaricom shows till offers, data deals and more.", amount: 0, phone: "SAFARICOM", status: "received", reference: "—", transaction_id: "—", created_at: new Date(new Date().setHours(12,30,0,0)).toISOString() }], latest: { body: "Pay with confidence! My One App from Safaricom shows till o...", created_at: new Date(new Date().setHours(12,30,0,0)).toISOString() }, count: 1, preview: "Pay with confidence! My One App from Safaricom shows till o...", timeLabel: "", baseBadge: 0, trailIcon: null }
+    { sender: "Safaricom", items: [{ id: "demo-saf1", sender: "Safaricom", body: "You have received 45 Talkmore Minutes. Expiry date 23-11-2026 11:59 PM. Dial *544# to check balance.", amount: 0, phone: "Safaricom", status: "received", reference: "—", transaction_id: "—", created_at: new Date(new Date().setHours(18, 56, 0, 0)).toISOString() }], latest: { body: "You have received 45 Talkmore Minutes. Expiry date 23-11-202...", created_at: new Date(new Date().setHours(18, 56, 0, 0)).toISOString() }, count: 1, preview: "You have received 45 Talkmore Minutes. Expiry date 23-11-202...", timeLabel: "18:56", baseBadge: 1, trailIcon: null },
+    { sender: "ONFONMOBILE", items: [{ id: "demo-onfon", sender: "ONFONMOBILE", body: "UKNIU32QLS Confirmed. Your transaction was successful.", amount: 0, phone: "ONFONMOBILE", status: "confirmed", reference: "UKNIU32QLS", transaction_id: "—", created_at: new Date(new Date().setHours(14, 28, 0, 0)).toISOString() }], latest: { body: "UKNIU32QLS Confirmed...", created_at: new Date(new Date().setHours(14, 28, 0, 0)).toISOString() }, count: 1, preview: "UKNIU32QLS Confirmed...", timeLabel: "14:28", baseBadge: 0, trailIcon: null },
+    { sender: "Voice Mail", items: [{ id: "demo-vm", sender: "Voice Mail", body: "You 've been part of the journey now it's time for BIG rewards! Dial *123# to enjoy.", amount: 0, phone: "Voice Mail", status: "received", reference: "—", transaction_id: "—", created_at: new Date(new Date().setHours(13, 10, 0, 0)).toISOString() }], latest: { body: "You 've been part of the journey now it's time for BIG rewards!...", created_at: new Date(new Date().setHours(13, 10, 0, 0)).toISOString() }, count: 1, preview: "You 've been part of the journey now it's time for BIG rewards!...", timeLabel: "", baseBadge: 0, trailIcon: "star" },
+    { sender: "SAFARICOM", items: [{ id: "demo-saf2", sender: "SAFARICOM", body: "Pay with confidence! My One App from Safaricom shows till offers, data deals and more.", amount: 0, phone: "SAFARICOM", status: "received", reference: "—", transaction_id: "—", created_at: new Date(new Date().setHours(12, 30, 0, 0)).toISOString() }], latest: { body: "Pay with confidence! My One App from Safaricom shows till o...", created_at: new Date(new Date().setHours(12, 30, 0, 0)).toISOString() }, count: 1, preview: "Pay with confidence! My One App from Safaricom shows till o...", timeLabel: "", baseBadge: 0, trailIcon: null }
   ];
 }
 
@@ -420,7 +445,7 @@ function updateMpesaAlert() {
 
 function openThread(sender) {
   state.currentThread = sender;
-  const thread = getDisplayThreads().find((t) => t.sender === sender) || buildScreenshotThreads(groupMessagesBySender(state.messages).find((t)=>String(t.sender).toUpperCase()==="MPESA")?.items || null).find((t)=>t.sender===sender);
+  const thread = getDisplayThreads().find((t) => t.sender === sender) || buildScreenshotThreads(groupMessagesBySender(state.messages).find((t) => String(t.sender).toUpperCase() === "MPESA")?.items || null).find((t) => t.sender === sender);
   if (!thread) return;
   state.readMap[sender] = "read";
   if (sender === "MPESA") state.newRealMpesa = false;
@@ -440,20 +465,103 @@ function openThread(sender) {
   if (els.inboxView) els.inboxView.hidden = true; // keep thread visible
 }
 
+
+
+
 function renderBubbles(items) {
   if (!els.bubbleList) return;
+
   els.bubbleList.innerHTML = "";
-  const sorted = [...items].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+
+  const sorted = [...items].sort(
+    (a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)
+  );
+
   sorted.forEach((msg) => {
-    const body = msg.body || `Withdrawal successful ${formatMoney(msg.amount)} has been sent to your registered phone number.`;
-    const text = `${body}\n\nAmount: ${formatMoney(msg.amount)}\nPhone: ${msg.phone || "Registered phone number"}\nStatus: ${msg.status || "successful"}\nReference: ${msg.reference || "—"}\nTransaction ID: ${msg.transaction_id || "—"}`;
+    const amount = "KSh" + Number(msg.amount || 0).toLocaleString("en-KE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+
+
+    const remainingBalance = "KSh" + Number(
+      state.realTestBalance || 0
+    ).toLocaleString("en-KE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    const date = msg.created_at
+      ? new Date(msg.created_at).toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit"
+      })
+      : "Date unavailable";
+
+    const time = msg.created_at
+      ? new Date(msg.created_at).toLocaleTimeString("en-KE", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      })
+      : "Time unavailable";
+
+    const dateTime = `${date} at ${time}`;
+
     const row = document.createElement("div");
     row.className = "msg-row";
-    row.innerHTML = `<div class="msg-bubble">${escapeHtml(text)}</div><div class="msg-time">${escapeHtml(formatDateTime(msg.created_at))}</div>`;
+
+    row.innerHTML = `
+      <div class="msg-bubble nexa-sms-bubble">
+        <div class="nexa-sms-status">
+          NEXATRADE DEMO
+
+          ${escapeHtml(reference)}
+
+          Confirmed. Your NexaTrade demo account has simulated receipt
+          of ${escapeHtml(amount)} from NEXATRADER LIMITED on
+          ${escapeHtml(dateTime)}.
+
+       New demo balance is ${escapeHtml(remainingBalance)}.
+        </div>
+
+        <div class="nexa-sms-time">
+          ${escapeHtml(dateTime)}
+        </div>
+      </div>
+
+      <div class="nexa-preview-card">
+        <div class="nexa-preview-top">
+          <div class="nexa-preview-icon">N</div>
+          <div>
+            <div class="nexa-preview-brand">NexaTrade</div>
+            <div class="nexa-preview-caption">SIMULATED WITHDRAWAL</div>
+          </div>
+          <div class="nexa-preview-check">✓</div>
+        </div>
+
+        <div class="nexa-preview-bottom">
+          <div class="nexa-preview-amount">${escapeHtml(amount)}</div>
+          <div class="nexa-preview-reference">
+            Reference: ${escapeHtml(reference)}
+          </div>
+          <div class="nexa-preview-date">
+            ${escapeHtml(dateTime)}
+          </div>
+          <div class="nexa-preview-demo-note">
+            Simulated transaction — not an M-PESA payment confirmation
+          </div>
+        </div>
+      </div>
+    `;
+
     els.bubbleList.appendChild(row);
   });
+
   els.bubbleList.scrollTop = els.bubbleList.scrollHeight;
 }
+
+
 
 function closeThread() {
   state.currentThread = null;
@@ -565,6 +673,7 @@ async function init() {
     const session = data && data.session ? data.session : null;
     if (!session || !session.user) { setStateRow(""); return; }
     state.user = session.user;
+    loadSavedReadMap();
     await refreshAll(false);
   } catch (_) {
     renderInbox();
@@ -577,16 +686,18 @@ async function init() {
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "nexatrade_withdrawal_messages", filter: `user_id=eq.${state.user.id}` }, () => {
           loadMessages().then(() => {
             renderInbox();
-            if (state.currentThread) openThread(state.currentThread);
+            if (state.currentThread) {
+              openThread(state.currentThread);
+            }
+
             if (state.newRealMpesa) {
               showSnackbar("New NexaTrade withdrawal received");
-              openThread("MPESA");
             }
-          }).catch(() => {});
+          }).catch(() => { });
         })
         .subscribe();
     }
-  } catch (_) {}
+  } catch (_) { }
 }
 
 init();

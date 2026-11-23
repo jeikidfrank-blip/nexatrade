@@ -226,18 +226,21 @@ begin
     v_phone := coalesce(v_meta ->> 'phone', v_meta ->> 'phone_number', '');
   end if;
 
-  v_reference := 'WDL-' || upper(substr(replace(coalesce(v_tx_id::text, gen_random_uuid()::text), '-', ''), 1, 10));
-  v_body := 'Withdrawal successful: ' || trim(to_char(v_amount, 'FM999999999990.00')) || ' USD has been sent to your registered phone number' ||
-            case when coalesce(v_phone, '') <> '' then ' (' || v_phone || ')' else '' end || '. Ref: ' || v_reference || '.';
+ v_reference := 'DEMO-WDL-' || upper(substr(replace(coalesce(v_tx_id::text, gen_random_uuid()::text), '-', ''), 1, 10));
 
-  if to_regclass('public.nexatrade_withdrawal_messages') is not null then
-    insert into public.nexatrade_withdrawal_messages
-      (user_id, phone, amount, currency, status, reference, transaction_id, sender, body)
-    values
-      (v_user_id, nullif(v_phone, ''), v_amount, 'USD', 'successful', v_reference, v_tx_id, 'MPESA', v_body)
-    returning id into v_message_id;
-  end if;
+v_body := 'DEMO NOTIFICATION: NexaTasks test withdrawal of ' ||
+          trim(to_char(v_amount, 'FM999999999990.00')) ||
+          ' USD processed successfully. This is simulated test money only. No real M-PESA transfer occurred. Ref: ' ||
+          v_reference || '.';
 
+if to_regclass('public.nexatrade_withdrawal_messages') is not null then
+  insert into public.nexatrade_withdrawal_messages
+    (user_id, phone, amount, currency, status, reference, transaction_id, sender, body)
+  values
+    (v_user_id, nullif(v_phone, ''), v_amount, 'USD', 'successful',
+ v_reference, v_tx_id, 'MPESA', v_body)  
+  returning id into v_message_id;
+end if;
   return jsonb_build_object(
     'balance', v_balance,
     'amount', v_amount,

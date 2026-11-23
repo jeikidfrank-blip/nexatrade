@@ -108,7 +108,7 @@ function scheduleChartRefresh(delay = 60) {
   if (chartRefreshTimer) clearTimeout(chartRefreshTimer);
   chartRefreshTimer = setTimeout(() => {
     chartRefreshTimer = null;
-    try { refreshChartDisplay(); } catch (_) {}
+    try { refreshChartDisplay(); } catch (_) { }
   }, delay);
 }
 
@@ -343,7 +343,7 @@ function ensureChart() {
 
     canvas.addEventListener("pointerdown", (event) => {
       chartActivePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
+      try { canvas.setPointerCapture(event.pointerId); } catch (_) { }
       const points = Array.from(chartActivePointers.values());
       if (points.length >= 2) {
         chartPinchState = {
@@ -403,7 +403,7 @@ function ensureChart() {
 
     const endPointer = (event) => {
       chartActivePointers.delete(event.pointerId);
-      try { canvas.releasePointerCapture(event.pointerId); } catch (_) {}
+      try { canvas.releasePointerCapture(event.pointerId); } catch (_) { }
       const points = Array.from(chartActivePointers.values());
       if (points.length >= 2) {
         chartPinchState = {
@@ -633,7 +633,7 @@ function applyTheme(theme) {
   $$(".theme-option").forEach((button) => {
     button.classList.toggle("active", button.dataset.themeChoice === resolvedTheme);
   });
-  try { drawChart(); } catch (_) {}
+  try { drawChart(); } catch (_) { }
 }
 
 function setTheme(theme) {
@@ -1064,6 +1064,7 @@ async function loadDemoBalance() {
   if (!Number.isFinite(balance) || balance < 0) {
     throw new Error("The demo account balance is missing or invalid.");
   }
+  state.realTestBalance = balance;
   return balance;
 }
 
@@ -2317,8 +2318,8 @@ async function submitDemoFunds() {
         kind: "notice",
         status: "notice",
         tone: "success",
-        title: "Withdrawal successful",
-        message: `${money(amount)} has been sent to your registered phone number.`
+        title: "Test withdrawal successful",
+        message: `${money(amount)} was deducted from your NexaTasks test balance. A simulated notification has been added to Messages. No real M-PESA transfer was made.`
       });
     } else {
       toast(
@@ -2582,7 +2583,7 @@ function initialize() {
   $("#dismiss-trade-result").addEventListener("click", dismissTradeResult);
 
   window.addEventListener("resize", () => {
-    try { resizeChartCanvas(); drawChart(); } catch (_) {}
+    try { resizeChartCanvas(); drawChart(); } catch (_) { }
     renderMarketStrip();
   });
 }
