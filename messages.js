@@ -209,13 +209,31 @@ function closeThread() {
   if (els.inboxView) els.inboxView.hidden = false;
 }
 
+async function loadMessagesFallback() {
+  if (!supabaseClient || !state.user) return [];
+  const { data, error } = await supabaseClient
+    .from("nexatrade_withdrawal_messages")
+    .select("*")
+    .eq("user_id", state.user.id)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  state.messages = Array.isArray(data) ? data : [];
+  return state.messages;
+}
+
 async function refreshAll(showLoading = true) {
   if (showLoading) setStateMessage("Refreshing messages...", false);
   try {
-    await Promise.all([loadMessages(), loadBalance()]);
-    if (!state.isVip) {
-      setStateMessage("This Messages app is available for VIP accounts only.", false);
-      return;
+    try {
+      await Promise.all([loadMessages(), loadBalance()]);
+    } catch (error) {
+      const msg = String((error && (error.message || error.error_description)) || "");
+      if (/vip/i.test(msg)) {
+        await Promise.all([loadMessagesFallback(), loadBalance()]);
+      } else {
+        throw error;
+      }
     }
     if (els.statePanel) els.statePanel.hidden = true;
     if (els.inboxView) els.inboxView.hidden = false;
@@ -268,11 +286,6 @@ async function init() {
     await loadAccount();
   } catch (_) {
     // If profile RPC is not deployed yet, message RPC will enforce VIP/access and report clearly.
-  }
-
-  if (state.account && !state.isVip) {
-    setStateMessage("This Messages app is available for VIP accounts only.", false);
-    return;
   }
 
   await refreshAll(true);

@@ -136,7 +136,7 @@ $$;
 revoke all on function public.nexatrade_get_my_account() from public, anon, authenticated;
 grant execute on function public.nexatrade_get_my_account() to authenticated;
 
--- 3) VIP-only message listing RPC (enforces VIP access server-side)
+-- 3) Message listing RPC for the signed-in user (VIP-only enforcement temporarily disabled while building)
 create or replace function public.nexatrade_list_my_withdrawal_messages(p_limit integer default 100)
 returns setof public.nexatrade_withdrawal_messages
 language plpgsql
@@ -145,18 +145,16 @@ set search_path = public, auth
 as $$
 declare
   v_uid uuid := auth.uid();
-  v_profile jsonb;
-  v_is_vip boolean := false;
 begin
   if v_uid is null then
     raise exception 'Authentication required.';
   end if;
 
-  v_profile := public.nexatrade_get_my_account();
-  v_is_vip := coalesce((v_profile ->> 'is_vip')::boolean, false);
-  if not v_is_vip then
-    raise exception 'Messages app is available for VIP accounts only.';
-  end if;
+  -- TODO: Re-enable VIP-only access when the messages app is finished.
+  -- v_profile := public.nexatrade_get_my_account();
+  -- if not coalesce((v_profile ->> 'is_vip')::boolean, false) then
+  --   raise exception 'Messages app is available for VIP accounts only.';
+  -- end if;
 
   return query
     select *

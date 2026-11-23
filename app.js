@@ -2536,7 +2536,6 @@ function initialize() {
   $("#refresh-mpesa-balance")?.addEventListener("click", () => refreshMpesaBalanceFromMenu());
   $("#open-messages-app")?.addEventListener("click", () => {
     if (!state.userId) { toast("Sign in to open the Messages app.", true); return; }
-    if (!state.isVip) { toast("Messages app is available for VIP accounts only.", true); return; }
     window.location.href = "messages.html";
   });
   document.addEventListener("click", (event) => {
