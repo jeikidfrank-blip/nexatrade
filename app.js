@@ -65,7 +65,7 @@ let chartCtx = null;
 let chartResizeObserver = null;
 let chartRefreshTimer = null;
 let chartNeedsRedraw = true;
-let chartPointer = { down: false, x: 0, offset: 0, moved: false };
+let chartPointer = { down: false, x: 0, y: 0, offset: 0, priceOffset: 0, moved: false };
 const chartActivePointers = new Map();
 let chartPinchState = null;
 
@@ -267,7 +267,7 @@ function getVisibleChartSlice() {
   const candles = state.candles || [];
   const total = candles.length;
   if (!total) return { candles: [], start: 0, end: 0 };
-  const count = Math.max(20, Math.min(total, Math.round(state.visibleCandles || 72)));
+  const count = Math.max(12, Math.min(total, Math.round(state.visibleCandles || 48)));
   const maxOffset = Math.max(0, total - count);
   state.candleOffset = Math.max(0, Math.min(maxOffset, Math.round(state.candleOffset || 0)));
   const end = total - state.candleOffset;
@@ -357,7 +357,9 @@ function ensureChart() {
         chartPointer.down = true;
         chartPointer.moved = false;
         chartPointer.x = event.clientX;
+        chartPointer.y = event.clientY;
         chartPointer.offset = state.candleOffset || 0;
+        chartPointer.priceOffset = state.priceOffset || 0;
       }
     });
 
@@ -388,11 +390,14 @@ function ensureChart() {
 
       if (!chartPointer.down) return;
       const dx = event.clientX - chartPointer.x;
-      if (Math.abs(dx) > 2) chartPointer.moved = true;
+      const dy = event.clientY - chartPointer.y;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) chartPointer.moved = true;
       const { candles } = getVisibleChartSlice();
-      const barWidth = Math.max(6, (canvas.clientWidth - 78) / Math.max(1, candles.length || state.visibleCandles || 72));
+      const barWidth = Math.max(6, (canvas.clientWidth - 78) / Math.max(1, candles.length || state.visibleCandles || 48));
       const deltaBars = Math.round(dx / barWidth);
       state.candleOffset = Math.max(0, chartPointer.offset + deltaBars);
+      const plotH = Math.max(20, (canvas.clientHeight || 0) - 24);
+      state.priceOffset = Math.max(-6, Math.min(6, (chartPointer.priceOffset || 0) + (dy / Math.max(plotH, 1))));
       drawChart();
     });
 
@@ -414,7 +419,9 @@ function ensureChart() {
         chartPointer.down = true;
         chartPointer.moved = false;
         chartPointer.x = points[0].x;
+        chartPointer.y = points[0].y;
         chartPointer.offset = state.candleOffset || 0;
+        chartPointer.priceOffset = state.priceOffset || 0;
       } else {
         chartPointer.down = false;
       }
@@ -459,7 +466,7 @@ function refreshChartViewport() {
 function zoomChartTime(direction = 1) {
   const dir = Number(direction) >= 0 ? 1 : -1;
   const factor = dir > 0 ? 0.86 : 1.16;
-  state.visibleCandles = Math.max(20, Math.min(240, Math.round((state.visibleCandles || 72) * factor)));
+  state.visibleCandles = Math.max(12, Math.min(240, Math.round((state.visibleCandles || 48) * factor)));
   drawChart();
 }
 
@@ -470,7 +477,7 @@ function zoomChartPrice(direction = 1) {
 }
 
 function resetChartViewport() {
-  state.visibleCandles = 72;
+  state.visibleCandles = 48;
   state.candleOffset = 0;
   state.priceZoom = 1;
   state.priceOffset = 0;
@@ -503,7 +510,7 @@ function drawChart() {
   const bounds = getChartPriceBounds(candles);
   const priceToY = (price) => top + ((bounds.max - price) / Math.max(bounds.max - bounds.min, 0.000001)) * plotH;
   const slot = plotW / candles.length;
-  const bodyW = Math.max(2.5, Math.min(11, slot * 0.64));
+  const bodyW = Math.max(4, Math.min(18, slot * 0.72));
 
   // grid
   ctx.strokeStyle = "rgba(42, 58, 77, 0.55)";
@@ -564,14 +571,13 @@ function drawChart() {
 
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(x, highY);
-    ctx.lineTo(x, lowY);
+    ctx.moveTo(Math.round(x) + 0.5, Math.round(highY));
+    ctx.lineTo(Math.round(x) + 0.5, Math.round(lowY));
     ctx.stroke();
 
-    ctx.fillRect(x - bodyW / 2, bodyTop, bodyW, bodyHeight);
-    ctx.strokeRect(x - bodyW / 2, bodyTop, bodyW, bodyHeight);
+    ctx.fillRect(Math.round(x - bodyW / 2), Math.round(bodyTop), Math.max(1, Math.round(bodyW)), Math.max(1, Math.round(bodyHeight)));
   });
 
   // current price line/label
@@ -648,16 +654,16 @@ function generateCandles(market) {
   const candles = [];
   const interval = getTimeframeInterval();
   const historyCount = 300;
-  const baseVol = Math.max(0.00008, (market.volatility || 0.0007) * (interval === 15000 ? 0.55 : 1));
+  const baseVol = Math.max(0.00004, (market.volatility || 0.0007) * (interval === 15000 ? 0.28 : 0.45));
 
-  let close = market.price * (1 + (Math.random() - 0.5) * baseVol * 12);
+  let close = market.price * (1 + (Math.random() - 0.5) * baseVol * 6);
   const lastIntervalStart = Math.floor(Date.now() / interval) * interval;
 
   for (let index = 0; index < historyCount; index += 1) {
     const open = close;
-    const drift = (market.dayOpen - open) / market.dayOpen * 0.03;
-    const impulse = (Math.random() - 0.5) * baseVol * 1.8;
-    const trend = ((market.change || 0) / 100) * 0.02 * baseVol;
+    const drift = (market.dayOpen - open) / Math.max(market.dayOpen, 0.0001) * 0.02;
+    const impulse = (Math.random() - 0.5) * baseVol * 0.9;
+    const trend = ((market.change || 0) / 100) * 0.012 * baseVol;
     close = Math.max(0.0001, open * (1 + impulse + trend + drift));
 
     if (index === historyCount - 1) {
@@ -666,8 +672,9 @@ function generateCandles(market) {
 
     const bodyHigh = Math.max(open, close);
     const bodyLow = Math.min(open, close);
-    const wickUp = Math.abs(open - close) * (0.15 + Math.random() * 0.9) + market.price * baseVol * (0.1 + Math.random() * 0.5);
-    const wickDown = Math.abs(open - close) * (0.15 + Math.random() * 0.9) + market.price * baseVol * (0.1 + Math.random() * 0.5);
+    const body = Math.max(Math.abs(open - close), market.price * baseVol * 0.15);
+    const wickUp = body * (0.08 + Math.random() * 0.22) + market.price * baseVol * (0.01 + Math.random() * 0.05);
+    const wickDown = body * (0.08 + Math.random() * 0.22) + market.price * baseVol * (0.01 + Math.random() * 0.05);
 
     candles.push({
       open,
@@ -684,7 +691,7 @@ function generateCandles(market) {
   last.low = Math.min(last.low, market.price, last.open);
 
   state.candles = candles;
-  state.visibleCandles = Math.min(72, candles.length);
+  state.visibleCandles = Math.min(48, candles.length);
   state.candleOffset = 0;
   state.priceZoom = 1;
   state.priceOffset = 0;
@@ -813,12 +820,12 @@ function tickLiveChart() {
   if (!last) return;
   const interval = getTimeframeInterval();
   const progress = interval > 0 ? Math.max(0, Math.min(1, (Date.now() - last.startedAt) / interval)) : 0;
-  const baseVol = Math.max(0.00005, (market.volatility || 0.0007) * 0.55);
+  const baseVol = Math.max(0.00003, (market.volatility || 0.0007) * 0.22);
   const noise = (Math.random() - 0.5) * baseVol;
-  const pulse = Math.sin(Date.now() / 1400) * baseVol * 0.18;
-  const revert = ((market.dayOpen - market.price) / Math.max(market.dayOpen, 0.0001)) * 0.015 * baseVol;
-  const momentum = ((Number(last.close) - Number(last.open)) / Math.max(Number(last.open) || market.price, 0.0001)) * 0.12 * baseVol;
-  const micro = (Math.random() < 0.18 ? (Math.random() - 0.5) * baseVol * 2.2 : 0);
+  const pulse = Math.sin(Date.now() / 2200) * baseVol * 0.12;
+  const revert = ((market.dayOpen - market.price) / Math.max(market.dayOpen, 0.0001)) * 0.01 * baseVol;
+  const momentum = ((Number(last.close) - Number(last.open)) / Math.max(Number(last.open) || market.price, 0.0001)) * 0.08 * baseVol;
+  const micro = 0;
   const reference = getChartReferencePrice(market);
   const basePrice = sanitizeMarketPrice(market.price, market, reference);
   const nextPrice = sanitizeMarketPrice(basePrice * (1 + noise + pulse + revert + momentum + micro), market, reference);
