@@ -146,13 +146,17 @@
           <section class="view-panel active" id="trade-view" data-view-panel="Trade">
           <section class="welcome-row">
             <div class="account-overview">
-              <div class="account-switch" role="group" aria-label="Account type">
-                <button type="button" class="account-tab active" id="demo-account-tab" data-account-mode="demo">Demo</button>
-                <button type="button" class="account-tab" id="real-account-tab" data-account-mode="real">Real <span>Account</span></button>
+              <div class="account-top-row">
+                <div class="account-switch" role="group" aria-label="Account type">
+                  <button type="button" class="account-tab active" id="demo-account-tab" data-account-mode="demo">Demo</button>
+                  <button type="button" class="account-tab" id="real-account-tab" data-account-mode="real">Real <span>Account</span></button>
+                </div>
+                <div class="account-balance-pill" aria-label="Account balance">
+                  <div class="balance-label" id="balance-label">DEMO BALANCE <span class="info-tip" title="Demo funds only">i</span></div>
+                  <div class="balance-value" id="balance-value">KSh 10,000.00</div>
+                </div>
               </div>
               <div class="balance-card">
-                <div class="balance-label" id="balance-label">DEMO BALANCE <span class="info-tip" title="Demo funds only">i</span></div>
-                <div class="balance-value" id="balance-value">KSh 10,000.00</div>
                 <div class="balance-actions">
                   <button type="button" id="balance-deposit">Deposit</button>
                   <button type="button" id="balance-withdraw" hidden>Withdraw</button>
