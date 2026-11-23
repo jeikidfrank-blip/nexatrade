@@ -1,0 +1,330 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexaTrade | Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase-config.js"></script>
+    <script src="dashboard.js" defer></script>
+</head>
+
+<body class="admin-body">
+    <div class="admin-shell">
+        <header class="dashboard-header glass-panel">
+            <div class="brand">
+                <div class="brand-icon">N</div>
+                <div>
+                    <h1>NexaTrade</h1>
+                    <p>ADMIN COMMAND CENTER</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="header-chip">Live operations</div>
+                <button id="logoutButton" class="logout-button">Sign out</button>
+            </div>
+        </header>
+
+        <section class="hero-panel glass-panel">
+            <div class="hero-copy">
+                <span class="eyebrow">PLATFORM OVERVIEW</span>
+                <h2>Manage users, balances, and platform flow</h2>
+                <p>Review account health, adjust demo and real test balances, monitor deposits, and tune simulation settings from one refined workspace.</p>
+            </div>
+            <div class="hero-glow" aria-hidden="true"></div>
+        </section>
+
+        <section class="stats-grid" aria-label="Platform statistics">
+            <article class="stat-card">
+                <span class="stat-label">Total users</span>
+                <strong id="totalUsers">—</strong>
+                <small>All registered accounts</small>
+            </article>
+            <article class="stat-card">
+                <span class="stat-label">Standard users</span>
+                <strong id="standardUsers">—</strong>
+                <small>Default account tier</small>
+            </article>
+            <article class="stat-card">
+                <span class="stat-label">VIP users</span>
+                <strong id="vipUsers">—</strong>
+                <small>Upgraded members</small>
+            </article>
+            <article class="stat-card accent">
+                <span class="stat-label">Restricted users</span>
+                <strong id="restrictedUsers">—</strong>
+                <small>Suspended or blocked</small>
+            </article>
+        </section>
+
+        <div class="dashboard-grid">
+            <section class="users-panel glass-panel panel-span-2">
+                <div class="panel-heading">
+                    <div>
+                        <span class="eyebrow">USER MANAGEMENT</span>
+                        <h2>Registered users</h2>
+                        <p>Search, filter, update account status, and open profiles to adjust balances.</p>
+                    </div>
+                    <button id="refreshUsers" class="secondary-button">Refresh users</button>
+                </div>
+
+                <div class="user-filters">
+                    <label class="field">
+                        <span>Search</span>
+                        <input id="userSearch" type="search" placeholder="Search by name, email, or user ID">
+                    </label>
+                    <label class="field">
+                        <span>Account type</span>
+                        <select id="accountFilter">
+                            <option value="all">All accounts</option>
+                            <option value="standard">Standard</option>
+                            <option value="vip">VIP</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Status</span>
+                        <select id="statusFilter">
+                            <option value="all">All statuses</option>
+                            <option value="active">Active</option>
+                            <option value="suspended">Suspended</option>
+                            <option value="blocked">Blocked</option>
+                        </select>
+                    </label>
+                </div>
+
+                <p id="dashboardMessage" class="message info" role="status">Loading users...</p>
+
+                <div class="table-wrap">
+                    <table class="data-table users-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Account</th>
+                                <th>Status</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <tr>
+                                <td colspan="5">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="glass-panel settings-panel compact-panel">
+                <div class="panel-heading">
+                    <div>
+                        <span class="eyebrow">SIMULATION</span>
+                        <h2>Win-rate settings</h2>
+                        <p>Global win rates for account categories.</p>
+                    </div>
+                </div>
+
+                <div class="settings-grid">
+                    <label class="setting-card field">
+                        <span>Standard account win rate (%)</span>
+                        <input id="standardWinRate" type="number" min="0" max="100" step="0.01" placeholder="0 - 100">
+                        <small>Applies to all Standard accounts.</small>
+                    </label>
+
+                    <label class="setting-card field">
+                        <span>VIP account win rate (%)</span>
+                        <input id="vipWinRate" type="number" min="0" max="100" step="0.01" placeholder="0 - 100">
+                        <small>Applies to all VIP accounts.</small>
+                    </label>
+                </div>
+
+                <button id="saveSettings" class="save-settings-button">Save simulation settings</button>
+                <p id="settingsMessage" class="message" role="status"></p>
+            </section>
+
+            <section class="glass-panel deposits-panel panel-span-2" id="depositsSection">
+                <div class="panel-heading">
+                    <div>
+                        <span class="eyebrow">FINANCE</span>
+                        <h2>Deposit records</h2>
+                        <p>Monitor STK Push requests and confirmed, credited deposits.</p>
+                    </div>
+                    <button id="refreshDeposits" class="secondary-button">Refresh deposits</button>
+                </div>
+
+                <div class="stats-grid deposit-stats">
+                    <article class="stat-card mini">
+                        <span class="stat-label">Total confirmed</span>
+                        <strong id="totalConfirmedDeposits">KSh 0.00</strong>
+                    </article>
+                    <article class="stat-card mini">
+                        <span class="stat-label">Today confirmed</span>
+                        <strong id="todayConfirmedDeposits">KSh 0.00</strong>
+                    </article>
+                    <article class="stat-card mini">
+                        <span class="stat-label">Pending requests</span>
+                        <strong id="pendingDepositCount">0</strong>
+                        <small id="pendingDepositAmount">KSh 0.00</small>
+                    </article>
+                </div>
+
+                <div class="deposit-columns">
+                    <section class="deposit-subpanel">
+                        <div class="section-header">
+                            <div>
+                                <h3>Money received</h3>
+                                <p>Successfully confirmed and credited deposits</p>
+                            </div>
+                            <strong id="receivedSectionTotal" class="section-total">KSh 0.00</strong>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Amount</th>
+                                        <th>Reference</th>
+                                        <th>Date received</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="receivedDepositsBody">
+                                    <tr><td colspan="5">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section class="deposit-subpanel">
+                        <div class="section-header">
+                            <div>
+                                <h3>Pending deposits</h3>
+                                <p>STK Push requests awaiting confirmation</p>
+                            </div>
+                            <strong id="pendingSectionTotal" class="section-total">KSh 0.00</strong>
+                        </div>
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Amount</th>
+                                        <th>Reference</th>
+                                        <th>Date requested</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pendingDepositsBody">
+                                    <tr><td colspan="5">Loading...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div id="profileModal" class="profile-modal" hidden>
+        <div class="profile-card glass-panel">
+            <div class="profile-heading">
+                <div>
+                    <span class="eyebrow">USER PROFILE</span>
+                    <h2 id="profileName">User name</h2>
+                    <p id="profileEmail" class="profile-email">user@email.com</p>
+                </div>
+                <button id="closeProfile" class="close-profile" aria-label="Close profile">×</button>
+            </div>
+
+            <div class="profile-top">
+                <div class="profile-avatar" id="profileAvatar">U</div>
+                <div class="profile-meta">
+                    <div class="profile-badges">
+                        <span id="profileAccountBadge" class="pill">—</span>
+                        <span id="profileStatusBadge" class="pill muted-pill">—</span>
+                    </div>
+                    <p class="profile-subtle">Adjust demo and real test balances below. Changes apply immediately after saving.</p>
+                </div>
+            </div>
+
+            <div class="profile-details">
+                <div><span>Phone number</span><strong id="profilePhone">—</strong></div>
+                <div><span>Account type</span><strong id="profileAccount">—</strong></div>
+                <div><span>Account status</span><strong id="profileStatus">—</strong></div>
+                <div><span>Registration date</span><strong id="profileDate">—</strong></div>
+                <div class="profile-id"><span>User ID</span><strong id="profileId">—</strong></div>
+            </div>
+
+            <section class="balance-manager" aria-label="Balance management">
+                <div class="section-header compact">
+                    <div>
+                        <h3>Balance management</h3>
+                        <p>Adjust balances for Demo and Real Test accounts.</p>
+                    </div>
+                    <button id="refreshBalances" type="button" class="secondary-button small">Refresh balances</button>
+                </div>
+
+                <div class="balance-grid">
+                    <article class="balance-card">
+                        <div class="balance-card-head">
+                            <div>
+                                <span class="eyebrow">DEMO ACCOUNT</span>
+                                <h4>Demo balance</h4>
+                            </div>
+                            <strong id="demoBalanceValue" class="balance-value">—</strong>
+                        </div>
+                        <p class="balance-hint">Virtual practice funds used in demo trading.</p>
+                        <div class="balance-form">
+                            <label class="field">
+                                <span>Action</span>
+                                <select id="demoAdjustMode">
+                                    <option value="add">Add funds</option>
+                                    <option value="subtract">Subtract funds</option>
+                                    <option value="set">Set exact balance</option>
+                                </select>
+                            </label>
+                            <label class="field">
+                                <span>Amount</span>
+                                <input id="demoAdjustAmount" type="number" min="0" step="0.01" placeholder="0.00">
+                            </label>
+                            <button id="applyDemoBalance" type="button" class="primary-button">Apply demo adjustment</button>
+                        </div>
+                    </article>
+
+                    <article class="balance-card real">
+                        <div class="balance-card-head">
+                            <div>
+                                <span class="eyebrow">REAL TEST ACCOUNT</span>
+                                <h4>Real test balance</h4>
+                            </div>
+                            <strong id="realTestBalanceValue" class="balance-value">—</strong>
+                        </div>
+                        <p class="balance-hint">Test funds used in the real-account test environment.</p>
+                        <div class="balance-form">
+                            <label class="field">
+                                <span>Action</span>
+                                <select id="realAdjustMode">
+                                    <option value="add">Add funds</option>
+                                    <option value="subtract">Subtract funds</option>
+                                    <option value="set">Set exact balance</option>
+                                </select>
+                            </label>
+                            <label class="field">
+                                <span>Amount</span>
+                                <input id="realAdjustAmount" type="number" min="0" step="0.01" placeholder="0.00">
+                            </label>
+                            <button id="applyRealTestBalance" type="button" class="primary-button">Apply real test adjustment</button>
+                        </div>
+                    </article>
+                </div>
+
+                <p id="balanceMessage" class="message" role="status"></p>
+            </section>
+
+            <button id="closeProfileBottom" class="profile-close-button">Close profile</button>
+        </div>
+    </div>
+</body>
+
+</html>
