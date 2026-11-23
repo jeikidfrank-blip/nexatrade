@@ -140,27 +140,41 @@ function renderUsers() {
     applyBtn.textContent = "Apply";
     applyBtn.addEventListener("click", async () => {
       const action = select.value;
-      if (!action) { setMessage(message, "Choose an action first.", "error"); return; }
+      if (!action) { setMessage(message, "Choose an action first (VIP, Standard, Activate, Suspend, or Block).", "error"); return; }
       let accountTypeUpdate = null;
       let statusUpdate = null;
       if (["vip", "standard"].includes(action)) accountTypeUpdate = action; else statusUpdate = action;
       if (!confirm(`Confirm ${action} for ${email}?`)) return;
 
       applyBtn.disabled = true;
-      applyBtn.textContent = "Saving...";
-      const { error } = await supabaseClient.rpc("admin_update_user", {
-        p_user_id: user.id,
-        p_account_type: accountTypeUpdate,
-        p_status: statusUpdate
-      });
+      select.disabled = true;
+      applyBtn.textContent = "Applying...";
+      setMessage(message, `Applying "${action}" to ${email}...`, "info");
+
+      const payloads = [
+        { p_user_id: user.id, p_account_type: accountTypeUpdate, p_status: statusUpdate },
+        { user_id: user.id, account_type: accountTypeUpdate, status: statusUpdate }
+      ];
+      let error = null;
+      for (let i = 0; i < payloads.length; i++) {
+        const res = await supabaseClient.rpc("admin_update_user", payloads[i]);
+        if (!res.error) { error = null; break; }
+        error = res.error;
+        const msg = String(getErrorMessage(res.error)).toLowerCase();
+        const maybeSignature = msg.includes("function") || msg.includes("argument") || msg.includes("parameter") || msg.includes("schema cache");
+        if (!maybeSignature || i === payloads.length - 1) break;
+      }
+
       applyBtn.disabled = false;
+      select.disabled = false;
       applyBtn.textContent = "Apply";
 
       if (error) {
-        setMessage(message, "Update failed: " + getErrorMessage(error), "error");
+        setMessage(message, `Action "${action}" failed: ${getErrorMessage(error)}. Ensure admin_update_user RPC is deployed and this account is recognized as admin.`, "error");
         return;
       }
-      setMessage(message, "User updated successfully.", "success");
+      select.value = "";
+      setMessage(message, `User updated successfully (${action}).`, "success");
       await loadUsers();
       await loadOverview();
     });
@@ -438,119 +452,15 @@ async function loadDepositRecords() {
   setText("completedDepositCount", String(confirmed.length));
 }
 
-function renderPositionsTable(rows, env) {
-  const body = document.getElementById("positionsTableBody");
-  if (!body) return;
-  const list = Array.isArray(rows) ? rows : [];
-  if (!list.length) {
-    body.innerHTML = '<tr><td colspan="9">No positions found.</td></tr>';
-    return;
-  }
-  body.innerHTML = list.map((p) => {
-    const status = String(p.status || "").toLowerCase();
-    const pnl = p.pnl == null ? "—" : `${Number(p.pnl) >= 0 ? "+" : ""}${formatMoney(p.pnl)}`;
-    const exit = p.exit_price == null ? "—" : String(p.exit_price);
-    const canClose = status === "open";
-    const action = canClose
-      ? `<button class="secondary-button small-btn close-position-btn" data-env="${env}" data-id="${escapeHtml(p.id)}">Close</button>`
-      : "—";
-    return `<tr>
-      <td><div class="user-cell"><strong>${escapeHtml(p.user_email || "—")}</strong><small>${escapeHtml(p.user_id || "")}</small></div></td>
-      <td>${escapeHtml(p.market || "—")}</td>
-      <td><span class="pill ${String(p.side || "").toLowerCase()}">${escapeHtml(p.side || "—")}</span></td>
-      <td>${formatMoney(p.amount)}</td>
-      <td>${p.entry_price ?? "—"}</td>
-      <td><div class="user-cell"><strong>${escapeHtml(exit)}</strong><small>${escapeHtml(pnl)}</small></div></td>
-      <td><span class="pill ${status}">${escapeHtml(p.status || "—")}</span></td>
-      <td>${formatDate(p.created_at || p.opened_at)}</td>
-      <td>${action}</td>
-    </tr>`;
-  }).join("");
-
-  body.querySelectorAll(".close-position-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const id = btn.getAttribute("data-id");
-      const acc = btn.getAttribute("data-env");
-      if (!id) return;
-      if (!confirm(`Close this open ${acc === "demo" ? "demo" : "real test"} position? This action takes effect immediately.`)) return;
-      btn.disabled = true;
-      btn.textContent = "Closing...";
-      const rpc = acc === "demo" ? "admin_close_demo_position" : "admin_close_real_test_position";
-      const { error } = await supabaseClient.rpc(rpc, { p_position_id: id });
-      if (error) {
-        setMessage(document.getElementById("positionsMessage"), "Close failed: " + getErrorMessage(error), "error");
-        btn.disabled = false;
-        btn.textContent = "Close";
-        return;
-      }
-      setMessage(document.getElementById("positionsMessage"), "Position closed successfully. Balance/records updated.", "success");
-      await loadPositions();
-      await loadTransactions();
-      await loadOverview();
-    });
-  });
-}
-
-async function loadPositions() {
-  const env = document.getElementById("positionsAccount")?.value || "real_test";
-  const status = document.getElementById("positionsStatus")?.value || "all";
-  const msg = document.getElementById("positionsMessage");
-  const body = document.getElementById("positionsTableBody");
-  if (body) body.innerHTML = '<tr><td colspan="9">Loading...</td></tr>';
-  setMessage(msg, "Loading positions...", "info");
-
-  const rpc = env === "demo" ? "admin_list_demo_positions" : "admin_list_real_test_positions";
-  const { data, error } = await supabaseClient.rpc(rpc, { p_user_id: null, p_status: status, p_limit: 300 });
-  if (error) {
-    if (body) body.innerHTML = '<tr><td colspan="9">Positions unavailable.</td></tr>';
-    setMessage(msg, "Unable to load positions: " + getErrorMessage(error) + " (run updated admin integration SQL)", "error");
-    return;
-  }
-  const rows = Array.isArray(data) ? data : [];
-  renderPositionsTable(rows, env);
-  setMessage(msg, `${rows.length} ${env === "demo" ? "demo" : "real test"} positions loaded.`, "success");
-}
-
-async function loadTransactions() {
-  const env = document.getElementById("transactionsAccount")?.value || "real_test";
-  const msg = document.getElementById("transactionsMessage");
-  const body = document.getElementById("transactionsTableBody");
-  if (body) body.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
-  setMessage(msg, "Loading transactions...", "info");
-
-  const rpc = env === "demo" ? "admin_list_demo_transactions" : "admin_list_real_test_transactions";
-  const { data, error } = await supabaseClient.rpc(rpc, { p_user_id: null, p_limit: 300 });
-  if (error) {
-    if (body) body.innerHTML = '<tr><td colspan="5">Transactions unavailable.</td></tr>';
-    setMessage(msg, "Unable to load transactions: " + getErrorMessage(error) + " (run updated admin integration SQL)", "error");
-    return;
-  }
-  const rows = Array.isArray(data) ? data : [];
-  if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="5">No transactions found.</td></tr>';
-  } else {
-    body.innerHTML = rows.map((t) => `<tr>
-      <td><div class="user-cell"><strong>${escapeHtml(t.user_email || "—")}</strong><small>${escapeHtml(t.user_id || "")}</small></div></td>
-      <td><span class="pill ${String(t.transaction_type || "").toLowerCase()}">${escapeHtml(t.transaction_type || "—")}</span></td>
-      <td>${formatMoney(t.amount)}</td>
-      <td>${formatMoney(t.balance_after)}</td>
-      <td>${formatDate(t.created_at)}</td>
-    </tr>`).join("");
-  }
-  setMessage(msg, `${rows.length} ${env === "demo" ? "demo" : "real test"} transactions loaded.`, "success");
-}
-
 async function loadAll() {
   setMessage(globalMessage, "Refreshing all dashboard data...", "info");
   await Promise.allSettled([
     loadUsers(),
     loadOverview(),
     loadSimulationSettings(),
-    loadDepositRecords(),
-    loadPositions(),
-    loadTransactions()
+    loadDepositRecords()
   ]);
-  setMessage(globalMessage, "Dashboard data refreshed. Actions and records are integrated with NexaTrade data sources.", "success");
+  setMessage(globalMessage, "Dashboard data refreshed.", "success");
 }
 
 document.getElementById("closeProfile")?.addEventListener("click", closeUserProfile);
@@ -565,12 +475,12 @@ document.getElementById("refreshUsers")?.addEventListener("click", () => { loadU
 document.getElementById("userSearch")?.addEventListener("input", renderUsers);
 document.getElementById("accountFilter")?.addEventListener("change", renderUsers);
 document.getElementById("statusFilter")?.addEventListener("change", renderUsers);
-document.getElementById("refreshDeposits")?.addEventListener("click", () => { loadDepositRecords(); loadOverview(); });
-document.getElementById("refreshPositions")?.addEventListener("click", loadPositions);
-document.getElementById("positionsAccount")?.addEventListener("change", loadPositions);
-document.getElementById("positionsStatus")?.addEventListener("change", loadPositions);
-document.getElementById("refreshTransactions")?.addEventListener("click", loadTransactions);
-document.getElementById("transactionsAccount")?.addEventListener("change", loadTransactions);
+document.getElementById("refreshDeposits")?.addEventListener("click", async () => {
+  const btn = document.getElementById("refreshDeposits");
+  if (btn) { btn.disabled = true; btn.textContent = "Refreshing..."; }
+  await Promise.allSettled([loadDepositRecords(), loadOverview()]);
+  if (btn) { btn.disabled = false; btn.textContent = "Refresh deposits"; }
+});
 document.getElementById("refreshAll")?.addEventListener("click", loadAll);
 
 document.getElementById("logoutButton")?.addEventListener("click", async () => {

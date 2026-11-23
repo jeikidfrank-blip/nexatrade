@@ -41,10 +41,6 @@
             <article class="stat-card"><span class="stat-label">Total users</span><strong id="totalUsers">—</strong><small>Registered accounts</small></article>
             <article class="stat-card"><span class="stat-label">VIP users</span><strong id="vipUsers">—</strong><small>Upgraded members</small></article>
             <article class="stat-card accent"><span class="stat-label">Restricted users</span><strong id="restrictedUsers">—</strong><small>Suspended or blocked</small></article>
-            <article class="stat-card"><span class="stat-label">Demo open positions</span><strong id="demoOpenPositions">—</strong><small>Active demo trades</small></article>
-            <article class="stat-card"><span class="stat-label">Real test open positions</span><strong id="realOpenPositions">—</strong><small>Active real test trades</small></article>
-            <article class="stat-card"><span class="stat-label">Demo total balance</span><strong id="demoTotalBalance">—</strong><small>Sum of demo accounts</small></article>
-            <article class="stat-card"><span class="stat-label">Real test total balance</span><strong id="realTotalBalance">—</strong><small>Sum of real test accounts</small></article>
             <article class="stat-card"><span class="stat-label">Confirmed deposits</span><strong id="overviewConfirmedDeposits">—</strong><small id="overviewTodayDeposits">Today: —</small></article>
         </section>
 
@@ -74,43 +70,6 @@
         </section>
 
         <div class="dashboard-grid">
-            <section class="glass-panel section-panel">
-                <div class="panel-heading">
-                    <div><span class="eyebrow">TRADING</span><h2>Positions</h2><p>Review and manage demo and real test positions.</p></div>
-                    <div class="inline-actions">
-                        <button id="refreshPositions" class="secondary-button" type="button">Refresh</button>
-                    </div>
-                </div>
-                <div class="toolbar-row">
-                    <label class="field compact-field"><span>Environment</span><select id="positionsAccount"><option value="real_test">Real test</option><option value="demo">Demo</option></select></label>
-                    <label class="field compact-field"><span>Status</span><select id="positionsStatus"><option value="all">All</option><option value="open">Open</option><option value="closed">Closed</option></select></label>
-                </div>
-                <p id="positionsMessage" class="message" role="status"></p>
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead><tr><th>User</th><th>Market</th><th>Side</th><th>Amount</th><th>Entry</th><th>Exit/PnL</th><th>Status</th><th>Opened</th><th>Action</th></tr></thead>
-                        <tbody id="positionsTableBody"><tr><td colspan="9">Loading...</td></tr></tbody>
-                    </table>
-                </div>
-            </section>
-
-            <section class="glass-panel section-panel">
-                <div class="panel-heading">
-                    <div><span class="eyebrow">LEDGER</span><h2>Transactions</h2><p>Review demo and real test transaction history.</p></div>
-                    <button id="refreshTransactions" class="secondary-button" type="button">Refresh</button>
-                </div>
-                <div class="toolbar-row">
-                    <label class="field compact-field"><span>Environment</span><select id="transactionsAccount"><option value="real_test">Real test</option><option value="demo">Demo</option></select></label>
-                </div>
-                <p id="transactionsMessage" class="message" role="status"></p>
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead><tr><th>User</th><th>Type</th><th>Amount</th><th>Balance after</th><th>Date</th></tr></thead>
-                        <tbody id="transactionsTableBody"><tr><td colspan="5">Loading...</td></tr></tbody>
-                    </table>
-                </div>
-            </section>
-
             <section class="glass-panel section-panel panel-span-2">
                 <div class="panel-heading">
                     <div><span class="eyebrow">FINANCE</span><h2>MegaPay deposits</h2><p>Track all MegaPay deposit intents and confirmed, credited deposits integrated with NexaTrade.</p></div>
