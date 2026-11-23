@@ -784,15 +784,11 @@ function syncActiveMarketCandle(price) {
   while (Date.now() >= candle.startedAt + interval && guard < 500) {
     const nextOpen = sanitizeMarketPrice(candle.close, market, reference);
     const startedAt = candle.startedAt + interval;
-    const bodyHigh = Math.max(nextOpen, safePrice);
-    const bodyLow = Math.min(nextOpen, safePrice);
-    const body = Math.max(Math.abs(nextOpen - safePrice), safePrice * 0.00003);
-    const wickCap = body * 0.12;
     candle = {
       open: nextOpen,
-      close: safePrice,
-      high: bodyHigh + wickCap,
-      low: Math.max(0.0001, bodyLow - wickCap),
+      close: nextOpen,
+      high: nextOpen,
+      low: nextOpen,
       startedAt,
     };
     state.candles.push(candle);
@@ -802,22 +798,32 @@ function syncActiveMarketCandle(price) {
     guard += 1;
   }
 
-  candle.close = safePrice;
-  const open = Number(candle.open) || safePrice;
-  const bodyHigh = Math.max(open, safePrice);
-  const bodyLow = Math.min(open, safePrice);
-  const body = Math.max(Math.abs(open - safePrice), safePrice * 0.00003);
-  const wickCap = Math.max(body * 0.18, safePrice * 0.00008);
+  // Smooth price movement during candle formation to avoid sudden spikes.
+  const prevClose = Number(candle.close);
+  const smoothBase = Number.isFinite(prevClose) && prevClose > 0 ? prevClose : (Number(candle.open) || safePrice);
+  const maxStep = Math.max(smoothBase * 0.00045, safePrice * 0.00012);
+  const formedPrice = sanitizeMarketPrice(
+    smoothBase + Math.max(-maxStep, Math.min(maxStep, safePrice - smoothBase)),
+    market,
+    reference
+  );
+
+  candle.close = formedPrice;
+  const open = Number(candle.open) || formedPrice;
+  const bodyHigh = Math.max(open, formedPrice);
+  const bodyLow = Math.min(open, formedPrice);
+  const body = Math.max(Math.abs(open - formedPrice), formedPrice * 0.00003);
+  const wickCap = Math.max(body * 0.12, formedPrice * 0.00006);
   candle.high = Math.min(Math.max(Number(candle.high) || bodyHigh, bodyHigh), bodyHigh + wickCap);
   candle.low = Math.max(Math.min(Number(candle.low) || bodyLow, bodyLow), Math.max(0.0001, bodyLow - wickCap));
-  market.price = safePrice;
+  market.price = formedPrice;
   if (!isPlausibleMarketPrice(market.dayOpen, reference)) {
     market.dayOpen = reference;
   }
-  if (!isPlausibleMarketPrice(market.dayHigh, reference)) market.dayHigh = safePrice;
-  if (!isPlausibleMarketPrice(market.dayLow, reference)) market.dayLow = safePrice;
-  market.dayHigh = Math.max(market.dayHigh, safePrice);
-  market.dayLow = Math.min(market.dayLow, safePrice);
+  if (!isPlausibleMarketPrice(market.dayHigh, reference)) market.dayHigh = formedPrice;
+  if (!isPlausibleMarketPrice(market.dayLow, reference)) market.dayLow = formedPrice;
+  market.dayHigh = Math.max(market.dayHigh, formedPrice);
+  market.dayLow = Math.min(market.dayLow, formedPrice);
   market.change = (market.price / Math.max(0.0001, market.dayOpen) - 1) * 100;
 }
 
