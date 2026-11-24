@@ -988,3 +988,239 @@ a.mpesa-inline-link {
   color: #ffffff;
   box-shadow: 0 3px 9px rgba(0, 0, 0, 0.2);
 }
+
+/* ======================================
+   ANDROID M-PESA MESSAGE ALIGNMENT FIX
+   ====================================== */
+
+.mpesa-detail-row {
+  width: 100%;
+  max-width: 100%;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.mpesa-bubble-row {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 0;
+}
+
+.mpesa-sms-bubble {
+  flex: 0 1 auto;
+  width: fit-content;
+  min-width: 0;
+  max-width: min(100%, 322px);
+  padding: 10px 12px !important;
+  border-radius: 18px 18px 18px 5px !important;
+  background: #303134 !important;
+  color: #e8eaed;
+  box-shadow: none;
+}
+
+.mpesa-sms-text {
+  font-family: Roboto, "Google Sans", "Segoe UI", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.35;
+  letter-spacing: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  color: #e8eaed;
+}
+
+.mpesa-bubble-action {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  align-self: flex-end;
+  margin-bottom: 0;
+  border-radius: 50%;
+}
+
+.mpesa-rich-wrap {
+  width: min(100%, 240px);
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.mpesa-rich-card-image {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.mpesa-reply-footer {
+  padding: 14px 16px;
+  line-height: 1.5;
+}
+
+/* Small Android phone screens */
+@media (max-width: 380px) {
+  .thread-top {
+    padding-left: 8px;
+    padding-right: 8px;
+    gap: 8px;
+  }
+
+  .bubble-list {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .mpesa-sms-bubble {
+    max-width: min(100%, 290px);
+  }
+
+  .mpesa-sms-text {
+    font-size: 15px;
+  }
+}
+
+/* Refined Android SMS message alignment */
+
+.mpesa-detail-row {
+  width: 100%;
+  align-items: flex-start;
+}
+
+.mpesa-bubble-row {
+  display: flex;
+  width: 100%;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.mpesa-sms-bubble {
+  box-sizing: border-box;
+  max-width: min(88%, 322px);
+  padding: 10px 12px !important;
+}
+
+.mpesa-sms-text {
+  font-size: 15px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mpesa-bubble-action {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+.mpesa-rich-wrap {
+  margin-top: 8px;
+  margin-left: 0;
+  width: min(100%, 240px);
+}
+
+@media (max-width: 380px) {
+  .mpesa-sms-bubble {
+    max-width: 85%;
+  }
+}
+
+/* ======================================
+   NEXATRADE ANDROID MESSAGES INTERFACE
+   ====================================== */
+
+/* Main application header */
+.top-bar {
+  padding: 6px 16px 10px;
+}
+
+.normal-header {
+  min-height: 58px;
+}
+
+.app-title {
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -0.4px;
+}
+
+/* Header action buttons */
+.actions {
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 44px;
+  height: 44px;
+}
+
+/* Conversation rows */
+.thread-row {
+  min-height: 80px;
+  padding: 10px 16px;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  column-gap: 14px;
+}
+
+/* Contact pictures */
+.list-avatar {
+  width: 48px;
+  height: 48px;
+}
+
+/* Contact names */
+.sender {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* Message previews */
+.row-main {
+  gap: 4px;
+}
+
+.preview {
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+/* Message time */
+.time {
+  font-size: 12px;
+}
+
+/* Unread conversations */
+.thread-row.unread .sender {
+  font-weight: 600;
+}
+
+.thread-row.unread .preview {
+  font-weight: 500;
+}
+
+/* Phone responsiveness */
+@media (max-width: 380px) {
+  .top-bar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .thread-row {
+    padding-left: 12px;
+    padding-right: 12px;
+    column-gap: 12px;
+    min-height: 76px;
+  }
+
+  .list-avatar {
+    width: 46px;
+    height: 46px;
+  }
+
+  .sender {
+    font-size: 15px;
+  }
+
+  .preview {
+    font-size: 13px;
+  }
+}
