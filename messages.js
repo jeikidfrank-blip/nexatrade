@@ -581,7 +581,11 @@ function renderNexaTradeMpesaDetail(msg) {
     </div>
     <div class="mpesa-rich-wrap">
       <a class="mpesa-rich-card mpesa-rich-card-image" href="https://saf.cx/cF6ir" target="_blank" rel="noopener noreferrer" aria-label="Open Safaricom M-PESA link">
-        <img src="safaricom-mpesa.png" alt="Safaricom M-PESA - Fintech App saf.cx" class="mpesa-rich-image">
+        <img src="safaricom-mpesa.png" alt="Safaricom M-PESA" class="mpesa-rich-image">
+        <span class="mpesa-rich-footer">
+          <span class="mpesa-rich-footer-title">Fintech App</span>
+          <span class="mpesa-rich-footer-url">saf.cx</span>
+        </span>
       </a>
     </div>
   `;

@@ -827,13 +827,45 @@ a.mpesa-inline-link {
 }
 
 .mpesa-rich-card-image {
-  background: transparent;
+  position: relative;
+  background: #1b5e20;
+  border-radius: 18px;
+  overflow: hidden;
 }
 
 .mpesa-rich-image {
   width: 100%;
   height: auto;
   display: block;
+}
+
+.mpesa-rich-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 28%;
+  padding: 10px 14px 12px;
+  background: #1b5e20;
+  color: #ffffff;
+}
+
+.mpesa-rich-footer-title {
+  font-family: Roboto, "Google Sans", "Segoe UI", Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.mpesa-rich-footer-url {
+  font-family: Roboto, "Google Sans", "Segoe UI", Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.2;
+  opacity: 0.95;
 }
 
 
