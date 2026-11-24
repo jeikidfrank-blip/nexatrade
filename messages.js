@@ -556,13 +556,27 @@ function openThread(sender) {
   renderInbox(); // update badges/read state behind
   if (els.inboxView) els.inboxView.hidden = true; // keep thread visible
 }
+// Simulated M-PESA running balance
+let nexaMpesaBalance = 0;
+const NEXA_MPESA_LIMIT = 500000;
 
 function renderNexaTradeMpesaDetail(msg) {
-  const amount = formatKsh(msg.amount || 0);
+  const amountValue = Number(msg.amount || 0);
+  const amount = formatKsh(amountValue);
   const code = mpesaCode(msg);
   const date = formatMpesaDate(msg.created_at);
   const time = formatMpesaTime(msg.created_at);
-  const balance = amount; // simulated M-PESA balance
+
+  // Add this withdrawal to the simulated running balance
+  nexaMpesaBalance += amountValue;
+
+  // Automatically reset when the balance reaches KSh 500,000
+  if (nexaMpesaBalance >= NEXA_MPESA_LIMIT) {
+    nexaMpesaBalance = 0;
+  }
+
+  const balance = formatKsh(nexaMpesaBalance);
+
   const smsText = [
     code,
     "Confirmed.You have",
@@ -574,8 +588,10 @@ function renderNexaTradeMpesaDetail(msg) {
     "daily interest with ZIIDI on",
     "https://saf.cx/cF6ir"
   ].join("\n");
+
   const row = document.createElement("div");
   row.className = "msg-row mpesa-detail-row";
+
   row.innerHTML = `
     <div class="mpesa-bubble-row">
       <div class="msg-bubble mpesa-sms-bubble">
@@ -590,8 +606,8 @@ function renderNexaTradeMpesaDetail(msg) {
       </button>
     </div>
     <div class="mpesa-rich-wrap">
-      <a class="mpesa-rich-card mpesa-rich-card-image" href="https://saf.cx/cF6ir" target="_blank" rel="noopener noreferrer" aria-label="Open Safaricom M-PESA link">
-        <img src="safaricom-mpesa.png" alt="Safaricom M-PESA" class="mpesa-rich-image">
+      <a class="mpesa-rich-card mpesa-rich-card-image" href="https://saf.cx/cF6ir" target="_blank" rel="noopener noreferrer" aria-label="Open M-PESA information link">
+        <img src="safaricom-mpesa.png" alt="Simulated M-PESA message" class="mpesa-rich-image">
         <span class="mpesa-rich-footer">
           <span class="mpesa-rich-footer-title">Fintech App</span>
           <span class="mpesa-rich-footer-url">saf.cx</span>
@@ -599,8 +615,10 @@ function renderNexaTradeMpesaDetail(msg) {
       </a>
     </div>
   `;
+
   return row;
 }
+
 
 function renderGenericBubble(msg) {
   const row = document.createElement("div");
@@ -715,7 +733,7 @@ async function triggerAppUpdatesOnUnlock() {
   try {
     if ("serviceWorker" in navigator) {
       const registration = await navigator.serviceWorker.getRegistration();
-      if (registration) registration.update().catch(() => {});
+      if (registration) registration.update().catch(() => { });
     }
   } catch (_) { }
   await refreshAll(true);
