@@ -584,7 +584,6 @@ function renderNexaTradeMpesaDetail(msg) {
       <a class="mpesa-rich-card mpesa-rich-card-image" href="https://saf.cx/cF6ir" target="_blank" rel="noopener noreferrer" aria-label="Open Safaricom M-PESA link">
         <img src="safaricom-mpesa.png" alt="Safaricom M-PESA - Fintech App saf.cx" class="mpesa-rich-image">
       </a>
-      <div class="mpesa-sim-note">Simulated NexaTrade withdrawal (demo funds)</div>
     </div>
   `;
   return row;
