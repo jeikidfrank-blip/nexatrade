@@ -5,7 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#121212">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Messages">
   <title>Messages</title>
+  <link rel="manifest" href="messages.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="messages-icon-192.png">
+  <link rel="apple-touch-icon" href="messages-icon-192.png">
   <link rel="stylesheet" href="messages.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
@@ -129,6 +135,13 @@
 
   <div id="snackbar" class="snackbar" hidden></div>
   </div>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./messages-sw.js").catch(() => {});
+      });
+    }
+  </script>
 </body>
 
 </html>
