@@ -129,8 +129,21 @@
     <span>Start chat</span>
   </button>
 
-  <div id="snackbar" class="snackbar" hidden></div>
+  <div id="appLock" class="app-lock" aria-hidden="false">
+    <div class="app-lock-card" role="dialog" aria-modal="true" aria-labelledby="appLockTitle">
+      <div class="app-lock-icon" aria-hidden="true">🔒</div>
+      <h2 id="appLockTitle" class="app-lock-title">Messages sign in</h2>
+      <p class="app-lock-sub">Enter password to open your messages and check for updates.</p>
+      <form id="appLockForm" class="app-lock-form">
+        <label class="app-lock-label" for="appLockPassword">Password</label>
+        <input id="appLockPassword" class="app-lock-input" type="password" autocomplete="current-password" placeholder="Enter password" />
+        <p id="appLockError" class="app-lock-error" hidden>Incorrect password. Try again.</p>
+        <button id="appLockSubmit" class="app-lock-btn" type="submit">Open messages</button>
+      </form>
+    </div>
   </div>
+
+  <div id="snackbar" class="snackbar" hidden></div>
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", async () => {

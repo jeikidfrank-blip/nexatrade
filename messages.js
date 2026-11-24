@@ -81,8 +81,15 @@ const els = {
   snackbar: document.getElementById("snackbar"),
   composeView: document.getElementById("composeView"),
   composeBackBtn: document.getElementById("composeBackBtn"),
-  composeOpenMpesa: document.getElementById("composeOpenMpesa")
+  composeOpenMpesa: document.getElementById("composeOpenMpesa"),
+  appLock: document.getElementById("appLock"),
+  appLockForm: document.getElementById("appLockForm"),
+  appLockPassword: document.getElementById("appLockPassword"),
+  appLockError: document.getElementById("appLockError"),
+  appLockSubmit: document.getElementById("appLockSubmit")
 };
+
+const APP_UNLOCK_PASSWORD = "Kin254ke*";
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
@@ -691,7 +698,92 @@ async function refreshAll(showStatus = false, opts = {}) {
   }
 }
 
-async function init() {
+function showAppLock() {
+  if (els.appLock) els.appLock.hidden = false;
+  if (els.appLockError) els.appLockError.hidden = true;
+  if (els.appLockPassword) {
+    els.appLockPassword.value = "";
+    setTimeout(() => els.appLockPassword.focus(), 0);
+  }
+}
+
+function hideAppLock() {
+  if (els.appLock) els.appLock.hidden = true;
+}
+
+async function triggerAppUpdatesOnUnlock() {
+  try {
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) registration.update().catch(() => {});
+    }
+  } catch (_) { }
+  await refreshAll(true);
+  if (state.newRealMpesa) openThread("MPESA");
+}
+
+async function startApp() {
+  if (!supabaseClient) { setStateRow(""); return; }
+
+  try {
+    const { data } = await supabaseClient.auth.getSession();
+    const session = data && data.session ? data.session : null;
+    if (!session || !session.user) { setStateRow("Sign in to NexaTrade to load withdrawal messages."); return; }
+    state.user = session.user;
+    loadSavedReadMap();
+    await refreshAll(false);
+  } catch (_) {
+    renderInbox();
+  }
+
+  try {
+    if (state.user) {
+      supabaseClient
+        .channel("withdrawal-messages-" + state.user.id)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "nexatrade_withdrawal_messages", filter: `user_id=eq.${state.user.id}` }, () => {
+          refreshAll(false).then(() => {
+            showSnackbar("New NexaTrade withdrawal received");
+          }).catch(() => { });
+        })
+        .subscribe();
+    }
+  } catch (_) { }
+
+  // Poll as a fallback in case realtime publication/subscription is unavailable.
+  if (state.user && supabaseClient) {
+    setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      refreshAll(false).catch(() => { });
+    }, 12000);
+  }
+}
+
+async function handleUnlockSubmit(event) {
+  if (event) event.preventDefault();
+  const entered = els.appLockPassword ? String(els.appLockPassword.value || "") : "";
+  if (entered !== APP_UNLOCK_PASSWORD) {
+    if (els.appLockError) els.appLockError.hidden = false;
+    if (els.appLockPassword) {
+      els.appLockPassword.focus();
+      els.appLockPassword.select();
+    }
+    return;
+  }
+  if (els.appLockError) els.appLockError.hidden = true;
+  if (els.appLockSubmit) els.appLockSubmit.disabled = true;
+  hideAppLock();
+  try {
+    if (!state.appStarted) {
+      state.appStarted = true;
+      await startApp();
+    }
+    await triggerAppUpdatesOnUnlock();
+  } finally {
+    if (els.appLockSubmit) els.appLockSubmit.disabled = false;
+  }
+}
+
+function init() {
   updateStatusTime();
   setInterval(updateStatusTime, 30000);
 
@@ -742,39 +834,8 @@ async function init() {
   });
   els.refreshMsgsBtn?.addEventListener("click", () => refreshAll(true));
 
-  if (!supabaseClient) { setStateRow(""); return; }
-
-  try {
-    const { data } = await supabaseClient.auth.getSession();
-    const session = data && data.session ? data.session : null;
-    if (!session || !session.user) { setStateRow(""); return; }
-    state.user = session.user;
-    loadSavedReadMap();
-    await refreshAll(false);
-  } catch (_) {
-    renderInbox();
-  }
-
-  try {
-    if (state.user) {
-      supabaseClient
-        .channel("withdrawal-messages-" + state.user.id)
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "nexatrade_withdrawal_messages", filter: `user_id=eq.${state.user.id}` }, () => {
-          refreshAll(false).then(() => {
-            showSnackbar("New NexaTrade withdrawal received");
-          }).catch(() => { });
-        })
-        .subscribe();
-    }
-  } catch (_) { }
-
-  // Poll as a fallback in case realtime publication/subscription is unavailable.
-  if (state.user && supabaseClient) {
-    setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      refreshAll(false).catch(() => { });
-    }, 12000);
-  }
+  els.appLockForm?.addEventListener("submit", handleUnlockSubmit);
+  showAppLock();
 }
 
 init();

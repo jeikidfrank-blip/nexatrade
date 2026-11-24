@@ -883,6 +883,101 @@ a.mpesa-inline-link {
   text-decoration: underline;
 }
 
+/* App password lock */
+.app-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: rgba(10, 10, 10, 0.96);
+  backdrop-filter: blur(4px);
+}
+
+.app-lock[hidden] {
+  display: none !important;
+}
+
+.app-lock-card {
+  width: min(100%, 360px);
+  background: #1f1f1f;
+  border: 1px solid #333537;
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.app-lock-icon {
+  font-size: 28px;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+.app-lock-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 500;
+  color: #e8eaed;
+}
+
+.app-lock-sub {
+  margin: 8px 0 16px;
+  color: #9aa0a6;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.app-lock-form {
+  display: grid;
+  gap: 10px;
+}
+
+.app-lock-label {
+  font-size: 13px;
+  color: #bdc1c6;
+}
+
+.app-lock-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: #303134;
+  color: #e8eaed;
+  border: 1px solid #44474d;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 16px;
+  outline: none;
+}
+
+.app-lock-input:focus {
+  border-color: #8ab4f8;
+}
+
+.app-lock-error {
+  margin: 0;
+  color: #f28b82;
+  font-size: 13px;
+}
+
+.app-lock-btn {
+  margin-top: 4px;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #8ab4f8;
+  color: #202124;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app-lock-btn:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
 /* Legacy NexaTrade preview styles kept for compatibility */
 .nexa-preview-card {
   width: min(100%, 430px);

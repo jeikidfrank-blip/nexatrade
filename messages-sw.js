@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "nexatrade-messages-v3";
+﻿const CACHE_NAME = "nexatrade-messages-v4";
 const APP_SHELL = [
   "./messages.html",
   "./messages.css",
