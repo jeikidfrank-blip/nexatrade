@@ -823,7 +823,7 @@ a.mpesa-inline-link {
 }
 
 .mpesa-rich-wrap {
-  width: min(100%, 332px);
+  width: min(100%, 240px);
   margin-top: 2px;
 }
 
