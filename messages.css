@@ -785,7 +785,8 @@ body {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  margin-bottom: 0;
+  align-self: flex-end;
+  margin-bottom: -30px;
   border: 1.5px solid rgba(255, 255, 255, 0.45);
   border-radius: 50%;
   background: transparent;
