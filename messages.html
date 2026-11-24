@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
@@ -10,106 +11,124 @@
   <script src="supabase-config.js"></script>
   <script src="messages.js" defer></script>
 </head>
+
 <body>
   <div class="app">
-    <div class="status-bar" aria-hidden="true">
-      <span id="statusTime">20:50</span>
-      <div class="status-icons">
-        <svg viewBox="0 0 24 24" class="s-ic"><path d="M12 22a2 2 0 002-2h-4a2 2 0 002 2zm6-6V11a6 6 0 10-12 0v5l-2 2v1h16v-1l-2-2z" fill="currentColor"/></svg>
-        <svg viewBox="0 0 24 24" class="s-ic"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.24 4.24 0 00-6 0zm-4-4l2 2a7.07 7.07 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z" fill="currentColor"/></svg>
-        <span class="signal">
-          <i></i><i></i><i></i><i></i>
-        </span>
-        <span class="net">4G</span>
-        <span class="battery"><span class="bat-level"></span><span class="bat-cap"></span></span>
-        <span class="bat-pct">36</span>
+
+  </div>
+
+  <header class="top-bar" id="topBar">
+    <div id="normalHeader" class="normal-header">
+      <h1 class="app-title">Google Messages</h1>
+      <div class="actions">
+        <button id="searchBtn" class="icon-btn" type="button" aria-label="Search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2" />
+            <path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button id="profileBtn" class="avatar-btn" type="button" aria-label="Account and M-Pesa balance">
+          <img id="profileImg" alt=""
+            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f6d365'/%3E%3Cstop offset='1' stop-color='%23e85d75'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='32' fill='url(%23g)'/%3E%3Ccircle cx='32' cy='24' r='11' fill='%23fff' fill-opacity='.92'/%3E%3Cpath d='M12 54c3-11 13-16 20-16s17 5 20 16' fill='%23fff' fill-opacity='.92'/%3E%3C/svg%3E">
+        </button>
       </div>
     </div>
-
-    <header class="top-bar" id="topBar">
-      <div id="normalHeader" class="normal-header">
-        <h1 class="app-title">Google Messages</h1>
-        <div class="actions">
-          <button id="searchBtn" class="icon-btn" type="button" aria-label="Search">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
-          <button id="profileBtn" class="avatar-btn" type="button" aria-label="Account and M-Pesa balance">
-            <img id="profileImg" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23f6d365'/%3E%3Cstop offset='1' stop-color='%23e85d75'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='32' fill='url(%23g)'/%3E%3Ccircle cx='32' cy='24' r='11' fill='%23fff' fill-opacity='.92'/%3E%3Cpath d='M12 54c3-11 13-16 20-16s17 5 20 16' fill='%23fff' fill-opacity='.92'/%3E%3C/svg%3E">
-          </button>
-        </div>
-      </div>
-      <div id="searchHeader" class="search-header" hidden>
-        <button id="searchBackBtn" class="icon-btn" type="button" aria-label="Back">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m7-7l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <input id="searchInput" class="search-input" type="text" placeholder="Search messages" autocomplete="off">
-        <button id="searchClearBtn" class="icon-btn" type="button" aria-label="Clear search" hidden>✕</button>
-      </div>
-      <div id="selectionBar" class="selection-bar" hidden>
-        <button id="selectionCancelBtn" class="icon-btn" type="button" aria-label="Cancel selection">✕</button>
-        <div id="selectionCount" class="selection-count">1 selected</div>
-        <div class="selection-actions">
-          <button id="markReadBtn" class="icon-btn text-action" type="button" title="Mark read/unread">Read</button>
-          <button id="deleteBtn" class="icon-btn text-action" type="button" title="Delete">Delete</button>
-        </div>
-      </div>
-      <div id="accountMenu" class="account-menu" hidden>
-        <div class="menu-label">M-Pesa balance</div>
-        <div id="mpesaBalanceValue" class="menu-balance">—</div>
-        <button id="refreshMpesaBtn" class="menu-btn" type="button">Refresh M-Pesa balance</button>
-        <button id="refreshMsgsBtn" class="menu-btn subtle" type="button">Refresh messages</button>
-        <button id="openMpesaQuickBtn" class="menu-btn subtle" type="button">Open MPESA messages</button>
-        <div id="menuStatus" class="menu-status"></div>
-      </div>
-    </header>
-
-    <main id="inboxView" class="inbox-view">
-      <button id="mpesaAlert" class="mpesa-alert" type="button" hidden>
-        <span class="mpesa-alert-dot"></span>
-        <span id="mpesaAlertText">New NexaTrade withdrawal received</span>
-        <span class="mpesa-alert-action">Open MPESA</span>
+    <div id="searchHeader" class="search-header" hidden>
+      <button id="searchBackBtn" class="icon-btn" type="button" aria-label="Back">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 12H4m7-7l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
       </button>
-      <div id="stateRow" class="state-row" hidden></div>
-      <div id="threadList" class="thread-list" role="list"></div>
-    </main>
+      <input id="searchInput" class="search-input" type="text" placeholder="Search messages" autocomplete="off">
+      <button id="searchClearBtn" class="icon-btn" type="button" aria-label="Clear search" hidden>✕</button>
+    </div>
+    <div id="selectionBar" class="selection-bar" hidden>
+      <button id="selectionCancelBtn" class="icon-btn" type="button" aria-label="Cancel selection">✕</button>
+      <div id="selectionCount" class="selection-count">1 selected</div>
+      <div class="selection-actions">
+        <button id="markReadBtn" class="icon-btn text-action" type="button" title="Mark read/unread">Read</button>
+        <button id="deleteBtn" class="icon-btn text-action" type="button" title="Delete">Delete</button>
+      </div>
+    </div>
+    <div id="accountMenu" class="account-menu" hidden>
+      <div class="menu-label">M-Pesa balance</div>
+      <div id="mpesaBalanceValue" class="menu-balance">—</div>
+      <button id="refreshMpesaBtn" class="menu-btn" type="button">Refresh M-Pesa balance</button>
+      <button id="refreshMsgsBtn" class="menu-btn subtle" type="button">Refresh messages</button>
+      <button id="openMpesaQuickBtn" class="menu-btn subtle" type="button">Open MPESA messages</button>
+      <div id="menuStatus" class="menu-status"></div>
+    </div>
+  </header>
 
-    <main id="threadView" class="thread-view" hidden>
-      <div class="thread-top">
-        <button id="backBtn" class="icon-btn" type="button" aria-label="Back">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m7-7l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div class="thread-person">
-          <div id="threadAvatar" class="list-avatar mpesa"><svg viewBox="0 0 24 24" class="person-ic"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5z" fill="currentColor"/></svg></div>
-          <div>
-            <div id="threadName" class="thread-name">MPESA</div>
-            <div id="threadSub" class="thread-sub">Withdrawal messages</div>
-          </div>
+  <main id="inboxView" class="inbox-view">
+    <button id="mpesaAlert" class="mpesa-alert" type="button" hidden>
+      <span class="mpesa-alert-dot"></span>
+      <span id="mpesaAlertText">New NexaTrade withdrawal received</span>
+      <span class="mpesa-alert-action">Open MPESA</span>
+    </button>
+    <div id="stateRow" class="state-row" hidden></div>
+    <div id="threadList" class="thread-list" role="list"></div>
+  </main>
+
+  <main id="threadView" class="thread-view" hidden>
+    <div class="thread-top">
+      <button id="backBtn" class="icon-btn" type="button" aria-label="Back">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 12H4m7-7l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </button>
+      <div class="thread-person">
+        <div id="threadAvatar" class="list-avatar mpesa"><svg viewBox="0 0 24 24" class="person-ic">
+            <path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5z"
+              fill="currentColor" />
+          </svg></div>
+        <div class="thread-meta">
+          <div id="threadName" class="thread-name">MPESA</div>
+          <div id="threadSub" class="thread-sub">Withdrawal messages</div>
         </div>
       </div>
-      <div id="bubbleList" class="bubble-list"></div>
-      <div class="compose-readonly">Text message • NexaTrade withdrawal inbox</div>
-    </main>
+      <button id="threadMenuBtn" class="icon-btn thread-menu-btn" type="button" aria-label="More options">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="5" r="1.8" fill="currentColor"></circle>
+          <circle cx="12" cy="12" r="1.8" fill="currentColor"></circle>
+          <circle cx="12" cy="19" r="1.8" fill="currentColor"></circle>
+        </svg>
+      </button>
+    </div>
+    <div id="bubbleList" class="bubble-list"></div>
+    <div id="threadFooter" class="compose-readonly">Text message • NexaTrade withdrawal inbox</div>
+  </main>
 
-    <section id="composeView" class="compose-view" hidden>
-      <div class="compose-top">
-        <button id="composeBackBtn" class="icon-btn" type="button" aria-label="Back">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4m7-7l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div class="compose-title">New conversation</div>
+  <section id="composeView" class="compose-view" hidden>
+    <div class="compose-top">
+      <button id="composeBackBtn" class="icon-btn" type="button" aria-label="Back">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 12H4m7-7l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </button>
+      <div class="compose-title">New conversation</div>
+    </div>
+    <div class="compose-body">
+      <div class="compose-to"><span>To</span><input id="composeTo" type="text" placeholder="Type a name or number">
       </div>
-      <div class="compose-body">
-        <div class="compose-to"><span>To</span><input id="composeTo" type="text" placeholder="Type a name or number"></div>
-        <div class="compose-hint">NexaTrade withdrawal confirmations will arrive automatically in <strong>MPESA</strong> when withdrawals flow in.</div>
-        <button id="composeOpenMpesa" class="menu-btn" type="button">Open MPESA inbox</button>
-      </div>
-    </section>
+      <div class="compose-hint">NexaTrade withdrawal confirmations will arrive automatically in <strong>MPESA</strong>
+        when withdrawals flow in.</div>
+      <button id="composeOpenMpesa" class="menu-btn" type="button">Open MPESA inbox</button>
+    </div>
+  </section>
 
-    <button id="fab" class="fab" type="button">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5a3 3 0 013-3h10a3 3 0 013 3v8a3 3 0 01-3 3H9l-4.5 3.2c-.7.5-1.5 0-1.5-.8V5z" fill="currentColor"/></svg>
-      <span>Start chat</span>
-    </button>
+  <button id="fab" class="fab" type="button">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 5a3 3 0 013-3h10a3 3 0 013 3v8a3 3 0 01-3 3H9l-4.5 3.2c-.7.5-1.5 0-1.5-.8V5z" fill="currentColor" />
+    </svg>
+    <span>Start chat</span>
+  </button>
 
-    <div id="snackbar" class="snackbar" hidden></div>
+  <div id="snackbar" class="snackbar" hidden></div>
   </div>
 </body>
+
 </html>

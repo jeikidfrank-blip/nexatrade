@@ -53,6 +53,8 @@ const els = {
   threadName: document.getElementById("threadName"),
   threadSub: document.getElementById("threadSub"),
   threadAvatar: document.getElementById("threadAvatar"),
+  threadMenuBtn: document.getElementById("threadMenuBtn"),
+  threadFooter: document.getElementById("threadFooter"),
   profileBtn: document.getElementById("profileBtn"),
   accountMenu: document.getElementById("accountMenu"),
   mpesaBalanceValue: document.getElementById("mpesaBalanceValue"),
@@ -121,6 +123,71 @@ function previewText(text) {
   return String(text || "").replace(/\s+/g, " ").trim();
 }
 
+function formatKsh(amount) {
+  const n = Number(amount);
+  const safe = Number.isFinite(n) ? n : 0;
+  return "Ksh" + safe.toLocaleString("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatMpesaDate(value) {
+  const d = value ? new Date(value) : new Date();
+  if (Number.isNaN(d.getTime())) return "23/11/26";
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${dd}/${mm}/${yy}`;
+}
+
+function formatMpesaTime(value) {
+  const d = value ? new Date(value) : new Date();
+  if (Number.isNaN(d.getTime())) return "8:14 PM";
+  return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
+function maskMpesaPhone(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (digits.length >= 10) {
+    const start = digits.slice(0, 4);
+    const end = digits.slice(-3);
+    return `${start}***${end}`;
+  }
+  return "07** ***000";
+}
+
+function mpesaCode(msg) {
+  const raw = String((msg && (msg.reference || msg.transaction_id || msg.id)) || "");
+  const cleaned = raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  if (cleaned.length >= 10) return cleaned.slice(0, 10);
+  let h = 0;
+  for (let i = 0; i < raw.length; i += 1) h = ((h << 5) - h + raw.charCodeAt(i)) | 0;
+  const seed = Math.abs(h).toString(36).toUpperCase() + cleaned;
+  return (seed + "UKNP52QKGJ").slice(0, 10);
+}
+
+function isNexaTradeMpesaWithdrawal(msg, thread) {
+  if (!msg) return false;
+  const sender = String(msg.sender || "").toUpperCase();
+  if (sender !== "MPESA") return false;
+  if (msg.nexatradeWithdrawal) return true;
+  const ref = String(msg.reference || "");
+  if (msg.transaction_id || ref.startsWith("DEMO-WDL")) return true;
+  if (thread && thread.isRealMpesa) return true;
+  return false;
+}
+
+function mpesaPreviewForWithdrawal(msg) {
+  const amount = formatKsh(msg.amount || 0);
+  const code = mpesaCode(msg);
+  return `${code} Confirmed. You have received ${amount} from nexatrade.com...`;
+}
+
+function escapeHtmlWithLinks(text) {
+  const escaped = escapeHtml(text);
+  return escaped
+    .replace(/(\d{2}\/\d{2}\/\d{2})/g, '<span class="mpesa-inline-link">$1</span>')
+    .replace(/(https?:\/\/[^\s<]+)/g, '<a class="mpesa-inline-link" href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+}
+
 function showSnackbar(text) {
   if (!els.snackbar) return;
   els.snackbar.textContent = text || "";
@@ -154,7 +221,7 @@ function avatarForSender(sender) {
 function buildScreenshotThreads(realMpesaItems) {
   const mpesaItems = Array.isArray(realMpesaItems) && realMpesaItems.length ? realMpesaItems : null;
   const mpesaLatest = mpesaItems ? mpesaItems[0] : null;
-  const realPreview = mpesaLatest ? previewText(mpesaLatest.body || `Withdrawal successful ${formatMoney(mpesaLatest.amount)} has been sent to your registered phone number.`) : null;
+  const realPreview = mpesaLatest ? mpesaPreviewForWithdrawal(mpesaLatest) : null;
   const mpesaThread = mpesaItems ? {
     sender: "MPESA",
     items: mpesaItems,
@@ -175,7 +242,7 @@ function buildScreenshotThreads(realMpesaItems) {
       phone: "Registered phone number",
       status: "successful",
       reference: "UKNIU34L4U",
-      transaction_id: "—",
+      transaction_id: null,
       created_at: new Date(Date.now() - 32 * 60000).toISOString()
     }],
     latest: { body: "UKNIU34L4U Confirmed. Fuliz...", created_at: new Date(Date.now() - 32 * 60000).toISOString() },
@@ -418,6 +485,7 @@ function markSelectedReadToggle() {
   const selectedThreads = threads.filter((t) => state.selected.has(t.sender));
   const anyUnread = selectedThreads.some((t) => isUnread(t));
   selectedThreads.forEach((t) => { state.readMap[t.sender] = anyUnread ? "read" : "unread"; });
+  saveReadMap();
   if (anyUnread && state.selected.has("MPESA")) state.newRealMpesa = false;
   showSnackbar(anyUnread ? "Marked as read" : "Marked as unread");
   exitSelection();
@@ -448,6 +516,7 @@ function openThread(sender) {
   const thread = getDisplayThreads().find((t) => t.sender === sender) || buildScreenshotThreads(groupMessagesBySender(state.messages).find((t) => String(t.sender).toUpperCase() === "MPESA")?.items || null).find((t) => t.sender === sender);
   if (!thread) return;
   state.readMap[sender] = "read";
+  saveReadMap();
   if (sender === "MPESA") state.newRealMpesa = false;
   if (els.inboxView) els.inboxView.hidden = true;
   if (els.threadView) els.threadView.hidden = false;
@@ -455,20 +524,85 @@ function openThread(sender) {
   if (els.composeView) els.composeView.hidden = true;
   const av = avatarForSender(sender);
   if (els.threadName) els.threadName.textContent = sender;
-  if (els.threadSub) els.threadSub.textContent = `${thread.count} message${thread.count === 1 ? "" : "s"}`;
+  const isMpesaThread = String(sender).toUpperCase() === "MPESA";
+  if (els.threadSub) {
+    els.threadSub.textContent = isMpesaThread ? "" : `${thread.count} message${thread.count === 1 ? "" : "s"}`;
+    els.threadSub.hidden = isMpesaThread;
+  }
   if (els.threadAvatar) {
     els.threadAvatar.className = `list-avatar ${av.cls}`;
     els.threadAvatar.innerHTML = av.content;
   }
-  renderBubbles(thread.items || []);
+  if (els.threadFooter) {
+    if (isMpesaThread) {
+      els.threadFooter.className = "compose-readonly mpesa-reply-footer";
+      els.threadFooter.innerHTML = `Sender can't accept replies. <a href="#" class="mpesa-learn-more" aria-label="Learn more">Learn more</a>`;
+    } else {
+      els.threadFooter.className = "compose-readonly";
+      els.threadFooter.textContent = "Text message • NexaTrade withdrawal inbox";
+    }
+  }
+  renderBubbles(thread.items || [], thread);
   renderInbox(); // update badges/read state behind
   if (els.inboxView) els.inboxView.hidden = true; // keep thread visible
 }
 
+function renderNexaTradeMpesaDetail(msg) {
+  const amount = formatKsh(msg.amount || 0);
+  const code = mpesaCode(msg);
+  const date = formatMpesaDate(msg.created_at);
+  const time = formatMpesaTime(msg.created_at);
+  const balance = amount; // simulated M-PESA balance
+  const smsText = [
+    code,
+    "Confirmed.You have",
+    `received ${amount} from`,
+    "nexatrade.com on",
+    `${date} at ${time}`,
+    "New M-PESA balance is",
+    `${balance}. Invest & earn`,
+    "daily interest with ZIIDI on",
+    "https://saf.cx/cF6ir"
+  ].join("\n");
+  const row = document.createElement("div");
+  row.className = "msg-row mpesa-detail-row";
+  row.innerHTML = `
+    <a class="mpesa-safcx-bar" href="https://saf.cx/cF6ir" target="_blank" rel="noopener noreferrer">saf.cx</a>
+    <div class="mpesa-bubble-row">
+      <div class="msg-bubble mpesa-sms-bubble">
+        <div class="mpesa-sms-text">${escapeHtmlWithLinks(smsText)}</div>
+      </div>
+      <button class="mpesa-bubble-action" type="button" aria-label="Forward message">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M14 9v-3l5 5-5 5v-3h-2c-3.3 0-5.6 1.1-7 3.5.4-3.8 2.4-6.2 7-7l2-.5z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+    <div class="mpesa-rich-wrap">
+      <a class="mpesa-rich-card mpesa-rich-card-image" href="https://saf.cx/cF6ir" target="_blank" rel="noopener noreferrer" aria-label="Open Safaricom M-PESA link">
+        <img src="safaricom-mpesa.png" alt="Safaricom M-PESA - Fintech App saf.cx" class="mpesa-rich-image">
+      </a>
+      <div class="mpesa-sim-note">Simulated NexaTrade withdrawal (demo funds)</div>
+    </div>
+  `;
+  return row;
+}
 
+function renderGenericBubble(msg) {
+  const row = document.createElement("div");
+  row.className = "msg-row";
+  const body = String(msg.body || "").trim() || "No message content.";
+  const time = msg.created_at ? formatDateTime(msg.created_at) : "";
+  row.innerHTML = `
+    <div class="msg-bubble">
+      <div class="msg-body-text">${escapeHtml(body)}</div>
+      ${time ? `<div class="msg-time">${escapeHtml(time)}</div>` : ""}
+    </div>
+  `;
+  return row;
+}
 
-
-function renderBubbles(items) {
+function renderBubbles(items, thread) {
   if (!els.bubbleList) return;
 
   els.bubbleList.innerHTML = "";
@@ -476,85 +610,15 @@ function renderBubbles(items) {
   const sorted = [...items].sort(
     (a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)
   );
+  const sender = String((thread && thread.sender) || state.currentThread || "").toUpperCase();
 
   sorted.forEach((msg) => {
-    const amount = "KSh" + Number(msg.amount || 0).toLocaleString("en-KE", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-
-
-    const remainingBalance = "KSh" + Number(
-      state.realTestBalance || 0
-    ).toLocaleString("en-KE", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-    const date = msg.created_at
-      ? new Date(msg.created_at).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "2-digit"
-      })
-      : "Date unavailable";
-
-    const time = msg.created_at
-      ? new Date(msg.created_at).toLocaleTimeString("en-KE", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true
-      })
-      : "Time unavailable";
-
-    const dateTime = `${date} at ${time}`;
-
-    const row = document.createElement("div");
-    row.className = "msg-row";
-
-    row.innerHTML = `
-      <div class="msg-bubble nexa-sms-bubble">
-        <div class="nexa-sms-status">
-          NEXATRADE DEMO
-
-          ${escapeHtml(reference)}
-
-          Confirmed. Your NexaTrade demo account has simulated receipt
-          of ${escapeHtml(amount)} from NEXATRADER LIMITED on
-          ${escapeHtml(dateTime)}.
-
-       New demo balance is ${escapeHtml(remainingBalance)}.
-        </div>
-
-        <div class="nexa-sms-time">
-          ${escapeHtml(dateTime)}
-        </div>
-      </div>
-
-      <div class="nexa-preview-card">
-        <div class="nexa-preview-top">
-          <div class="nexa-preview-icon">N</div>
-          <div>
-            <div class="nexa-preview-brand">NexaTrade</div>
-            <div class="nexa-preview-caption">SIMULATED WITHDRAWAL</div>
-          </div>
-          <div class="nexa-preview-check">✓</div>
-        </div>
-
-        <div class="nexa-preview-bottom">
-          <div class="nexa-preview-amount">${escapeHtml(amount)}</div>
-          <div class="nexa-preview-reference">
-            Reference: ${escapeHtml(reference)}
-          </div>
-          <div class="nexa-preview-date">
-            ${escapeHtml(dateTime)}
-          </div>
-          <div class="nexa-preview-demo-note">
-            Simulated transaction — not an M-PESA payment confirmation
-          </div>
-        </div>
-      </div>
-    `;
-
+    let row;
+    if (sender === "MPESA" && isNexaTradeMpesaWithdrawal(msg, thread)) {
+      row = renderNexaTradeMpesaDetail(msg);
+    } else {
+      row = renderGenericBubble(msg);
+    }
     els.bubbleList.appendChild(row);
   });
 
@@ -565,6 +629,11 @@ function renderBubbles(items) {
 
 function closeThread() {
   state.currentThread = null;
+  if (els.threadSub) els.threadSub.hidden = false;
+  if (els.threadFooter) {
+    els.threadFooter.className = "compose-readonly";
+    els.threadFooter.textContent = "Text message • NexaTrade withdrawal inbox";
+  }
   if (els.threadView) els.threadView.hidden = true;
   if (els.inboxView) els.inboxView.hidden = false;
   if (els.fab) els.fab.hidden = false;
