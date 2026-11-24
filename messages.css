@@ -751,20 +751,6 @@ body {
   max-width: 100%;
 }
 
-.mpesa-safcx-bar {
-  display: block;
-  width: 100%;
-  margin: 0 0 4px;
-  padding: 10px 14px;
-  background: #1f5a2a;
-  color: #dff5e4;
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 1.25;
-  text-decoration: none;
-  border-radius: 4px;
-}
-
 .mpesa-bubble-row {
   width: 100%;
   display: flex;
@@ -780,8 +766,23 @@ body {
   background: #303134 !important;
   color: #e8eaed;
   border-radius: 18px 18px 18px 6px !important;
-  padding: 12px 14px !important;
+  padding: 0 !important;
+  overflow: hidden;
   box-shadow: none;
+}
+
+.mpesa-safcx-bar {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 12px 16px;
+  background: #1e6b2f;
+  color: #e6f4ea;
+  font-family: Roboto, "Google Sans", "Segoe UI", Arial, sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-decoration: none;
 }
 
 .mpesa-sms-text {
@@ -793,6 +794,7 @@ body {
   overflow-wrap: normal;
   word-break: normal;
   color: #e8eaed;
+  padding: 12px 16px 14px;
 }
 
 .mpesa-bubble-action {

@@ -569,9 +569,9 @@ function renderNexaTradeMpesaDetail(msg) {
   const row = document.createElement("div");
   row.className = "msg-row mpesa-detail-row";
   row.innerHTML = `
-    <a class="mpesa-safcx-bar" href="https://saf.cx/cF6ir" target="_blank" rel="noopener noreferrer">saf.cx</a>
     <div class="mpesa-bubble-row">
       <div class="msg-bubble mpesa-sms-bubble">
+        <a class="mpesa-safcx-bar" href="https://saf.cx/cF6ir" target="_blank" rel="noopener noreferrer">saf.cx</a>
         <div class="mpesa-sms-text">${escapeHtmlWithLinks(smsText)}</div>
       </div>
       <button class="mpesa-bubble-action" type="button" aria-label="Forward message">
