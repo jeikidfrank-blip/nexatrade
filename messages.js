@@ -1,3 +1,50 @@
+/* NEXATRADE SIMULATED M-PESA BALANCE */
+const NEXA_MPESA_LIMIT = 500000;
+const NEXA_MPESA_STORAGE = "nexa_mpesa_balance";
+const NEXA_MPESA_TRANSACTIONS = "nexa_mpesa_transactions";
+
+function getNexaMpesaBalance() {
+  return Number(localStorage.getItem(NEXA_MPESA_STORAGE) || 0);
+}
+
+function recordNexaMpesaWithdrawal(amount, transactionId) {
+  const value = Number(amount);
+
+  if (!Number.isFinite(value) || value <= 0 || !transactionId) {
+    return getNexaMpesaBalance();
+  }
+
+  let transactions = [];
+  try {
+    transactions = JSON.parse(localStorage.getItem(NEXA_MPESA_TRANSACTIONS) || "[]");
+  } catch (_) {
+    transactions = [];
+  }
+
+  // Prevent counting the same withdrawal twice
+  if (transactions.some((tx) => tx && tx.id === String(transactionId))) {
+    return getNexaMpesaBalance();
+  }
+
+  let balance = getNexaMpesaBalance() + value;
+
+  // Reset when the limit is reached
+  if (balance >= NEXA_MPESA_LIMIT) {
+    balance = 0;
+  }
+
+  transactions.push({
+    id: String(transactionId),
+    amount: value,
+    balanceAfter: balance
+  });
+
+  localStorage.setItem(NEXA_MPESA_TRANSACTIONS, JSON.stringify(transactions));
+  localStorage.setItem(NEXA_MPESA_STORAGE, String(balance));
+
+  return balance;
+}
+
 const supabaseConfig = window.NEXATRADE_SUPABASE_CONFIG || window.NEXATRADE_SUPABASE || {};
 const supabaseClient = window.supabase
   ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.publishableKey)
@@ -556,9 +603,6 @@ function openThread(sender) {
   renderInbox(); // update badges/read state behind
   if (els.inboxView) els.inboxView.hidden = true; // keep thread visible
 }
-// Simulated M-PESA running balance
-let nexaMpesaBalance = 0;
-const NEXA_MPESA_LIMIT = 500000;
 
 function renderNexaTradeMpesaDetail(msg) {
   const amountValue = Number(msg.amount || 0);
@@ -566,22 +610,14 @@ function renderNexaTradeMpesaDetail(msg) {
   const code = mpesaCode(msg);
   const date = formatMpesaDate(msg.created_at);
   const time = formatMpesaTime(msg.created_at);
-
-  // Add this withdrawal to the simulated running balance
-  nexaMpesaBalance += amountValue;
-
-  // Automatically reset when the balance reaches KSh 500,000
-  if (nexaMpesaBalance >= NEXA_MPESA_LIMIT) {
-    nexaMpesaBalance = 0;
-  }
-
-  const balance = formatKsh(nexaMpesaBalance);
+  const txKey = String((msg && (msg.id || msg.transaction_id || msg.reference)) || code);
+  const balance = formatKsh(recordNexaMpesaWithdrawal(amountValue, txKey));
 
   const smsText = [
     code,
     "Confirmed.You have",
     `received ${amount} from`,
-    "nexatrade.com on",
+    "nexatrade limited on",
     `${date} at ${time}`,
     "New M-PESA balance is",
     `${balance}. Invest & earn`,
