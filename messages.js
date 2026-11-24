@@ -343,11 +343,12 @@ function detectNewRealMpesa() {
 async function loadMessages() {
   try {
     state.messages = await loadMessagesViaRpc();
-  } catch (error) {
+  } catch (rpcError) {
     try {
       state.messages = await loadMessagesFallback();
-    } catch (_) {
-      throw error;
+    } catch (fallbackError) {
+      state.messages = [];
+      console.warn("Could not load NexaTrade withdrawal messages", rpcError || fallbackError);
     }
   }
   detectNewRealMpesa();
@@ -759,20 +760,21 @@ async function init() {
       supabaseClient
         .channel("withdrawal-messages-" + state.user.id)
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "nexatrade_withdrawal_messages", filter: `user_id=eq.${state.user.id}` }, () => {
-          loadMessages().then(() => {
-            renderInbox();
-            if (state.currentThread) {
-              openThread(state.currentThread);
-            }
-
-            if (state.newRealMpesa) {
-              showSnackbar("New NexaTrade withdrawal received");
-            }
+          refreshAll(false).then(() => {
+            showSnackbar("New NexaTrade withdrawal received");
           }).catch(() => { });
         })
         .subscribe();
     }
   } catch (_) { }
+
+  // Poll as a fallback in case realtime publication/subscription is unavailable.
+  if (state.user && supabaseClient) {
+    setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      refreshAll(false).catch(() => { });
+    }, 12000);
+  }
 }
 
 init();

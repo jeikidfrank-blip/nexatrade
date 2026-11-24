@@ -257,4 +257,22 @@ $$;
 revoke all on function public.real_test_withdraw(numeric) from public, anon, authenticated;
 grant execute on function public.real_test_withdraw(numeric) to authenticated;
 
+-- Ensure realtime can deliver new withdrawal messages to the messages app (safe to re-run)
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1
+       from pg_publication_tables
+       where pubname = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename = 'nexatrade_withdrawal_messages'
+     ) then
+    alter publication supabase_realtime add table public.nexatrade_withdrawal_messages;
+  end if;
+exception
+  when insufficient_privilege then
+    raise notice 'Could not add nexatrade_withdrawal_messages to supabase_realtime publication; add it manually if realtime updates are needed.';
+end $$;
+
 notify pgrst, 'reload schema';
