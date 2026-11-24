@@ -574,8 +574,8 @@ function renderNexaTradeMpesaDetail(msg) {
         <div class="mpesa-sms-text">${escapeHtmlWithLinks(smsText)}</div>
       </div>
       <button class="mpesa-bubble-action" type="button" aria-label="Forward message">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M14 9v-3l5 5-5 5v-3h-2c-3.3 0-5.6 1.1-7 3.5.4-3.8 2.4-6.2 7-7l2-.5z" fill="currentColor"/>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none">
+          <path d="M10 8l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
     </div>

@@ -747,7 +747,7 @@ body {
 /* NexaTrade M-PESA withdrawal detail (screenshot-style) */
 .mpesa-detail-row {
   align-items: flex-start;
-  gap: 8px;
+  gap: 2px;
   max-width: 100%;
 }
 
@@ -782,23 +782,23 @@ body {
 }
 
 .mpesa-bubble-action {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
-  margin-bottom: 2px;
-  border: none;
+  margin-bottom: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 50%;
-  background: #4a4a4a;
-  color: #f1f1f1;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8eaed;
   display: grid;
   place-items: center;
   cursor: default;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
 }
 
 .mpesa-bubble-action svg {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .mpesa-inline-link {
@@ -814,7 +814,7 @@ a.mpesa-inline-link {
 
 .mpesa-rich-wrap {
   width: min(100%, 240px);
-  margin-top: 8px;
+  margin-top: 0;
 }
 
 .mpesa-rich-card {
