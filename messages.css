@@ -1224,3 +1224,23 @@ a.mpesa-inline-link {
     font-size: 13px;
   }
 }
+
+/* Bring M-PESA link and green icon close together */
+.mpesa-sms-text {
+  line-height: 1.15 !important;
+}
+
+.mpesa-sms-text a {
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.mpesa-bubble-action {
+  margin-top: -4px !important;
+  margin-bottom: 0 !important;
+}
+
+.mpesa-bubble-row {
+  gap: 2px !important;
+}
