@@ -542,10 +542,10 @@ body {
 .bubble-list {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 12px 16px;
+  padding: 4px 8px 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .msg-row {
@@ -747,7 +747,7 @@ body {
 /* NexaTrade M-PESA withdrawal detail (screenshot-style) */
 .mpesa-detail-row {
   align-items: flex-start;
-  gap: 2px;
+  gap: 0;
   max-width: 100%;
 }
 
@@ -815,6 +815,7 @@ a.mpesa-inline-link {
 .mpesa-rich-wrap {
   width: min(100%, 240px);
   margin-top: 0;
+  margin-bottom: 0;
 }
 
 .mpesa-rich-card {
