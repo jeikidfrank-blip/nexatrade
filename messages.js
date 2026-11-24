@@ -45,6 +45,7 @@ function saveReadMap() {
 
 const els = {
   statusTime: document.getElementById("statusTime"),
+  topBar: document.getElementById("topBar"),
   threadList: document.getElementById("threadList"),
   inboxView: document.getElementById("inboxView"),
   threadView: document.getElementById("threadView"),
@@ -522,6 +523,7 @@ function openThread(sender) {
   if (els.threadView) els.threadView.hidden = false;
   if (els.fab) els.fab.hidden = true;
   if (els.composeView) els.composeView.hidden = true;
+  if (els.topBar) els.topBar.hidden = true;
   const av = avatarForSender(sender);
   if (els.threadName) els.threadName.textContent = sender;
   const isMpesaThread = String(sender).toUpperCase() === "MPESA";
