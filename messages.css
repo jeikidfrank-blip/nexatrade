@@ -786,10 +786,10 @@ body {
   height: 36px;
   flex-shrink: 0;
   margin-bottom: 0;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  color: #e8eaed;
+  background: transparent;
+  color: #d7dade;
   display: grid;
   place-items: center;
   cursor: default;
@@ -797,8 +797,8 @@ body {
 }
 
 .mpesa-bubble-action svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .mpesa-inline-link {
