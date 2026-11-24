@@ -1244,3 +1244,68 @@ a.mpesa-inline-link {
 .mpesa-bubble-row {
   gap: 2px !important;
 }
+
+/* TIGHT M-PESA MESSAGE ALIGNMENT */
+.mpesa-detail-row {
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+.mpesa-bubble-row {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 1px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.mpesa-sms-bubble {
+  margin: 0 !important;
+  padding: 2px 5px !important;
+  max-width: 92% !important;
+}
+
+.mpesa-sms-text {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.15 !important;
+  white-space: pre-line !important;
+}
+
+.mpesa-bubble-action {
+  margin: 0 !important;
+  padding: 2px !important;
+  align-self: flex-start !important;
+}
+
+.mpesa-rich-wrap {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.mpesa-rich-card {
+  margin: 0 !important;
+}
+
+.bubble-list {
+  gap: 2px !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.msg-row {
+  margin-top: 0 !important;
+  margin-bottom: 2px !important;
+}
+
+@media (max-width: 380px) {
+  .mpesa-sms-bubble {
+    max-width: 94% !important;
+    padding: 2px 4px !important;
+  }
+
+  .mpesa-bubble-row {
+    gap: 0 !important;
+  }
+}
