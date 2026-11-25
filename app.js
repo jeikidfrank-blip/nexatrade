@@ -657,15 +657,16 @@ function generateCandles(market) {
   const interval = getTimeframeInterval();
   const historyCount = 300;
   const baseVol = Math.max(0.00004, (market.volatility || 0.0007) * (interval === 15000 ? 0.28 : 0.45));
+  const targetPrice = Number(market.price) || 1;
 
-  let close = market.price * (1 + (Math.random() - 0.5) * baseVol * 6);
+  let close = targetPrice * (1 + (Math.random() - 0.5) * baseVol * 2);
   const lastIntervalStart = Math.floor(Date.now() / interval) * interval;
 
   for (let index = 0; index < historyCount; index += 1) {
     const open = close;
-    const drift = (market.dayOpen - open) / Math.max(market.dayOpen, 0.0001) * 0.02;
-    const impulse = (Math.random() - 0.5) * baseVol * 0.9;
-    const trend = ((market.change || 0) / 100) * 0.012 * baseVol;
+    const drift = (targetPrice - open) / Math.max(targetPrice, 0.0001) * 0.08;
+    const impulse = (Math.random() - 0.5) * baseVol * 0.4;
+    const trend = ((market.change || 0) / 100) * 0.006 * baseVol;
     close = Math.max(0.0001, open * (1 + impulse + trend + drift));
 
     if (index === historyCount - 1) {
@@ -802,7 +803,7 @@ function syncActiveMarketCandle(price) {
   // Smooth price movement during candle formation to avoid sudden spikes.
   const prevClose = Number(candle.close);
   const smoothBase = Number.isFinite(prevClose) && prevClose > 0 ? prevClose : (Number(candle.open) || safePrice);
-  const maxStep = Math.max(smoothBase * 0.00045, safePrice * 0.00012);
+  const maxStep = Math.max(smoothBase * 0.00008, safePrice * 0.00004);
   const formedPrice = sanitizeMarketPrice(
     smoothBase + Math.max(-maxStep, Math.min(maxStep, safePrice - smoothBase)),
     market,
@@ -1146,7 +1147,7 @@ async function loadDemoDeposits() {
 async function loadRealTestTransactions() {
   const { data, error } = await supabaseClient
     .from("real_test_transactions")
-    .select("id,transaction_type,amount,balance_after,counterparty_email,created_at")
+    .select("id,transaction_type,amount,balance_after,counterparty_identifier,counterparty_email,created_at")
     .eq("user_id", state.userId)
     .order("created_at", { ascending: false })
     .limit(500);
@@ -1271,9 +1272,9 @@ function renderDemoDeposits() {
       : transactionType === "withdrawal"
         ? "Withdrawal"
         : transactionType === "transfer_sent"
-          ? `Transfer to ${record.counterparty_email || "NexaTrade user"}`
+          ? `Transfer to ${record.counterparty_identifier || record.counterparty_email || "NexaTrade user"}`
           : transactionType === "transfer_received"
-            ? `Transfer from ${record.counterparty_email || "NexaTrade user"}`
+            ? `Transfer from ${record.counterparty_identifier || record.counterparty_email || "NexaTrade user"}`
             : "Deposit";
 
     const amount = document.createElement("td");
@@ -2004,7 +2005,7 @@ async function submitInternalTransfer(event) {
     return;
   }
 
-  const recipientEmail = $("#transfer-recipient-email").value.trim();
+  const recipientIdentifier = $("#transfer-recipient-identifier").value.trim();
   const amount = Number($("#transfer-amount").value);
   const errorBox = $("#internal-transfer-error");
   const submitButton = $("#submit-internal-transfer");
@@ -2016,29 +2017,40 @@ async function submitInternalTransfer(event) {
     errorBox.hidden = false;
     return;
   }
-  if (recipientEmail.toLowerCase() === String(state.userEmail || "").toLowerCase()) {
-    errorBox.textContent = "You cannot transfer funds to your own account.";
-    errorBox.hidden = false;
-    return;
-  }
-
   state.isSubmittingTransfer = true;
   submitButton.disabled = true;
-  submitButton.textContent = "Sending transfer...";
+  submitButton.textContent = "Checking recipient...";
 
   try {
+    const { data: verification, error: verificationError } = await supabaseClient.rpc("real_test_internal_transfer", {
+      p_recipient_identifier: recipientIdentifier,
+      p_amount: amount,
+      p_confirm_only: true
+    });
+    if (verificationError) throw verificationError;
+    if (verification?.recipient_found !== true || verification?.recipient_has_account !== true) {
+      throw new Error("Could not confirm that recipient has an active NexaTrade account.");
+    }
+
+    const confirmed = window.confirm(
+      `A NexaTrade account was found for "${recipientIdentifier}". Transfer ${money(amount)} to this account?`
+    );
+    if (!confirmed) return;
+
+    submitButton.textContent = "Sending transfer...";
     const { data, error } = await supabaseClient.rpc("real_test_internal_transfer", {
-      p_recipient_email: recipientEmail,
-      p_amount: amount
+      p_recipient_identifier: recipientIdentifier,
+      p_amount: amount,
+      p_confirm_only: false
     });
     if (error) throw error;
 
     const updatedBalance = Number(data?.balance);
     if (Number.isFinite(updatedBalance) && updatedBalance >= 0) state.realTestBalance = updatedBalance;
     $("#internal-transfer-balance").textContent = money(state.realTestBalance);
-    $("#transfer-recipient-email").value = "";
+    $("#transfer-recipient-identifier").value = "";
     $("#transfer-amount").value = "";
-    toast(`Transfer of ${money(amount)} sent to ${recipientEmail}.`);
+    toast(`Transfer of ${money(amount)} sent to ${recipientIdentifier}.`);
 
     try {
       const [balance] = await Promise.all([loadRealTestBalance(), loadRealTestTransactions()]);

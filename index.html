@@ -142,7 +142,6 @@
             <span>NexaTrade</span><span class="crumb-slash">/</span><strong id="page-title">Trade</strong>
           </div>
           <div class="topbar-actions">
-            <span class="market-status"><i></i> Demo feed active</span>
             <div class="notification-wrap">
               <button class="icon-button notification-button" id="notifications-button" aria-label="Notifications" aria-expanded="false" aria-controls="notifications-menu">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
@@ -347,23 +346,22 @@
 
           <section class="view-panel" id="transfer-view" data-view-panel="Transfer" hidden>
             <div class="view-heading">
-              <div><h1>Internal transfer<span class="title-period">.</span></h1><p>Send simulated account funds to another NexaTrade user by email.</p></div>
+              <div><h1>Internal transfer<span class="title-period">.</span></h1></div>
             </div>
             <section class="panel internal-transfer-panel">
               <div class="internal-transfer-balance">
-                <span>AVAILABLE SIMULATED REAL-ACCOUNT BALANCE</span>
+                <span>AVAILABLE REAL-ACCOUNT BALANCE</span>
                 <strong id="internal-transfer-balance">KSh 0.00</strong>
               </div>
               <form id="internal-transfer-form" class="internal-transfer-form">
                 <label>
-                  <span>RECIPIENT EMAIL</span>
-                  <input id="transfer-recipient-email" type="email" autocomplete="email" placeholder="person@example.com" required />
+                  <span>RECIPIENT USERNAME OR PHONE NUMBER</span>
+                  <input id="transfer-recipient-identifier" type="text" autocomplete="off" placeholder="Username or phone number" required />
                 </label>
                 <label>
                   <span>AMOUNT (KSh)</span>
                   <input id="transfer-amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="100.00" required />
                 </label>
-                <p class="internal-transfer-notice">Transfers use simulated account funds only. No real money is moved. Transfers cannot be reversed.</p>
                 <p class="internal-transfer-error" id="internal-transfer-error" role="alert" hidden></p>
                 <button class="trade-submit buy-submit" id="submit-internal-transfer" type="submit">Send transfer <span>→</span></button>
               </form>
