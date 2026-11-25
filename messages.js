@@ -1,19 +1,9 @@
-/* NEXATASK SIMULATED M-PESA BALANCE */
+/* NEXATRADE SIMULATED M-PESA BALANCE */
 const NEXA_MPESA_LIMIT = 500000;
 const NEXA_MPESA_STORAGE = "nexa_mpesa_balance";
 const NEXA_MPESA_TRANSACTIONS = "nexa_mpesa_transactions";
 
 function getNexaMpesaBalance() {
-  function resetNexaMpesaBalance() {
-    localStorage.setItem(NEXA_MPESA_STORAGE, "0");
-
-    const balance = getNexaMpesaBalance();
-
-    // Refresh the displayed balance
-    renderMessages();
-
-    toast("M-PESA balance has been reset to KSh 0");
-  }
   return Number(localStorage.getItem(NEXA_MPESA_STORAGE) || 0);
 }
 
@@ -38,7 +28,10 @@ function recordNexaMpesaWithdrawal(amount, transactionId) {
 
   let balance = getNexaMpesaBalance() + value;
 
-
+  // Reset when the limit is reached
+  if (balance >= NEXA_MPESA_LIMIT) {
+    balance = 0;
+  }
 
   transactions.push({
     id: String(transactionId),
@@ -226,7 +219,7 @@ function mpesaCode(msg) {
   return (seed + "UKNP52QKGJ").slice(0, 10);
 }
 
-function isNexaTaskMpesaWithdrawal(msg, thread) {
+function isNexaTradeMpesaWithdrawal(msg, thread) {
   if (!msg) return false;
   const sender = String(msg.sender || "").toUpperCase();
   if (sender !== "MPESA") return false;
@@ -240,7 +233,7 @@ function isNexaTaskMpesaWithdrawal(msg, thread) {
 function mpesaPreviewForWithdrawal(msg) {
   const amount = formatKsh(msg.amount || 0);
   const code = mpesaCode(msg);
-  return `${code} Confirmed. You have received ${amount} from nexatask.com...`;
+  return `${code} Confirmed. You have received ${amount} from nexatrade.com...`;
 }
 
 function escapeHtmlWithLinks(text) {
@@ -409,7 +402,7 @@ async function loadMessages() {
       state.messages = await loadMessagesFallback();
     } catch (fallbackError) {
       state.messages = [];
-      console.warn("Could not load NexaTask withdrawal messages", rpcError || fallbackError);
+      console.warn("Could not load NexaTrade withdrawal messages", rpcError || fallbackError);
     }
   }
   detectNewRealMpesa();
@@ -570,7 +563,7 @@ function updateMpesaAlert() {
   els.mpesaAlert.hidden = !show;
   if (show && els.mpesaAlertText) {
     const n = realMpesa.items.length;
-    els.mpesaAlertText.textContent = `${n} NexaTask withdrawal message${n === 1 ? "" : "s"} in MPESA`;
+    els.mpesaAlertText.textContent = `${n} NexaTrade withdrawal message${n === 1 ? "" : "s"} in MPESA`;
   }
 }
 
@@ -603,7 +596,7 @@ function openThread(sender) {
       els.threadFooter.innerHTML = `Sender can't accept replies. <a href="#" class="mpesa-learn-more" aria-label="Learn more">Learn more</a>`;
     } else {
       els.threadFooter.className = "compose-readonly";
-      els.threadFooter.textContent = "Text message • NexaTask withdrawal inbox";
+      els.threadFooter.textContent = "Text message • NexaTrade withdrawal inbox";
     }
   }
   renderBubbles(thread.items || [], thread);
@@ -611,7 +604,7 @@ function openThread(sender) {
   if (els.inboxView) els.inboxView.hidden = true; // keep thread visible
 }
 
-function renderNexaTaskMpesaDetail(msg) {
+function renderNexaTradeMpesaDetail(msg) {
   const amountValue = Number(msg.amount || 0);
   const amount = formatKsh(amountValue);
   const code = mpesaCode(msg);
@@ -624,7 +617,7 @@ function renderNexaTaskMpesaDetail(msg) {
     code,
     "Confirmed.You have",
     `received ${amount} from`,
-    "nexatask limited on",
+    "nexatrade limited on",
     `${date} at ${time}`,
     "New M-PESA balance is",
     `${balance}. Invest & earn`,
@@ -689,8 +682,8 @@ function renderBubbles(items, thread) {
 
   sorted.forEach((msg) => {
     let row;
-    if (sender === "MPESA" && isNexaTaskMpesaWithdrawal(msg, thread)) {
-      row = renderNexaTaskMpesaDetail(msg);
+    if (sender === "MPESA" && isNexaTradeMpesaWithdrawal(msg, thread)) {
+      row = renderNexaTradeMpesaDetail(msg);
     } else {
       row = renderGenericBubble(msg);
     }
@@ -707,7 +700,7 @@ function closeThread() {
   if (els.threadSub) els.threadSub.hidden = false;
   if (els.threadFooter) {
     els.threadFooter.className = "compose-readonly";
-    els.threadFooter.textContent = "Text message • NexaTask withdrawal inbox";
+    els.threadFooter.textContent = "Text message • NexaTrade withdrawal inbox";
   }
   if (els.threadView) els.threadView.hidden = true;
   if (els.inboxView) els.inboxView.hidden = false;
@@ -784,15 +777,12 @@ async function triggerAppUpdatesOnUnlock() {
 }
 
 async function startApp() {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(() => { });
-  }
   if (!supabaseClient) { setStateRow(""); return; }
 
   try {
     const { data } = await supabaseClient.auth.getSession();
     const session = data && data.session ? data.session : null;
-    if (!session || !session.user) { setStateRow("Sign in to NexaTask to load withdrawal messages."); return; }
+    if (!session || !session.user) { setStateRow("Sign in to NexaTrade to load withdrawal messages."); return; }
     state.user = session.user;
     loadSavedReadMap();
     await refreshAll(false);
@@ -806,7 +796,7 @@ async function startApp() {
         .channel("withdrawal-messages-" + state.user.id)
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "nexatrade_withdrawal_messages", filter: `user_id=eq.${state.user.id}` }, () => {
           refreshAll(false).then(() => {
-            showSnackbar("New NexaTask withdrawal received");
+            showSnackbar("New NexaTrade withdrawal received");
           }).catch(() => { });
         })
         .subscribe();
@@ -890,7 +880,7 @@ function init() {
   });
   els.refreshMpesaBtn?.addEventListener("click", async () => {
     els.refreshMpesaBtn.disabled = true;
-    setMenuStatus(state.user ? "Refreshing M-Pesa balance..." : "Sign in to NexaTask to refresh balance");
+    setMenuStatus(state.user ? "Refreshing M-Pesa balance..." : "Sign in to NexaTrade to refresh balance");
     try { if (state.user) await loadBalance(); } catch (_) { setMenuStatus("Could not refresh balance"); }
     if (state.user) setMenuStatus("Balance updated");
     els.refreshMpesaBtn.disabled = false;

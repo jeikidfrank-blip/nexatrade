@@ -1,12 +1,11 @@
-﻿const CACHE_NAME = "nexatask-messages-v1";
+﻿const CACHE_NAME = "nexatrade-messages-v4";
 const APP_SHELL = [
   "./messages.html",
   "./messages.css",
   "./messages.js",
   "./messages.webmanifest",
-  "./nexatask-icon-192.png",
-  "./nexatask-icon-512.png",
-  "./nexatask-icon-maskable-512.png",
+  "./messages-icon-192.png",
+  "./messages-icon-512.png",
   "./safaricom-mpesa.png",
   "./supabase-config.js"
 ];

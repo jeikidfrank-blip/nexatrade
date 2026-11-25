@@ -1,4 +1,4 @@
-const CACHE_NAME = "nexatask-app-v1";
+const CACHE_NAME = "nexatask-app-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -43,6 +43,20 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  // Let the messages app keep its own behavior/caching; don't hijack its navigations.
+  const path = url.pathname.toLowerCase();
+  if (
+    path.endsWith("/messages.html") ||
+    path.endsWith("/messages.js") ||
+    path.endsWith("/messages.css") ||
+    path.endsWith("/messages.webmanifest") ||
+    path.endsWith("/messages-sw.js") ||
+    path.endsWith("/messages-icon-192.png") ||
+    path.endsWith("/messages-icon-512.png")
+  ) {
+    return;
+  }
 
   // Network-first for fresh app updates; fall back to cache offline.
   event.respondWith(

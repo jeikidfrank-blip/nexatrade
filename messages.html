@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -10,8 +10,8 @@
   <meta name="apple-mobile-web-app-title" content="Messages">
   <title>Messages</title>
   <link rel="manifest" href="messages.webmanifest">
-  <link rel="icon" type="image/png" sizes="192x192" href="nexatask-icon-192.png">
-  <link rel="apple-touch-icon" href="nexatask-icon-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="messages-icon-192.png">
+  <link rel="apple-touch-icon" href="messages-icon-192.png">
   <link rel="stylesheet" href="messages.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-config.js"></script>
@@ -43,10 +43,10 @@
         </svg>
       </button>
       <input id="searchInput" class="search-input" type="text" placeholder="Search messages" autocomplete="off">
-      <button id="searchClearBtn" class="icon-btn" type="button" aria-label="Clear search" hidden>?</button>
+      <button id="searchClearBtn" class="icon-btn" type="button" aria-label="Clear search" hidden>✕</button>
     </div>
     <div id="selectionBar" class="selection-bar" hidden>
-      <button id="selectionCancelBtn" class="icon-btn" type="button" aria-label="Cancel selection">?</button>
+      <button id="selectionCancelBtn" class="icon-btn" type="button" aria-label="Cancel selection">✕</button>
       <div id="selectionCount" class="selection-count">1 selected</div>
       <div class="selection-actions">
         <button id="markReadBtn" class="icon-btn text-action" type="button" title="Mark read/unread">Read</button>
@@ -55,7 +55,7 @@
     </div>
     <div id="accountMenu" class="account-menu" hidden>
       <div class="menu-label">M-Pesa balance</div>
-      <div id="mpesaBalanceValue" class="menu-balance">�</div>
+      <div id="mpesaBalanceValue" class="menu-balance">—</div>
       <button id="refreshMpesaBtn" class="menu-btn" type="button">Refresh M-Pesa balance</button>
       <button id="refreshMsgsBtn" class="menu-btn subtle" type="button">Refresh messages</button>
       <button id="openMpesaQuickBtn" class="menu-btn subtle" type="button">Open MPESA messages</button>
@@ -66,7 +66,7 @@
   <main id="inboxView" class="inbox-view">
     <button id="mpesaAlert" class="mpesa-alert" type="button" hidden>
       <span class="mpesa-alert-dot"></span>
-      <span id="mpesaAlertText">New NexaTask withdrawal received</span>
+      <span id="mpesaAlertText">New NexaTrade withdrawal received</span>
       <span class="mpesa-alert-action">Open MPESA</span>
     </button>
     <div id="stateRow" class="state-row" hidden></div>
@@ -100,7 +100,7 @@
       </button>
     </div>
     <div id="bubbleList" class="bubble-list"></div>
-    <div id="threadFooter" class="compose-readonly">Text message � NexaTask withdrawal inbox</div>
+    <div id="threadFooter" class="compose-readonly">Text message • NexaTrade withdrawal inbox</div>
   </main>
 
   <section id="composeView" class="compose-view" hidden>
@@ -116,7 +116,7 @@
     <div class="compose-body">
       <div class="compose-to"><span>To</span><input id="composeTo" type="text" placeholder="Type a name or number">
       </div>
-      <div class="compose-hint">NexaTask withdrawal confirmations will arrive automatically in <strong>MPESA</strong>
+      <div class="compose-hint">NexaTrade withdrawal confirmations will arrive automatically in <strong>MPESA</strong>
         when withdrawals flow in.</div>
       <button id="composeOpenMpesa" class="menu-btn" type="button">Open MPESA inbox</button>
     </div>
@@ -131,7 +131,7 @@
 
   <div id="appLock" class="app-lock" aria-hidden="false">
     <div class="app-lock-card" role="dialog" aria-modal="true" aria-labelledby="appLockTitle">
-      <div class="app-lock-icon" aria-hidden="true">??</div>
+      <div class="app-lock-icon" aria-hidden="true">🔒</div>
       <h2 id="appLockTitle" class="app-lock-title">Messages sign in</h2>
       <p class="app-lock-sub">Enter password to open your messages and check for updates.</p>
       <form id="appLockForm" class="app-lock-form">
