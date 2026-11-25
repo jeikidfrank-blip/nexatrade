@@ -1,8 +1,8 @@
 {
   "id": "./index.html",
-  "name": "NexaTask",
-  "short_name": "NexaTask",
-  "description": "NexaTask â€” Learn, Trade, Earn. Demo market dashboard for exploring markets, charts, and demo trades.",
+  "name": "NexaTrade",
+  "short_name": "NexaTrade",
+  "description": "NexaTrade — Trade, Invest, Grow. Demo market dashboard for exploring markets, charts, and demo trades.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -11,25 +11,25 @@
   "theme_color": "#090d12",
   "icons": [
     {
-      "src": "nexatask-icon-192.png",
+      "src": "nexatrade-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "nexatask-icon-512.png",
+      "src": "nexatrade-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "nexatask-icon-maskable-192.png",
+      "src": "nexatrade-icon-maskable-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "nexatask-icon-maskable-512.png",
+      "src": "nexatrade-icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

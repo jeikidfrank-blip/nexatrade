@@ -94,6 +94,7 @@ body.authenticated .app-shell { display: block; }
 .brand-mark i:nth-child(1) { height: 11px; opacity: .63; }
 .brand-mark i:nth-child(2) { height: 18px; opacity: .83; }
 .brand-mark i:nth-child(3) { height: 23px; }
+.brand-logo-img { width: 28px; height: 28px; border-radius: 7px; object-fit: cover; display: block; flex-shrink: 0; }
 .sidebar-label { padding: 0 10px; margin: 0 0 12px; color: #94a3b3; font-size: 11px; font-weight: 700; letter-spacing: 1.4px; }
 .primary-nav { display: grid; gap: 5px; margin-bottom: 35px; }
 .nav-link { border: 0; width: 100%; padding: 10px 11px; display: flex; align-items: center; gap: 12px; border-radius: 6px; background: transparent; color: #afbcc9; text-align: left; cursor: pointer; transition: background .16s ease, color .16s ease; }

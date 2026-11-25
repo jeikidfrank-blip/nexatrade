@@ -1,4 +1,4 @@
-const CACHE_NAME = "nexatask-app-v2";
+const CACHE_NAME = "nexatrade-app-v1";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -7,12 +7,12 @@ const APP_SHELL = [
   "./payments.js",
   "./supabase-config.js",
   "./manifest.webmanifest",
-  "./nexatask-icon-192.png",
-  "./nexatask-icon-512.png",
-  "./nexatask-icon-maskable-192.png",
-  "./nexatask-icon-maskable-512.png",
-  "./nexatask-icon-180.png",
-  "./nexatask-icon-32.png",
+  "./nexatrade-icon-192.png",
+  "./nexatrade-icon-512.png",
+  "./nexatrade-icon-maskable-192.png",
+  "./nexatrade-icon-maskable-512.png",
+  "./nexatrade-icon-180.png",
+  "./nexatrade-icon-32.png",
   "./safaricom-mpesa.png"
 ];
 
@@ -26,7 +26,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME && k.startsWith("nexatask-app-")).map((k) => caches.delete(k)))
+      Promise.all(keys.filter((k) => k !== CACHE_NAME && (k.startsWith("nexatrade-app-") || k.startsWith("nexatask-app-"))).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
 });

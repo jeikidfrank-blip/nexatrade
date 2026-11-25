@@ -1,5 +1,5 @@
 /* ============================================================================
-   NexaTask — payment provider adapter ("plugin slot")
+   NexaTrade — payment provider adapter ("plugin slot")
    ----------------------------------------------------------------------------
    This file deliberately CANNOT move money. It gives you one place to register
    a payment provider later, without wiring a live gateway into the trading
@@ -165,7 +165,7 @@
             transactionRequestId: "NEXATRADE-" + reference,
             checkoutUrl: cfg.testCheckoutUrl || null,
             instructions:
-              "NexaTask M-Pesa STK push test. Reference: " + reference
+              "NexaTrade M-Pesa STK push test. Reference: " + reference
               + (msisdn ? ", phone: " + msisdn : "")
               + ". No external request was sent. Set `checkoutUrl` in "
               + "`window.NEXATRADE_MEGAPAY_CONFIG` to your server endpoint that calls "
