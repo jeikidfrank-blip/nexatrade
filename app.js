@@ -27,6 +27,7 @@ const state = {
   priceZoom: 1,
   priceOffset: 0,
   isSubmittingTrade: false,
+  isSubmittingTransfer: false,
   tradeDisplay: null,
   tradeResultTimeout: null,
   quoteErrorNotified: false,
@@ -1145,7 +1146,7 @@ async function loadDemoDeposits() {
 async function loadRealTestTransactions() {
   const { data, error } = await supabaseClient
     .from("real_test_transactions")
-    .select("id,transaction_type,amount,balance_after,created_at")
+    .select("id,transaction_type,amount,balance_after,counterparty_email,created_at")
     .eq("user_id", state.userId)
     .order("created_at", { ascending: false })
     .limit(500);
@@ -1262,25 +1263,28 @@ function renderDemoDeposits() {
     );
 
     const transaction = document.createElement("td");
-    const transactionType = isDemo
-      ? "deposit"
-      : record.transaction_type;
+    const transactionType = isDemo ? "deposit" : record.transaction_type;
+    const isTransfer = transactionType === "transfer_sent" || transactionType === "transfer_received";
 
     transaction.textContent = isDemo
       ? "Demo deposit"
       : transactionType === "withdrawal"
         ? "Withdrawal"
-        : "Deposit";
+        : transactionType === "transfer_sent"
+          ? `Transfer to ${record.counterparty_email || "NexaTrade user"}`
+          : transactionType === "transfer_received"
+            ? `Transfer from ${record.counterparty_email || "NexaTrade user"}`
+            : "Deposit";
 
     const amount = document.createElement("td");
-    const prefix = transactionType === "withdrawal" ? "-" : "+";
+    const prefix = transactionType === "withdrawal" || transactionType === "transfer_sent" ? "-" : "+";
     amount.textContent = `${prefix}${money(Number(record.amount))}`;
 
     const balance = document.createElement("td");
     balance.textContent = money(Number(record.balance_after));
 
     const type = document.createElement("td");
-    type.textContent = transactionType === "withdrawal" ? "Withdrawal" : "Deposit";
+    type.textContent = isTransfer ? "Internal transfer" : transactionType === "withdrawal" ? "Withdrawal" : "Deposit";
 
     row.append(date, transaction, amount, balance, type);
     body.append(row);
@@ -1310,7 +1314,7 @@ function renderTradeResult() {
     notice.hidden = true;
     notice.textContent = "";
   }
-  if (tag) tag.hidden = false;
+  if (tag) tag.hidden = true;
   if (amount) amount.hidden = true;
 
   if (!display || isPending) return;
@@ -1321,7 +1325,6 @@ function renderTradeResult() {
     const tone = display.tone === "error" ? "is-error" : "is-win";
     panel.className = `trade-result is-notice ${tone}`;
     $("#result-status").textContent = display.title || "Notice";
-    if (tag) tag.hidden = true;
     if (notice) {
       notice.textContent = display.message || "";
       notice.hidden = !display.message;
@@ -1979,6 +1982,83 @@ function setNavigationMenuOpen(isOpen) {
   $("#menu-toggle").setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
 }
 
+async function refreshInternalTransferBalance() {
+  if (!state.userId || !supabaseClient) {
+    toast("Sign in to transfer simulated account funds.", true);
+    return;
+  }
+
+  try {
+    state.realTestBalance = await loadRealTestBalance();
+    $("#internal-transfer-balance").textContent = money(state.realTestBalance);
+  } catch (error) {
+    toast(`Could not load transfer balance: ${getErrorMessage(error, "Account loading failed.")}`, true);
+  }
+}
+
+async function submitInternalTransfer(event) {
+  event.preventDefault();
+  if (state.isSubmittingTransfer) return;
+  if (!supabaseClient || !state.userId) {
+    toast("Sign in to transfer simulated account funds.", true);
+    return;
+  }
+
+  const recipientEmail = $("#transfer-recipient-email").value.trim();
+  const amount = Number($("#transfer-amount").value);
+  const errorBox = $("#internal-transfer-error");
+  const submitButton = $("#submit-internal-transfer");
+  errorBox.hidden = true;
+  errorBox.textContent = "";
+
+  if (!Number.isFinite(amount) || amount <= 0 || Number(amount.toFixed(2)) !== amount) {
+    errorBox.textContent = "Enter an amount greater than zero with no more than two decimal places.";
+    errorBox.hidden = false;
+    return;
+  }
+  if (recipientEmail.toLowerCase() === String(state.userEmail || "").toLowerCase()) {
+    errorBox.textContent = "You cannot transfer funds to your own account.";
+    errorBox.hidden = false;
+    return;
+  }
+
+  state.isSubmittingTransfer = true;
+  submitButton.disabled = true;
+  submitButton.textContent = "Sending transfer...";
+
+  try {
+    const { data, error } = await supabaseClient.rpc("real_test_internal_transfer", {
+      p_recipient_email: recipientEmail,
+      p_amount: amount
+    });
+    if (error) throw error;
+
+    const updatedBalance = Number(data?.balance);
+    if (Number.isFinite(updatedBalance) && updatedBalance >= 0) state.realTestBalance = updatedBalance;
+    $("#internal-transfer-balance").textContent = money(state.realTestBalance);
+    $("#transfer-recipient-email").value = "";
+    $("#transfer-amount").value = "";
+    toast(`Transfer of ${money(amount)} sent to ${recipientEmail}.`);
+
+    try {
+      const [balance] = await Promise.all([loadRealTestBalance(), loadRealTestTransactions()]);
+      state.realTestBalance = balance;
+      $("#internal-transfer-balance").textContent = money(balance);
+    } catch (refreshError) {
+      toast(`Transfer completed, but account history could not be refreshed: ${getErrorMessage(refreshError, "Refresh failed.")}`, true);
+    }
+  } catch (error) {
+    const message = getErrorMessage(error, "Could not complete the transfer.");
+    errorBox.textContent = message;
+    errorBox.hidden = false;
+    toast(`Transfer failed: ${message}`, true);
+  } finally {
+    state.isSubmittingTransfer = false;
+    submitButton.disabled = false;
+    submitButton.innerHTML = "Send transfer <span>→</span>";
+  }
+}
+
 function selectView(view) {
   const panel = $(`[data-view-panel="${view}"]`);
   if (!panel) return;
@@ -1986,13 +2066,14 @@ function selectView(view) {
   $$(".nav-link[data-view]").forEach((button) => {
     button.classList.toggle("active", button.dataset.view === view);
   });
-  $("#page-title").textContent = view;
+  $("#page-title").textContent = view === "Transfer" ? "Internal transfer" : view;
   if (view === "Markets") renderMarketStrip();
   if (view === "History") {
     state.showingHistory = true;
     renderPositions();
   }
   if (view === "Trade") renderChart();
+  if (view === "Transfer") refreshInternalTransferBalance();
   setNavigationMenuOpen(false);
   window.scrollTo({ top: 0 });
 }
@@ -2318,8 +2399,7 @@ async function submitDemoFunds() {
         kind: "notice",
         status: "notice",
         tone: "success",
-        title: "Test withdrawal successful",
-        message: `${money(amount)} was deducted from your NexaTrade test balance. A simulated notification has been added to Messages. No real M-PESA transfer was made.`
+        title: "Withdrawal successful"
       });
     } else {
       toast(
@@ -2497,6 +2577,7 @@ function initialize() {
   });
 
   $$(".nav-link[data-view]").forEach((button) => button.addEventListener("click", () => selectView(button.dataset.view)));
+  $("#internal-transfer-form").addEventListener("submit", submitInternalTransfer);
   $("#menu-toggle").addEventListener("click", () => {
     setNavigationMenuOpen(!document.body.classList.contains("menu-open"));
   });
@@ -2718,6 +2799,7 @@ function resetUserDemoState() {
   state.activeMarket = "XAU";
   state.timeframe = "30sec";
   state.isSubmittingTrade = false;
+  state.isSubmittingTransfer = false;
   state.tradeDisplay = null;
   const profileDetails = $("#profile-details");
   const profileButton = $("#profile-button");

@@ -79,6 +79,7 @@
           <button class="nav-link active" data-view="Trade"><span class="nav-icon">↗</span>Trade</button>
           <button class="nav-link" data-view="Markets"><span class="nav-icon">⌁</span>Markets</button>
           <button class="nav-link" data-view="History"><span class="nav-icon">▤</span>History</button>
+          <button class="nav-link" data-view="Transfer"><span class="nav-icon">⇄</span>Internal transfer</button>
           <div class="profile-menu" id="profile-menu">
             <button type="button" class="nav-link profile-menu-button" id="profile-button" aria-expanded="false" aria-controls="profile-details">
               <span class="nav-icon">●</span>Profile
@@ -342,6 +343,31 @@
               </table>
             </div>
           </section>
+          </section>
+
+          <section class="view-panel" id="transfer-view" data-view-panel="Transfer" hidden>
+            <div class="view-heading">
+              <div><h1>Internal transfer<span class="title-period">.</span></h1><p>Send simulated account funds to another NexaTrade user by email.</p></div>
+            </div>
+            <section class="panel internal-transfer-panel">
+              <div class="internal-transfer-balance">
+                <span>AVAILABLE SIMULATED REAL-ACCOUNT BALANCE</span>
+                <strong id="internal-transfer-balance">KSh 0.00</strong>
+              </div>
+              <form id="internal-transfer-form" class="internal-transfer-form">
+                <label>
+                  <span>RECIPIENT EMAIL</span>
+                  <input id="transfer-recipient-email" type="email" autocomplete="email" placeholder="person@example.com" required />
+                </label>
+                <label>
+                  <span>AMOUNT (KSh)</span>
+                  <input id="transfer-amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="100.00" required />
+                </label>
+                <p class="internal-transfer-notice">Transfers use simulated account funds only. No real money is moved. Transfers cannot be reversed.</p>
+                <p class="internal-transfer-error" id="internal-transfer-error" role="alert" hidden></p>
+                <button class="trade-submit buy-submit" id="submit-internal-transfer" type="submit">Send transfer <span>→</span></button>
+              </form>
+            </section>
           </section>
           <footer class="page-footer"><span>© 2026 NexaTrade</span><span><i class="footer-dot"></i> Market data</span></footer>
         </div>

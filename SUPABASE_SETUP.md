@@ -9,8 +9,9 @@ In the Supabase project configured in `supabase-config.js`, open **SQL Editor** 
 1. `supabase-demo-accounts.sql`
 2. `supabase-real-test-account.sql`
 3. `supabase-real-test-trading.sql`
+4. `supabase-internal-transfers.sql`
 
-The scripts create the tables, row-level security policies, signup triggers, and RPC functions used by `app.js`. They are intended to be rerunnable. The final script updates prices and relevant account functions to use KSh.
+The scripts create the tables, row-level security policies, signup triggers, and RPC functions used by `app.js`. They are intended to be rerunnable. The trading script updates prices and relevant account functions to use KSh. The internal-transfer migration adds a server-validated transfer RPC and ledger entries; run it before using the Internal transfer menu.
 
 ## Configure authentication
 
@@ -22,6 +23,7 @@ In Supabase, open **Authentication > URL Configuration** and set the site's depl
 2. Confirm signup and sign in.
 3. Check that the Demo and Test Funds tabs load balances.
 4. Try a simulated deposit/withdrawal and a demo trade.
-5. In Supabase **Table Editor**, verify that only that user's account, transaction, and position records were created.
+5. Create or use a second signed-up account, send it a small simulated internal transfer by email, and confirm the sender and recipient transaction histories and balances update.
+6. In Supabase **Table Editor**, verify that each account's transactions are scoped to that user and the transfer ledger records match.
 
 The Test Funds account is simulated: this setup does not connect a payment provider or execute live trades. Do not use it to accept real deposits.
