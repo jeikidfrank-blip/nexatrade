@@ -1,6 +1,6 @@
 # Supabase backend setup
 
-NexaTrade uses Supabase for authentication, account balances, transaction history, and server-side simulated trade execution. The browser only uses the project's URL and publishable key from `supabase-config.js`; never put a Supabase service-role key in the site.
+NexaTask uses Supabase for authentication, account balances, transaction history, and server-side simulated trade execution. The browser only uses the project's URL and publishable key from `supabase-config.js`; never put a Supabase service-role key in the site.
 
 ## Set up the database
 

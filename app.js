@@ -2175,8 +2175,8 @@ async function submitExternalDeposit(amount, providerId) {
   const email = $("#funds-email") ? String($("#funds-email").value || "").trim() : "";
 
   const reference = typeof api.createReference === "function"
-    ? api.createReference("NEXATRADE")
-    : ("NEXATRADE-" + Date.now());
+    ? api.createReference("NEXATASK")
+    : ("NEXATASK-" + Date.now());
 
   let accessToken = null;
   try {
@@ -2319,7 +2319,7 @@ async function submitDemoFunds() {
         status: "notice",
         tone: "success",
         title: "Test withdrawal successful",
-        message: `${money(amount)} was deducted from your NexaTasks test balance. A simulated notification has been added to Messages. No real M-PESA transfer was made.`
+        message: `${money(amount)} was deducted from your NexaTask test balance. A simulated notification has been added to Messages. No real M-PESA transfer was made.`
       });
     } else {
       toast(
@@ -2614,7 +2614,7 @@ function setAuthMode(mode) {
   const authMessage = $("#auth-message");
   const authForm = $("#auth-form");
 
-  if (authTitle) authTitle.innerHTML = isSignUp ? 'Create your NexaTrade account<span class="title-period">.</span>' : 'Welcome back<span class="title-period">.</span>';
+  if (authTitle) authTitle.innerHTML = isSignUp ? 'Create your NexaTask account<span class="title-period">.</span>' : 'Welcome back<span class="title-period">.</span>';
   if (nameField) nameField.hidden = !isSignUp;
   if (phoneField) phoneField.hidden = !isSignUp;
   if (confirmField) confirmField.hidden = !isSignUp;
@@ -2891,7 +2891,17 @@ async function signOut() {
   }
 }
 
+function registerAppServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch((error) => {
+      console.warn("Service worker registration failed:", error);
+    });
+  });
+}
+
 async function initializeAuth() {
+  registerAppServiceWorker();
   try {
     initTheme();
     $$(".auth-tab").forEach((button) => button.addEventListener("click", () => setAuthMode(button.dataset.authMode)));
