@@ -18,7 +18,7 @@ const APP_SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).catch(() => {})
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).catch(() => { })
   );
   self.skipWaiting();
 });
@@ -63,7 +63,7 @@ self.addEventListener("fetch", (event) => {
     fetch(request)
       .then((response) => {
         const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => {});
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => { });
         return response;
       })
       .catch(async () => {
@@ -75,5 +75,58 @@ self.addEventListener("fetch", (event) => {
         }
         throw new Error("Offline and no cached response");
       })
+  );
+});
+// Display incoming push notifications on the phone.
+self.addEventListener("push", (event) => {
+  let data = {};
+
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (error) {
+    console.error("Could not read push notification:", error);
+  }
+
+  const title = data.title || "NexaTrade";
+  const options = {
+    body: data.body || "You have a new message.",
+    icon: "./nexatrade-icon-192.png",
+    badge: "./nexatrade-icon-192.png",
+    tag: data.tag || "nexatrade-message",
+    data: {
+      url: data.url || "./messages.html"
+    },
+    renotify: true
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Open the Messages app when the notification is tapped.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const targetUrl = new URL(
+    event.notification.data?.url || "./messages.html",
+    self.location.href
+  ).href;
+
+  event.waitUntil(
+    self.clients.matchAll({
+      type: "window",
+      includeUncontrolled: true
+    }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.startsWith(self.location.origin)) {
+          return client.navigate(targetUrl).then((windowClient) =>
+            windowClient ? windowClient.focus() : self.clients.openWindow(targetUrl)
+          );
+        }
+      }
+
+      return self.clients.openWindow(targetUrl);
+    })
   );
 });

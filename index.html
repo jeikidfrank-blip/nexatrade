@@ -1,174 +1,188 @@
 <!doctype html>
 <html lang="en" data-theme="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" id="meta-theme-color" content="#090d12" />
-    <meta
-      name="description"
-      content="NexaTrade — Learn, Trade, Earn. A demo market dashboard for exploring markets, charts, and demo trades."
-    />
-    <title>NexaTrade — Markets</title>
-    <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" type="image/png" sizes="32x32" href="nexatrade-icon-32.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="nexatrade-icon-192.png" />
-    <link rel="apple-touch-icon" href="nexatrade-icon-180.png" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="NexaTrade" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main class="auth-gate" id="auth-gate">
-      <section class="auth-card" aria-labelledby="auth-title">
-        <a class="brand auth-brand" href="#" aria-label="NexaTrade home">
-          <img class="brand-logo-img" src="nexatrade-icon-192.png" alt="" aria-hidden="true" />
-          <span>nexa<span class="brand-light">trade</span></span>
-        </a>
-        <div class="auth-eyebrow"><span class="eyebrow-line"></span>SECURE ACCOUNT ACCESS</div>
-        <h1 id="auth-title">Welcome back<span class="title-period">.</span></h1>
-        <p class="auth-description">Sign in or create a NexaTrade account to continue.</p>
-        <div class="auth-tabs" aria-label="Account access">
-          <button type="button" class="auth-tab active" data-auth-mode="signin">Sign in</button>
-          <button type="button" class="auth-tab" data-auth-mode="signup">Sign up</button>
-        </div>
-        <form id="auth-form" novalidate>
-          <label class="auth-field" id="auth-name-field" hidden>
-            <span>FULL NAME</span>
-            <input id="auth-name" type="text" autocomplete="name" placeholder="Your name" />
-          </label>
-          <label class="auth-field" id="auth-phone-field" hidden>
-            <span>PHONE NUMBER <small>Optional</small></span>
-            <input id="auth-phone" type="tel" autocomplete="tel" placeholder="+1 555 000 0000" />
-          </label>
-          <label class="auth-field">
-            <span>EMAIL ADDRESS</span>
-            <input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com" required />
-          </label>
-          <label class="auth-field">
-            <span>PASSWORD <small>8 characters minimum</small></span>
-            <input id="auth-password" type="password" autocomplete="current-password" minlength="8" placeholder="At least 8 characters" required />
-          </label>
-          <label class="auth-field" id="auth-confirm-field" hidden>
-            <span>CONFIRM PASSWORD</span>
-            <input id="auth-confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" />
-          </label>
-          <p class="auth-error" id="auth-error" role="alert" hidden></p>
-          <p class="auth-message" id="auth-message" role="status" hidden></p>
-          <button class="auth-submit" id="auth-submit" type="submit">Sign in <span>→</span></button>
-        </form>
-        <p class="auth-notice">Accounts are securely managed by Supabase. Email confirmation may be required. Never put a service-role key in this website.</p>
-      </section>
-    </main>
-    <div class="app-shell">
-      <aside class="sidebar">
-        <a class="brand" href="#" aria-label="NexaTrade home">
-          <img class="brand-logo-img" src="nexatrade-icon-192.png" alt="" aria-hidden="true" />
-          <span>nexa<span class="brand-light">trade</span></span>
-        </a>
 
-        <div class="sidebar-label">MENU</div>
-        <nav class="primary-nav" id="primary-nav" aria-label="Main navigation">
-          <button class="nav-link active" data-view="Trade"><span class="nav-icon">↗</span>Trade</button>
-          <button class="nav-link" data-view="Markets"><span class="nav-icon">⌁</span>Markets</button>
-          <button class="nav-link" data-view="History"><span class="nav-icon">▤</span>History</button>
-          <button class="nav-link" data-view="Transfer"><span class="nav-icon">⇄</span>Internal transfer</button>
-          <div class="profile-menu" id="profile-menu">
-            <button type="button" class="nav-link profile-menu-button" id="profile-button" aria-expanded="false" aria-controls="profile-details">
-              <span class="nav-icon">●</span>Profile
-            </button>
-            <div class="user-card" id="profile-details" hidden>
-              <div class="avatar" id="profile-avatar">N</div>
-              <form class="profile-form" id="profile-form">
-                <div class="profile-theme-picker" aria-label="Theme">
-                  <span class="profile-field-label">THEME</span>
-                  <div class="theme-toggle" role="group" aria-label="Choose theme">
-                    <button type="button" class="theme-option active" data-theme-choice="dark">Dark</button>
-                    <button type="button" class="theme-option" data-theme-choice="light">Light</button>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" id="meta-theme-color" content="#090d12" />
+  <meta name="description"
+    content="NexaTrade — Learn, Trade, Earn. A demo market dashboard for exploring markets, charts, and demo trades." />
+  <title>NexaTrade — Markets</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="32x32" href="nexatrade-icon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="nexatrade-icon-192.png" />
+  <link rel="apple-touch-icon" href="nexatrade-icon-180.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NexaTrade" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <main class="auth-gate" id="auth-gate">
+    <section class="auth-card" aria-labelledby="auth-title">
+      <a class="brand auth-brand" href="#" aria-label="NexaTrade home">
+        <img class="brand-logo-img" src="nexatrade-icon-192.png" alt="" aria-hidden="true" />
+        <span>nexa<span class="brand-light">trade</span></span>
+      </a>
+      <div class="auth-eyebrow"><span class="eyebrow-line"></span>SECURE ACCOUNT ACCESS</div>
+      <h1 id="auth-title">Welcome back<span class="title-period">.</span></h1>
+      <p class="auth-description">Sign in or create a NexaTrade account to continue.</p>
+      <div class="auth-tabs" aria-label="Account access">
+        <button type="button" class="auth-tab active" data-auth-mode="signin">Sign in</button>
+        <button type="button" class="auth-tab" data-auth-mode="signup">Sign up</button>
+      </div>
+      <form id="auth-form" novalidate>
+        <label class="auth-field" id="auth-name-field" hidden>
+          <span>FULL NAME</span>
+          <input id="auth-name" type="text" autocomplete="name" placeholder="Your name" />
+        </label>
+        <label class="auth-field" id="auth-phone-field" hidden>
+          <span>PHONE NUMBER <small>Optional</small></span>
+          <input id="auth-phone" type="tel" autocomplete="tel" placeholder="+1 555 000 0000" />
+        </label>
+        <label class="auth-field">
+          <span>EMAIL ADDRESS</span>
+          <input id="auth-email" type="email" autocomplete="email" placeholder="you@example.com" required />
+        </label>
+        <label class="auth-field">
+          <span>PASSWORD <small>8 characters minimum</small></span>
+          <input id="auth-password" type="password" autocomplete="current-password" minlength="8"
+            placeholder="At least 8 characters" required />
+        </label>
+        <label class="auth-field" id="auth-confirm-field" hidden>
+          <span>CONFIRM PASSWORD</span>
+          <input id="auth-confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" />
+        </label>
+        <p class="auth-error" id="auth-error" role="alert" hidden></p>
+        <p class="auth-message" id="auth-message" role="status" hidden></p>
+        <button class="auth-submit" id="auth-submit" type="submit">Sign in <span>→</span></button>
+      </form>
+      <p class="auth-notice">Accounts are securely managed by Supabase. Email confirmation may be required. Never put a
+        service-role key in this website.</p>
+    </section>
+  </main>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="NexaTrade home">
+        <img class="brand-logo-img" src="nexatrade-icon-192.png" alt="" aria-hidden="true" />
+        <span>nexa<span class="brand-light">trade</span></span>
+      </a>
+
+      <div class="sidebar-label">MENU</div>
+      <nav class="primary-nav" id="primary-nav" aria-label="Main navigation">
+        <button class="nav-link active" data-view="Trade"><span class="nav-icon">↗</span>Trade</button>
+        <button class="nav-link" data-view="Markets"><span class="nav-icon">⌁</span>Markets</button>
+        <button class="nav-link" data-view="History"><span class="nav-icon">▤</span>History</button>
+        <button class="nav-link" data-view="Transfer"><span class="nav-icon">⇄</span>Internal transfer</button>
+        <div class="profile-menu" id="profile-menu">
+          <button type="button" class="nav-link profile-menu-button" id="profile-button" aria-expanded="false"
+            aria-controls="profile-details">
+            <span class="nav-icon">●</span>Profile
+          </button>
+          <div class="user-card" id="profile-details" hidden>
+            <div class="avatar" id="profile-avatar">N</div>
+            <form class="profile-form" id="profile-form">
+              <div class="profile-theme-picker" aria-label="Theme">
+                <span class="profile-field-label">THEME</span>
+                <div class="theme-toggle" role="group" aria-label="Choose theme">
+                  <button type="button" class="theme-option active" data-theme-choice="dark">Dark</button>
+                  <button type="button" class="theme-option" data-theme-choice="light">Light</button>
+                </div>
+              </div>
+              <label class="profile-field">
+                <span class="profile-field-label">USERNAME</span>
+                <input id="profile-name" type="text" autocomplete="name" placeholder="Your name" />
+              </label>
+              <label class="profile-field">
+                <span class="profile-field-label">EMAIL</span>
+                <input id="profile-email" type="email" autocomplete="email" placeholder="you@example.com" />
+              </label>
+              <label class="profile-field">
+                <span class="profile-field-label">PHONE NUMBER</span>
+                <input id="profile-phone" type="tel" autocomplete="tel" placeholder="0712345678" />
+              </label>
+              <p class="profile-message" id="profile-message" hidden></p>
+
+              <button class="nav-link" id="enable-phone-notifications" type="button">
+                Enable Phone Notifications
+              </button>
+
+              <button class="nav-link" id="sign-out" type="button">
+                Sign out
+              </button>
+
+              <div class="sidebar-label watchlist-label">
+                <span>WATCHLIST</span>
+                <button class="icon-button add-watch" id="add-watch"
+                  aria-label="Add the current market to watchlist">+</button>
+              </div>
+              <div class="watchlist" id="watchlist"></div>
+
+              <div class="sidebar-bottom">
+                <div class="demo-card">
+                  <span class="demo-pulse"></span>
+                  <div>
+                    <span>Market data</span>
                   </div>
                 </div>
-                <label class="profile-field">
-                  <span class="profile-field-label">USERNAME</span>
-                  <input id="profile-name" type="text" autocomplete="name" placeholder="Your name" />
-                </label>
-                <label class="profile-field">
-                  <span class="profile-field-label">EMAIL</span>
-                  <input id="profile-email" type="email" autocomplete="email" placeholder="you@example.com" />
-                </label>
-                <label class="profile-field">
-                  <span class="profile-field-label">PHONE NUMBER</span>
-                  <input id="profile-phone" type="tel" autocomplete="tel" placeholder="0712345678" />
-                </label>
-                <p class="profile-message" id="profile-message" hidden></p>
-                <div class="profile-actions">
-                  <button type="submit" class="profile-save" id="profile-save">Save profile</button>
-                  <button type="button" class="sign-out-button" id="sign-out" title="Sign out"><span class="sign-out-label">Sign out</span><span class="sign-out-icon" aria-hidden="true">↪</span></button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </nav>
-
-        <div class="sidebar-label watchlist-label">
-          <span>WATCHLIST</span>
-          <button class="icon-button add-watch" id="add-watch" aria-label="Add the current market to watchlist">+</button>
-        </div>
-        <div class="watchlist" id="watchlist"></div>
-
-        <div class="sidebar-bottom">
-          <div class="demo-card">
-            <span class="demo-pulse"></span>
-            <div>
-              <span>Market data</span>
-            </div>
-          </div>
-          <button class="nav-link help-link" id="help-button"><span class="nav-icon">?</span>Help centre</button>
-        </div>
-      </aside>
-
-      <main class="main-content">
-        <header class="topbar">
-          <div class="breadcrumb">
-            <button type="button" class="menu-toggle" id="menu-toggle" aria-label="Open navigation menu" aria-controls="primary-nav" aria-expanded="false">
-              <span></span><span></span><span></span>
-            </button>
-            <span class="breadcrumb-brand">NexaTrade</span><span class="crumb-slash">/</span><strong id="page-title">Trade</strong>
-          </div>
-          <div class="topbar-actions">
-            <div class="notification-wrap">
-              <button class="icon-button notification-button" id="notifications-button" aria-label="Notifications" aria-expanded="false" aria-controls="notifications-menu">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" /></svg>
-                <span class="notification-dot" id="notifications-dot"></span>
-              </button>
-              <div class="notifications-menu" id="notifications-menu" hidden>
-                <div class="notifications-menu-head">Notifications</div>
-                <div class="notifications-menu-balance"><span>M-Pesa balance</span><strong id="notifications-mpesa-balance">—</strong></div>
-                <button type="button" class="notifications-menu-item" id="refresh-mpesa-balance">Refresh M-Pesa balance</button>
-                <button type="button" class="notifications-menu-item" id="open-messages-app">Open Messages app</button>
+                <button class="nav-link help-link" id="help-button"><span class="nav-icon">?</span>Help centre</button>
               </div>
-            </div>
-            <button class="button button-outline add-funds" id="open-funds" aria-label="Add demo funds">＋ <span>Add funds</span></button>
-          </div>
-        </header>
+    </aside>
 
-        <div class="page-body">
-          <section class="view-panel active" id="trade-view" data-view-panel="Trade">
+    <main class="main-content">
+      <header class="topbar">
+        <div class="breadcrumb">
+          <button type="button" class="menu-toggle" id="menu-toggle" aria-label="Open navigation menu"
+            aria-controls="primary-nav" aria-expanded="false">
+            <span></span><span></span><span></span>
+          </button>
+          <span class="breadcrumb-brand">NexaTrade</span><span class="crumb-slash">/</span><strong
+            id="page-title">Trade</strong>
+        </div>
+        <div class="topbar-actions">
+          <div class="notification-wrap">
+            <button class="icon-button notification-button" id="notifications-button" aria-label="Notifications"
+              aria-expanded="false" aria-controls="notifications-menu">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+              </svg>
+              <span class="notification-dot" id="notifications-dot"></span>
+            </button>
+            <div class="notifications-menu" id="notifications-menu" hidden>
+              <div class="notifications-menu-head">Notifications</div>
+              <div class="notifications-menu-balance"><span>M-Pesa balance</span><strong
+                  id="notifications-mpesa-balance">—</strong></div>
+              <button type="button" class="notifications-menu-item" id="refresh-mpesa-balance">Refresh M-Pesa
+                balance</button>
+              <button type="button" class="notifications-menu-item" id="open-messages-app">Open Messages app</button>
+            </div>
+          </div>
+          <button class="button button-outline add-funds" id="open-funds" aria-label="Add demo funds">＋ <span>Add
+              funds</span></button>
+        </div>
+      </header>
+
+      <div class="page-body">
+        <section class="view-panel active" id="trade-view" data-view-panel="Trade">
           <section class="welcome-row">
             <div class="account-overview">
               <div class="account-top-row">
                 <div class="account-switch" role="group" aria-label="Account type">
-                  <button type="button" class="account-tab active" id="demo-account-tab" data-account-mode="demo">Demo</button>
-                  <button type="button" class="account-tab" id="real-account-tab" data-account-mode="real">Real <span>Account</span></button>
+                  <button type="button" class="account-tab active" id="demo-account-tab"
+                    data-account-mode="demo">Demo</button>
+                  <button type="button" class="account-tab" id="real-account-tab" data-account-mode="real">Real
+                    <span>Account</span></button>
                 </div>
                 <div class="account-balance-pill" aria-label="Account balance">
-                  <div class="balance-label" id="balance-label">DEMO BALANCE <span class="info-tip" title="Demo funds only">i</span></div>
+                  <div class="balance-label" id="balance-label">DEMO BALANCE <span class="info-tip"
+                      title="Demo funds only">i</span></div>
                   <div class="balance-value" id="balance-value">KSh 10,000.00</div>
                 </div>
               </div>
@@ -199,7 +213,8 @@
                       <span class="im-change chart-price-change positive" id="chart-change">+0.18%</span>
                     </div>
                   </div>
-                  <button class="favorite-button im-favorite" id="favorite-button" aria-label="Toggle current market favorite">☆</button>
+                  <button class="favorite-button im-favorite" id="favorite-button"
+                    aria-label="Toggle current market favorite">☆</button>
                 </div>
                 <div class="im-stats chart-range" aria-label="24 hour market stats">
                   <div><small>24H HIGH</small><b id="chart-high">$4,742.85</b></div>
@@ -215,15 +230,18 @@
                     <span class="im-market-feed" id="chart-feed-status">LIVE FEED</span>
                   </div>
                   <div class="im-chart-right">
-                    <span class="im-chart-countdown candle-countdown" id="candle-countdown" aria-live="off">NEXT CANDLE IN 00:15</span>
+                    <span class="im-chart-countdown candle-countdown" id="candle-countdown" aria-live="off">NEXT CANDLE
+                      IN 00:15</span>
                     <div class="im-chart-tools chart-navigation" aria-label="Chart controls">
-                      <button type="button" class="chart-reset" data-chart-control="reset" aria-label="Reset chart view">⟲</button>
+                      <button type="button" class="chart-reset" data-chart-control="reset"
+                        aria-label="Reset chart view">⟲</button>
                     </div>
                   </div>
                 </div>
 
                 <div class="chart-container im-chart-wrap">
-                  <canvas id="index-chart" class="im-chart-canvas" aria-label="Interactive indexmarkets-style candlestick price chart"></canvas>
+                  <canvas id="index-chart" class="im-chart-canvas"
+                    aria-label="Interactive indexmarkets-style candlestick price chart"></canvas>
                   <div class="im-chart-overlay-labels" aria-hidden="true">
                     <span id="chart-y-axis-label" class="im-y-axis-label"></span>
                   </div>
@@ -231,14 +249,16 @@
                     <div class="trade-result-heading">
                       <strong class="result-status" id="result-status">Order result</strong>
                       <span class="result-tag demo-tag" id="result-tag" hidden></span>
-                      <button type="button" class="trade-result-close" id="dismiss-trade-result" aria-label="Dismiss trade result">×</button>
+                      <button type="button" class="trade-result-close" id="dismiss-trade-result"
+                        aria-label="Dismiss trade result">×</button>
                     </div>
                     <strong class="result-outcome-amount" id="result-outcome-amount" hidden></strong>
-                  <p class="result-notice-message" id="result-notice-message" hidden></p>
+                    <p class="result-notice-message" id="result-notice-message" hidden></p>
                   </section>
                 </div>
 
-                <div class="result-executing chart-execution-status" id="result-executing" role="status" aria-live="polite" hidden>
+                <div class="result-executing chart-execution-status" id="result-executing" role="status"
+                  aria-live="polite" hidden>
                   <span></span><strong id="result-executing-message">Submitting order…</strong>
                 </div>
 
@@ -252,20 +272,31 @@
             </section>
 
             <aside class="panel order-panel">
-              <div class="panel-heading order-heading"><div><h2 id="order-panel-title"></h2><span id="order-mode-description">Demo market position</span></div><span class="demo-tag" id="order-mode-tag">DEMO</span></div>
-              <div class="order-market-label">MARKET <span>Market order <span class="market-order-dot"></span></span></div>
+              <div class="panel-heading order-heading">
+                <div>
+                  <h2 id="order-panel-title"></h2><span id="order-mode-description">Demo market position</span>
+                </div><span class="demo-tag" id="order-mode-tag">DEMO</span>
+              </div>
+              <div class="order-market-label">MARKET <span>Market order <span class="market-order-dot"></span></span>
+              </div>
               <div class="order-instrument">
-                <button type="button" class="ai-scan-button" id="ai-scan-button" title="AI scanner (optional): scans simulated market and suggests a buy or sell entry with win-rate probability" aria-label="AI scanner: scan simulated market for entry">
+                <button type="button" class="ai-scan-button" id="ai-scan-button"
+                  title="AI scanner (optional): scans simulated market and suggests a buy or sell entry with win-rate probability"
+                  aria-label="AI scanner: scan simulated market for entry">
                   <span class="ai-logo" aria-hidden="true">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect x="2.5" y="2.5" width="19" height="19" rx="6" fill="url(#ai-scan-logo-bg)"/>
-                      <path d="M12 6.2v2.1M12 15.7v2.1M6.2 12h2.1M15.7 12h2.1M8.1 8.1l1.5 1.5M14.4 14.4l1.5 1.5M15.9 8.1l-1.5 1.5M9.6 14.4l-1.5 1.5" stroke="rgba(255,255,255,.55)" stroke-width="1.2" stroke-linecap="round"/>
-                      <circle cx="12" cy="12" r="3.25" fill="#08111f" stroke="#7dd3fc" stroke-width="1.2"/>
-                      <path d="M10.55 13.45 12 9.7l1.45 3.75M11.05 12.45h1.9" stroke="#e0f2fe" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round"/>
+                      <rect x="2.5" y="2.5" width="19" height="19" rx="6" fill="url(#ai-scan-logo-bg)" />
+                      <path
+                        d="M12 6.2v2.1M12 15.7v2.1M6.2 12h2.1M15.7 12h2.1M8.1 8.1l1.5 1.5M14.4 14.4l1.5 1.5M15.9 8.1l-1.5 1.5M9.6 14.4l-1.5 1.5"
+                        stroke="rgba(255,255,255,.55)" stroke-width="1.2" stroke-linecap="round" />
+                      <circle cx="12" cy="12" r="3.25" fill="#08111f" stroke="#7dd3fc" stroke-width="1.2" />
+                      <path d="M10.55 13.45 12 9.7l1.45 3.75M11.05 12.45h1.9" stroke="#e0f2fe" stroke-width="1.15"
+                        stroke-linecap="round" stroke-linejoin="round" />
                       <defs>
-                        <linearGradient id="ai-scan-logo-bg" x1="4" y1="4" x2="20" y2="20" gradientUnits="userSpaceOnUse">
-                          <stop stop-color="#2563eb"/>
-                          <stop offset="1" stop-color="#06b6d4"/>
+                        <linearGradient id="ai-scan-logo-bg" x1="4" y1="4" x2="20" y2="20"
+                          gradientUnits="userSpaceOnUse">
+                          <stop stop-color="#2563eb" />
+                          <stop offset="1" stop-color="#06b6d4" />
                         </linearGradient>
                       </defs>
                     </svg>
@@ -277,149 +308,209 @@
                 </button>
               </div>
               <label class="amount-label" for="trade-amount">AMOUNT <span>KES</span></label>
-              <div class="amount-input-wrap"><span>KSh</span><input id="trade-amount" type="number" min="100" step="100" value="100" inputmode="decimal" aria-label="Trade amount in Kenya shillings" /></div>
-              <div class="amount-presets"><button data-amount="500">500</button><button data-amount="1000">1,000</button><button data-amount="5000">5,000</button><button data-amount="10000">10,000</button><button data-amount="max">Max</button></div>
+              <div class="amount-input-wrap"><span>KSh</span><input id="trade-amount" type="number" min="100" step="100"
+                  value="100" inputmode="decimal" aria-label="Trade amount in Kenya shillings" /></div>
+              <div class="amount-presets"><button data-amount="500">500</button><button
+                  data-amount="1000">1,000</button><button data-amount="5000">5,000</button><button
+                  data-amount="10000">10,000</button><button data-amount="max">Max</button></div>
               <div class="order-summary">
-                <div><span id="available-balance-label">Available demo funds</span><strong id="available-balance">KSh 10,000.00</strong></div>
+                <div><span id="available-balance-label">Available demo funds</span><strong id="available-balance">KSh
+                    10,000.00</strong></div>
                 <div><span>Position size</span><strong id="estimated-position">0.021158 XAU</strong></div>
-                <div><span>Demo fee <span class="info-tip" title="Estimated demo fee">i</span></span><strong id="estimated-fee">KSh 0.00</strong></div>
+                <div><span>Demo fee <span class="info-tip" title="Estimated demo fee">i</span></span><strong
+                    id="estimated-fee">KSh 0.00</strong></div>
               </div>
               <div class="trade-actions">
-                <button class="trade-submit buy-submit trade-action" id="buy-trade" aria-label="Buy the selected market">Buy XAUUSD <span>↗</span></button>
-                <button class="trade-submit sell-submit trade-action" id="sell-trade" aria-label="Sell the selected market">Sell XAUUSD <span>↘</span></button>
+                <button class="trade-submit buy-submit trade-action" id="buy-trade"
+                  aria-label="Buy the selected market">Buy XAUUSD <span>↗</span></button>
+                <button class="trade-submit sell-submit trade-action" id="sell-trade"
+                  aria-label="Sell the selected market">Sell XAUUSD <span>↘</span></button>
               </div>
               <div class="sentiment">
                 <div class="sentiment-heading"><strong>Market sentiment</strong><span>XAUUSD</span></div>
-                <div class="sentiment-bar"><span class="sentiment-buy-bar" id="sentiment-buy-bar"></span><span class="sentiment-sell-bar" id="sentiment-sell-bar"></span></div>
-                <div class="sentiment-values"><span><i class="sentiment-green"></i><strong id="sentiment-buy">64%</strong> buyers</span><span><i class="sentiment-red"></i><strong id="sentiment-sell">36%</strong> sellers</span></div>
+                <div class="sentiment-bar"><span class="sentiment-buy-bar" id="sentiment-buy-bar"></span><span
+                    class="sentiment-sell-bar" id="sentiment-sell-bar"></span></div>
+                <div class="sentiment-values"><span><i class="sentiment-green"></i><strong
+                      id="sentiment-buy">64%</strong> buyers</span><span><i class="sentiment-red"></i><strong
+                      id="sentiment-sell">36%</strong> sellers</span></div>
               </div>
             </aside>
           </div>
 
-          </section>
+        </section>
 
-          <section class="view-panel" id="markets-view" data-view-panel="Markets" hidden>
-            <div class="view-heading">
-              <div><h1>Markets<span class="title-period">.</span></h1><p>Gold (XAUUSD) price snapshot.</p></div>
+        <section class="view-panel" id="markets-view" data-view-panel="Markets" hidden>
+          <div class="view-heading">
+            <div>
+              <h1>Markets<span class="title-period">.</span></h1>
+              <p>Gold (XAUUSD) price snapshot.</p>
             </div>
-            <section class="market-strip" aria-label="Gold market">
-              <article class="market-stat">
-                <div class="stat-heading"><span class="coin-icon gold">Au</span><span class="stat-name">Gold</span><span class="stat-symbol">XAUUSD</span></div>
-                <div class="stat-main"><strong id="xau-price">$4,726.40</strong><span class="change positive" id="xau-change">+0.18%</span></div>
-              </article>
-              <article class="market-stat market-strip-meta">
-                <div class="live-feed"><span class="live-dot"></span> MARKET FEED <span class="feed-live">SIM</span></div>
-                <div class="feed-value">Prices update automatically</div>
-                <div class="feed-caption">Demo data · <span id="last-updated">just now</span></div>
-              </article>
-            </section>
+          </div>
+          <section class="market-strip" aria-label="Gold market">
+            <article class="market-stat">
+              <div class="stat-heading"><span class="coin-icon gold">Au</span><span class="stat-name">Gold</span><span
+                  class="stat-symbol">XAUUSD</span></div>
+              <div class="stat-main"><strong id="xau-price">$4,726.40</strong><span class="change positive"
+                  id="xau-change">+0.18%</span></div>
+            </article>
+            <article class="market-stat market-strip-meta">
+              <div class="live-feed"><span class="live-dot"></span> MARKET FEED <span class="feed-live">SIM</span></div>
+              <div class="feed-value">Prices update automatically</div>
+              <div class="feed-caption">Demo data · <span id="last-updated">just now</span></div>
+            </article>
           </section>
+        </section>
 
-          <section class="view-panel" id="history-view" data-view-panel="History" hidden>
-            <div class="view-heading">
-              <div><h1>History<span class="title-period">.</span></h1></div>
+        <section class="view-panel" id="history-view" data-view-panel="History" hidden>
+          <div class="view-heading">
+            <div>
+              <h1>History<span class="title-period">.</span></h1>
             </div>
+          </div>
           <section class="panel positions-panel transaction-panel">
             <div class="panel-heading positions-heading">
-              <div class="positions-title"><h2 id="transactions-title">Transaction history</h2></div>
+              <div class="positions-title">
+                <h2 id="transactions-title">Transaction history</h2>
+              </div>
             </div>
             <div class="positions-table-wrap">
               <table class="history-table">
-                <thead><tr><th>DATE</th><th>TRANSACTION</th><th>AMOUNT</th><th>BALANCE AFTER</th><th>TYPE</th></tr></thead>
-               <tbody id="demo-transactions-body"><tr class="empty-row"><td colspan="5"><span class="empty-icon">＋</span><strong>No transactions yet</strong><span>Your deposits and withdrawals will appear here.</span></td></tr></tbody>
+                <thead>
+                  <tr>
+                    <th>DATE</th>
+                    <th>TRANSACTION</th>
+                    <th>AMOUNT</th>
+                    <th>BALANCE AFTER</th>
+                    <th>TYPE</th>
+                  </tr>
+                </thead>
+                <tbody id="demo-transactions-body">
+                  <tr class="empty-row">
+                    <td colspan="5"><span class="empty-icon">＋</span><strong>No transactions yet</strong><span>Your
+                        deposits and withdrawals will appear here.</span></td>
+                  </tr>
+                </tbody>
               </table>
             </div>
           </section>
           <section class="panel positions-panel">
             <div class="panel-heading positions-heading">
-              <div class="positions-title"><h2 id="positions-title">Completed trades</h2><span class="position-count" id="position-count">0</span></div>
-              <div class="positions-actions"><span class="demo-tag">DEMO</span><button class="text-button" id="view-all-positions">View history <span>↗</span></button></div>
+              <div class="positions-title">
+                <h2 id="positions-title">Completed trades</h2><span class="position-count" id="position-count">0</span>
+              </div>
+              <div class="positions-actions"><span class="demo-tag">DEMO</span><button class="text-button"
+                  id="view-all-positions">View history <span>↗</span></button></div>
             </div>
             <div class="positions-table-wrap">
               <table class="positions-table">
-                <thead><tr><th>MARKET</th><th>TYPE</th><th>POSITION SIZE</th><th id="pnl-heading">UNREALIZED P&amp;L</th><th></th></tr></thead>
-                <tbody id="positions-body"><tr class="empty-row"><td colspan="5"><span class="empty-icon">⌁</span><strong>No open positions yet</strong><span>Place a demo trade to see it here.</span></td></tr></tbody>
+                <thead>
+                  <tr>
+                    <th>MARKET</th>
+                    <th>TYPE</th>
+                    <th>POSITION SIZE</th>
+                    <th id="pnl-heading">UNREALIZED P&amp;L</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="positions-body">
+                  <tr class="empty-row">
+                    <td colspan="5"><span class="empty-icon">⌁</span><strong>No open positions yet</strong><span>Place a
+                        demo trade to see it here.</span></td>
+                  </tr>
+                </tbody>
               </table>
             </div>
           </section>
-          </section>
+        </section>
 
-          <section class="view-panel" id="transfer-view" data-view-panel="Transfer" hidden>
-            <div class="view-heading">
-              <div><h1>Internal transfer<span class="title-period">.</span></h1></div>
+        <section class="view-panel" id="transfer-view" data-view-panel="Transfer" hidden>
+          <div class="view-heading">
+            <div>
+              <h1>Internal transfer<span class="title-period">.</span></h1>
             </div>
-            <section class="panel internal-transfer-panel">
-              <div class="internal-transfer-balance">
-                <span>AVAILABLE REAL-ACCOUNT BALANCE</span>
-                <strong id="internal-transfer-balance">KSh 0.00</strong>
-              </div>
-              <form id="internal-transfer-form" class="internal-transfer-form">
-                <label>
-                  <span>RECIPIENT USERNAME OR PHONE NUMBER</span>
-                  <input id="transfer-recipient-identifier" type="text" autocomplete="off" placeholder="Username or phone number" required />
-                </label>
-                <label>
-                  <span>AMOUNT (KSh)</span>
-                  <input id="transfer-amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="100.00" required />
-                </label>
-                <p class="internal-transfer-error" id="internal-transfer-error" role="alert" hidden></p>
-                <button class="trade-submit buy-submit" id="submit-internal-transfer" type="submit">Send transfer <span>→</span></button>
-              </form>
-            </section>
+          </div>
+          <section class="panel internal-transfer-panel">
+            <div class="internal-transfer-balance">
+              <span>AVAILABLE REAL-ACCOUNT BALANCE</span>
+              <strong id="internal-transfer-balance">KSh 0.00</strong>
+            </div>
+            <form id="internal-transfer-form" class="internal-transfer-form">
+              <label>
+                <span>RECIPIENT USERNAME OR PHONE NUMBER</span>
+                <input id="transfer-recipient-identifier" type="text" autocomplete="off"
+                  placeholder="Username or phone number" required />
+              </label>
+              <label>
+                <span>AMOUNT (KSh)</span>
+                <input id="transfer-amount" type="number" min="0.01" step="0.01" inputmode="decimal"
+                  placeholder="100.00" required />
+              </label>
+              <p class="internal-transfer-error" id="internal-transfer-error" role="alert" hidden></p>
+              <button class="trade-submit buy-submit" id="submit-internal-transfer" type="submit">Send transfer
+                <span>→</span></button>
+            </form>
           </section>
-          <footer class="page-footer"><span>© 2026 NexaTrade</span><span><i class="footer-dot"></i> Market data</span></footer>
-        </div>
-      </main>
-    </div>
+        </section>
+        <footer class="page-footer"><span>© 2026 NexaTrade</span><span><i class="footer-dot"></i> Market data</span>
+        </footer>
+      </div>
+    </main>
+  </div>
 
-    <button type="button" class="menu-backdrop" id="menu-backdrop" aria-label="Close navigation menu" hidden></button>
-    <div class="toast-region" id="toast-region" aria-live="polite"></div>
-    <div class="modal-backdrop" id="funds-modal" hidden>
-      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="funds-title">
-        <button class="modal-close" id="close-funds" aria-label="Close dialog">×</button>
-        <div class="modal-mark">＋</div>
-        <h2 id="funds-title">Deposit demo funds</h2>
-        <p id="funds-description">Add demo funds to your demo balance. No real money is involved.</p>
-        <div id="funds-action-field" hidden>
-          <label for="funds-action">TRANSACTION TYPE</label>
-          <select id="funds-action">
-            <option value="deposit">Deposit</option>
-            <option value="withdrawal">Withdraw</option>
-          </select>
+  <button type="button" class="menu-backdrop" id="menu-backdrop" aria-label="Close navigation menu" hidden></button>
+  <div class="toast-region" id="toast-region" aria-live="polite"></div>
+  <div class="modal-backdrop" id="funds-modal" hidden>
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="funds-title">
+      <button class="modal-close" id="close-funds" aria-label="Close dialog">×</button>
+      <div class="modal-mark">＋</div>
+      <h2 id="funds-title">Deposit demo funds</h2>
+      <p id="funds-description">Add demo funds to your demo balance. No real money is involved.</p>
+      <div id="funds-action-field" hidden>
+        <label for="funds-action">TRANSACTION TYPE</label>
+        <select id="funds-action">
+          <option value="deposit">Deposit</option>
+          <option value="withdrawal">Withdraw</option>
+        </select>
+      </div>
+      <div class="funds-amount-field" id="funds-amount-field">
+        <label for="funds-amount">DEMO AMOUNT IN KSH</label>
+        <div class="amount-input-wrap modal-amount"><span>KSh</span><input id="funds-amount" type="number" min="100"
+            step="100" value="1000" /></div>
+      </div>
+      <div class="funds-provider-field" id="funds-provider-field" hidden>
+        <label for="funds-provider">PAYMENT METHOD</label>
+        <select id="funds-provider"></select>
+        <p class="funds-provider-note" id="funds-provider-note"></p>
+      </div>
+      <div class="funds-provider-details" id="funds-provider-details" hidden>
+        <div class="funds-amount-field">
+          <label for="funds-msisdn">M-PESA PHONE NUMBER</label>
+          <div class="amount-input-wrap modal-amount"><span>+254</span><input id="funds-msisdn" type="tel"
+              inputmode="tel" autocomplete="tel" placeholder="0712345678" /></div>
         </div>
-        <div class="funds-amount-field" id="funds-amount-field">
-          <label for="funds-amount">DEMO AMOUNT IN KSH</label>
-          <div class="amount-input-wrap modal-amount"><span>KSh</span><input id="funds-amount" type="number" min="100" step="100" value="1000" /></div>
+        <div class="funds-amount-field">
+          <label for="funds-email">EMAIL (OPTIONAL)</label>
+          <div class="amount-input-wrap modal-amount"><span>@</span><input id="funds-email" type="email"
+              inputmode="email" autocomplete="email" placeholder="you@example.com" /></div>
         </div>
-        <div class="funds-provider-field" id="funds-provider-field" hidden>
-          <label for="funds-provider">PAYMENT METHOD</label>
-          <select id="funds-provider"></select>
-          <p class="funds-provider-note" id="funds-provider-note"></p>
+      </div>
+      <div class="funds-withdrawal-details" id="funds-withdrawal-details" hidden>
+        <div class="funds-amount-field">
+          <label for="funds-withdrawal-phone">PHONE NUMBER</label>
+          <div class="amount-input-wrap modal-amount"><span>+254</span><input id="funds-withdrawal-phone" type="tel"
+              inputmode="tel" autocomplete="tel" placeholder="0712345678" /></div>
+          <p class="funds-provider-note">This number is added from your sign-up details. You can edit it before
+            withdrawing.</p>
         </div>
-        <div class="funds-provider-details" id="funds-provider-details" hidden>
-          <div class="funds-amount-field">
-            <label for="funds-msisdn">M-PESA PHONE NUMBER</label>
-            <div class="amount-input-wrap modal-amount"><span>+254</span><input id="funds-msisdn" type="tel" inputmode="tel" autocomplete="tel" placeholder="0712345678" /></div>
-          </div>
-          <div class="funds-amount-field">
-            <label for="funds-email">EMAIL (OPTIONAL)</label>
-            <div class="amount-input-wrap modal-amount"><span>@</span><input id="funds-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" /></div>
-          </div>
-        </div>
-        <div class="funds-withdrawal-details" id="funds-withdrawal-details" hidden>
-          <div class="funds-amount-field">
-            <label for="funds-withdrawal-phone">PHONE NUMBER</label>
-            <div class="amount-input-wrap modal-amount"><span>+254</span><input id="funds-withdrawal-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="0712345678" /></div>
-            <p class="funds-provider-note">This number is added from your sign-up details. You can edit it before withdrawing.</p>
-          </div>
-        </div>
-        <div class="funds-checkout-result" id="funds-checkout-result" hidden aria-live="polite"></div>
-        <button class="trade-submit buy-submit" id="confirm-funds">Deposit demo funds <span>→</span></button>
-      </section>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="payments.js"></script>
-    <script src="app.js"></script>
-  </body>
+      </div>
+      <div class="funds-checkout-result" id="funds-checkout-result" hidden aria-live="polite"></div>
+      <button class="trade-submit buy-submit" id="confirm-funds">Deposit demo funds <span>→</span></button>
+    </section>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="payments.js"></script>
+  <script src="app.js"></script>
+</body>
+
 </html>

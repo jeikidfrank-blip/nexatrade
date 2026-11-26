@@ -2986,50 +2986,127 @@ async function signOut() {
   } catch (error) {
     toast(`Could not sign out: ${error instanceof Error ? error.message : "Supabase request failed."}`, true);
   }
-}
 
-function registerAppServiceWorker() {
-  if (!("serviceWorker" in navigator)) return;
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch((error) => {
+  async function registerAppServiceWorker() {
+
+    // Convert the VAPID public key into the format required by PushManager.
+    function urlBase64ToUint8Array(base64String) {
+      const padding = "=".repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding)
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+
+      const rawData = window.atob(base64);
+      return Uint8Array.from(rawData, (char) => char.charCodeAt(0));
+    }
+
+    // Subscribe the signed-in user to Android phone notifications.
+    async function enablePhonePushNotifications() {
+      try {
+        if (!("PushManager" in window) || !("Notification" in window)) {
+          throw new Error("This browser does not support push notifications.");
+        }
+
+        const permission = await Notification.requestPermission();
+
+        if (permission !== "granted") {
+          throw new Error("Please allow notifications in your phone settings.");
+        }
+
+        const { data: { user }, error: userError } =
+          await supabaseClient.auth.getUser();
+
+        if (userError || !user) {
+          throw new Error("Please sign in to NexaTrade first.");
+        }
+
+        const registration = await registerAppServiceWorker();
+
+        if (!registration) {
+          throw new Error("Could not register the notification service worker.");
+        }
+
+        const publicKey = "9cdc7e56b96dba9ee73f7df6e47ab542628e1f1ee2c8ced94e5dd1c7f33562fb";
+
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+
+        const subscriptionJSON = subscription.toJSON();
+
+        const { error } = await supabaseClient
+          .from("nexatrade_push_subscriptions")
+          .upsert({
+            user_id: user.id,
+            endpoint: subscription.endpoint,
+            subscription: subscriptionJSON
+          }, {
+            onConflict: "endpoint"
+          });
+
+        if (error) throw error;
+
+        alert("Phone notifications have been enabled successfully!");
+        return true;
+
+      } catch (error) {
+        console.error("Phone notification setup failed:", error);
+        alert(error.message || "Could not enable phone notifications.");
+        return false;
+      }
+    }
+
+    if (!("serviceWorker" in navigator)) return null;
+
+    try {
+      const registration = await navigator.serviceWorker.register("./sw.js");
+      await navigator.serviceWorker.ready;
+      return registration;
+    } catch (error) {
       console.warn("Service worker registration failed:", error);
-    });
-  });
-}
-
-async function initializeAuth() {
-  registerAppServiceWorker();
-  try {
-    initTheme();
-    $$(".auth-tab").forEach((button) => button.addEventListener("click", () => setAuthMode(button.dataset.authMode)));
-    const authForm = $("#auth-form");
-    if (authForm) authForm.addEventListener("submit", submitAuth);
-    const signOutButton = $("#sign-out");
-    if (signOutButton) signOutButton.addEventListener("click", signOut);
-    setAuthMode("signin");
-  } catch (error) {
-    console.error("Could not initialize auth UI:", error);
+      return null;
+    }
   }
 
-  if (!supabaseClient) {
-    showAuthError(supabaseSetupError);
-    return;
-  }
 
-  try {
-    const { data, error } = await supabaseClient.auth.getSession();
-    if (error) {
-      showAuthError(`Could not restore your sign-in: ${error.message}`);
+  async function initializeAuth() {
+    registerAppServiceWorker(); const notificationButton = document.getElementById("enable-phone-notifications");
+
+    if (notificationButton) {
+      notificationButton.addEventListener("click", enablePhonePushNotifications);
+    }
+    try {
+      initTheme();
+      $$(".auth-tab").forEach((button) => button.addEventListener("click", () => setAuthMode(button.dataset.authMode)));
+      const authForm = $("#auth-form");
+      if (authForm) authForm.addEventListener("submit", submitAuth);
+      const signOutButton = $("#sign-out");
+      if (signOutButton) signOutButton.addEventListener("click", signOut);
+      setAuthMode("signin");
+    } catch (error) {
+      console.error("Could not initialize auth UI:", error);
+    }
+
+    if (!supabaseClient) {
+      showAuthError(supabaseSetupError);
       return;
     }
-    if (data.session) await enterDashboard(data.session.user);
-  } catch (error) {
-    showAuthError(`Could not restore your sign-in: ${error instanceof Error ? error.message : "Supabase request failed."}`);
-  }
-}
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initializeAuth);
-} else {
-  initializeAuth();
-}
+    try {
+      const { data, error } = await supabaseClient.auth.getSession();
+      if (error) {
+        showAuthError(`Could not restore your sign-in: ${error.message}`);
+        return;
+      }
+      if (data.session) await enterDashboard(data.session.user);
+    } catch (error) {
+      showAuthError(`Could not restore your sign-in: ${error instanceof Error ? error.message : "Supabase request failed."}`);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initializeAuth);
+  } else {
+    initializeAuth();
+  }
