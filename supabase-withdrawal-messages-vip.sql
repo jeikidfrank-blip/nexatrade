@@ -252,13 +252,10 @@ begin
 
  v_reference := 'DEMO-WDL-' || upper(substr(replace(coalesce(v_tx_id::text, gen_random_uuid()::text), '-', ''), 1, 10));
 
-v_body := 'Confirmed. You have received Ksh ' ||
+v_body := 'DEMO NOTIFICATION: NexaTasks test withdrawal of ' ||
           trim(to_char(v_amount, 'FM999999999990.00')) ||
-          ' from NEXATRADE LIMITED on ' ||
-          to_char(now(), 'DD Mon YYYY') ||
-          ' at ' ||
-          to_char(now(), 'HH12:MI AM') ||
-          '. Ref: ' || v_reference ||
+          ' USD processed successfully. This is simulated test money only. No real M-PESA transfer occurred. Ref: ' ||
+          v_reference || '.';
 
 if to_regclass('public.nexatrade_withdrawal_messages') is not null then
   insert into public.nexatrade_withdrawal_messages
