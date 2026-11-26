@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = "nexatrade-messages-v4";
+const CACHE_NAME = "nexatrade-messages-v5";
 const APP_SHELL = [
   "./messages.html",
   "./messages.css",
@@ -29,6 +29,49 @@ self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
+});
+
+self.addEventListener("push", (event) => {
+  event.waitUntil((async () => {
+    let payload = {};
+    try {
+      payload = event.data ? event.data.json() : {};
+    } catch (error) {
+      console.error("Could not parse withdrawal push notification:", error);
+    }
+
+    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    if (clients.some((client) => client.visibilityState === "visible")) return;
+
+    await self.registration.showNotification(payload.title || "New withdrawal message", {
+      body: payload.body || "A new message has arrived in your NexaTrade inbox.",
+      icon: "./messages-icon-192.png",
+      badge: "./messages-icon-192.png",
+      tag: payload.tag || "nexatrade-withdrawal",
+      data: { url: payload.url || "./messages.html?thread=MPESA" }
+    });
+  })());
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil((async () => {
+    const requestedUrl = new URL(
+      event.notification.data?.url || "./messages.html?thread=MPESA",
+      self.registration.scope
+    );
+    const url = requestedUrl.origin === self.location.origin
+      ? requestedUrl
+      : new URL("./messages.html?thread=MPESA", self.registration.scope);
+    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    for (const client of clients) {
+      if (new URL(client.url).origin === url.origin) {
+        await client.navigate(url.href);
+        return client.focus();
+      }
+    }
+    return self.clients.openWindow(url.href);
+  })());
 });
 
 self.addEventListener("fetch", (event) => {

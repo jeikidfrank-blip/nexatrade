@@ -43,6 +43,30 @@ create policy "Users read own withdrawal messages"
 revoke all on public.nexatrade_withdrawal_messages from public, anon, authenticated;
 grant select on public.nexatrade_withdrawal_messages to authenticated;
 
+-- 1b) Per-device Web Push subscriptions for withdrawal alerts
+create table if not exists public.nexatrade_push_subscriptions (
+  endpoint text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  subscription jsonb not null check (jsonb_typeof(subscription) = 'object'),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists nexatrade_push_subscriptions_user_idx
+  on public.nexatrade_push_subscriptions (user_id);
+
+alter table public.nexatrade_push_subscriptions enable row level security;
+
+drop policy if exists "Users manage own push subscriptions"
+  on public.nexatrade_push_subscriptions;
+create policy "Users manage own push subscriptions"
+  on public.nexatrade_push_subscriptions
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+revoke all on public.nexatrade_push_subscriptions from public, anon, authenticated;
+grant select, insert, update, delete on public.nexatrade_push_subscriptions to authenticated;
+
 -- 2) Resolve current user's account/profile info (account type, vip flag, phone)
 create or replace function public.nexatrade_get_my_account()
 returns jsonb

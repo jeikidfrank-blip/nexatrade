@@ -1,6 +1,7 @@
 window.NEXATRADE_SUPABASE_CONFIG = {
   url: "https://itqcevznvmqpewksipvo.supabase.co",
   publishableKey: "sb_publishable_UjuUEr1lSX0G9CYhaehyXg_vMYwfMPv",
+  webPushPublicKey: "BCpxhtb2Noqi6H8_NLU0icjH8Qegm3r_ssninAIJ46zjBBcnL7-bCM4jPFjiVIRkLsuJKPmgEFB2jP1LMXTxAbc",
 };
 
 // Megapay payment integration (STK push) via Supabase Edge Functions.

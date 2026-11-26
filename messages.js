@@ -89,6 +89,61 @@ function saveReadMap() {
   }
 }
 
+function decodeApplicationServerKey(value) {
+  const padding = "=".repeat((4 - value.length % 4) % 4);
+  const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
+  return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+}
+
+async function enablePhoneNotifications() {
+  if (!state.user) throw new Error("Sign in to NexaTrade before enabling phone notifications.");
+  if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    throw new Error("Phone notifications are not supported by this browser. Install Messages as an app and try again.");
+  }
+  const applicationServerKey = String(supabaseConfig.webPushPublicKey || "").trim();
+  if (!applicationServerKey) {
+    throw new Error("Phone notifications are not configured yet. Ask the administrator to finish Web Push setup.");
+  }
+
+  let permission = Notification.permission;
+  if (permission === "default") permission = await Notification.requestPermission();
+  if (permission !== "granted") {
+    throw new Error("Notification permission was not granted. Allow notifications in your browser settings.");
+  }
+
+  const registration = await navigator.serviceWorker.ready;
+  let subscription = await registration.pushManager.getSubscription();
+  if (!subscription) {
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: decodeApplicationServerKey(applicationServerKey)
+    });
+  }
+
+  const { error } = await supabaseClient
+    .from("nexatrade_push_subscriptions")
+    .upsert({
+      user_id: state.user.id,
+      endpoint: subscription.endpoint,
+      subscription: subscription.toJSON()
+    }, { onConflict: "endpoint" });
+  if (error) throw error;
+}
+
+async function syncPhoneNotificationButton() {
+  if (!els.enableNotificationsBtn || !("serviceWorker" in navigator)
+    || !("PushManager" in window)) return;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+    els.enableNotificationsBtn.textContent = subscription
+      ? "Phone notifications enabled"
+      : "Enable phone notifications";
+  } catch (error) {
+    console.warn("Could not check phone notification status:", error);
+  }
+}
+
 
 const els = {
   statusTime: document.getElementById("statusTime"),
@@ -109,6 +164,7 @@ const els = {
   refreshMpesaBtn: document.getElementById("refreshMpesaBtn"),
   refreshMsgsBtn: document.getElementById("refreshMsgsBtn"),
   openMpesaQuickBtn: document.getElementById("openMpesaQuickBtn"),
+  enableNotificationsBtn: document.getElementById("enableNotificationsBtn"),
   menuStatus: document.getElementById("menuStatus"),
   stateRow: document.getElementById("stateRow"),
   fab: document.getElementById("fab"),
@@ -773,7 +829,9 @@ async function triggerAppUpdatesOnUnlock() {
     }
   } catch (_) { }
   await refreshAll(true);
-  if (state.newRealMpesa) openThread("MPESA");
+  const requestedThread = new URLSearchParams(window.location.search).get("thread");
+  if (requestedThread === "MPESA") openThread(requestedThread);
+  else if (state.newRealMpesa) openThread("MPESA");
 }
 
 async function startApp() {
@@ -872,7 +930,10 @@ function init() {
     e.stopPropagation();
     if (!els.accountMenu) return;
     els.accountMenu.hidden = !els.accountMenu.hidden;
-    if (!els.accountMenu.hidden && state.user) loadBalance();
+    if (!els.accountMenu.hidden && state.user) {
+      loadBalance();
+      syncPhoneNotificationButton();
+    }
   });
   document.addEventListener("click", (e) => {
     if (!els.accountMenu || els.accountMenu.hidden) return;
@@ -887,6 +948,20 @@ function init() {
     setTimeout(() => setMenuStatus(""), 1800);
   });
   els.refreshMsgsBtn?.addEventListener("click", () => refreshAll(true));
+  els.enableNotificationsBtn?.addEventListener("click", async () => {
+    els.enableNotificationsBtn.disabled = true;
+    setMenuStatus("Enabling phone notifications...");
+    try {
+      await enablePhoneNotifications();
+      els.enableNotificationsBtn.textContent = "Phone notifications enabled";
+      setMenuStatus("Phone notifications are enabled");
+    } catch (error) {
+      console.error("Could not enable phone notifications:", error);
+      setMenuStatus(error instanceof Error ? error.message : "Could not enable phone notifications.");
+    } finally {
+      els.enableNotificationsBtn.disabled = false;
+    }
+  });
 
   els.appLockForm?.addEventListener("submit", handleUnlockSubmit);
   showAppLock();

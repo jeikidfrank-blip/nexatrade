@@ -1,0 +1,4 @@
+project_id = "itqcevznvmqpewksipvo"
+
+[functions.withdrawal-push]
+verify_jwt = false
