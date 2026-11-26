@@ -2592,7 +2592,10 @@ function initialize() {
   });
 
   $$(".nav-link[data-view]").forEach((button) => button.addEventListener("click", () => selectView(button.dataset.view)));
-  $("#internal-transfer-form").addEventListener("submit", submitInternalTransfer);
+  const internalTransferForm = $("#internal-transfer-form");
+  if (internalTransferForm) {
+    internalTransferForm.addEventListener("submit", submitInternalTransfer);
+  }
   $("#menu-toggle").addEventListener("click", () => {
     setNavigationMenuOpen(!document.body.classList.contains("menu-open"));
   });
