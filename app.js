@@ -1547,7 +1547,7 @@ async function placeTrade(side) {
         outcome: position.outcome,
       };
 
-      notification = `Demo trade ${position.outcome.toUpperCase()}: ${position.pnl >= 0 ? "+" : "−"
+      notification = `Trade ${position.outcome.toUpperCase()}: ${position.pnl >= 0 ? "+" : "−"
         }${money(Math.abs(position.pnl))}.`;
 
     } else {
@@ -2349,6 +2349,9 @@ async function submitDemoFunds() {
       toast("Enter a valid phone number for withdrawal (e.g. 0712345678).", true);
       return;
     }
+    if (!window.confirm(`Confirm withdrawal of ${money(amount)} to ${withdrawalPhone}?`)) {
+      return;
+    }
   }
 
   $("#confirm-funds").disabled = true;
@@ -2416,9 +2419,9 @@ async function submitDemoFunds() {
     } else {
       toast(
         isSet
-          ? `Demo balance set to ${money(state.balance)}.`
+          ? `Balance set to ${money(state.balance)}.`
           : isDemo
-            ? `${money(amount)} added to your demo balance.`
+            ? `${money(amount)} added to your balance.`
             : `${money(amount)} added to your balance.`,
       );
     }
