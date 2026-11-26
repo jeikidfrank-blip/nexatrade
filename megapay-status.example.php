@@ -106,4 +106,3 @@ if ($decoded === null) {
     }
     echo json_encode($decoded);
 }
-?>

@@ -2960,154 +2960,221 @@ async function submitAuth(event) {
   }
 }
 
+
 async function signOut() {
   if (state.isSubmittingTrade) {
     toast("Wait for the demo trade request to finish before signing out.");
     return;
   }
+
   if (!supabaseClient) {
     showAuthError(supabaseSetupError);
     return;
   }
+
   try {
     const { error } = await supabaseClient.auth.signOut();
+
     if (error) {
       toast(`Could not sign out: ${error.message}`, true);
       return;
     }
+
     stopDashboard();
     document.body.classList.remove("authenticated");
     resetUserDemoState();
+
     $("#auth-password").value = "";
     $("#auth-confirm").value = "";
     $("#auth-email").value = "";
+
     setAuthMode("signin");
     $("#auth-email").focus();
+
   } catch (error) {
-    toast(`Could not sign out: ${error instanceof Error ? error.message : "Supabase request failed."}`, true);
+    toast(
+      `Could not sign out: ${error instanceof Error ? error.message : "Supabase request failed."}`,
+      true
+    );
   }
+}
 
-  async function registerAppServiceWorker() {
 
-    // Convert the VAPID public key into the format required by PushManager.
-    function urlBase64ToUint8Array(base64String) {
-      const padding = "=".repeat((4 - base64String.length % 4) % 4);
-      const base64 = (base64String + padding)
-        .replace(/-/g, "+")
-        .replace(/_/g, "/");
+// Register NexaTrade service worker.
+async function registerAppServiceWorker() {
+  if (!("serviceWorker" in navigator)) return null;
 
-      const rawData = window.atob(base64);
-      return Uint8Array.from(rawData, (char) => char.charCodeAt(0));
-    }
-
-    // Subscribe the signed-in user to Android phone notifications.
-    async function enablePhonePushNotifications() {
-      try {
-        if (!("PushManager" in window) || !("Notification" in window)) {
-          throw new Error("This browser does not support push notifications.");
-        }
-
-        const permission = await Notification.requestPermission();
-
-        if (permission !== "granted") {
-          throw new Error("Please allow notifications in your phone settings.");
-        }
-
-        const { data: { user }, error: userError } =
-          await supabaseClient.auth.getUser();
-
-        if (userError || !user) {
-          throw new Error("Please sign in to NexaTrade first.");
-        }
-
-        const registration = await registerAppServiceWorker();
-
-        if (!registration) {
-          throw new Error("Could not register the notification service worker.");
-        }
-
-        const publicKey = "9cdc7e56b96dba9ee73f7df6e47ab542628e1f1ee2c8ced94e5dd1c7f33562fb";
-
-        const subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey)
-        });
-
-        const subscriptionJSON = subscription.toJSON();
-
-        const { error } = await supabaseClient
-          .from("nexatrade_push_subscriptions")
-          .upsert({
-            user_id: user.id,
-            endpoint: subscription.endpoint,
-            subscription: subscriptionJSON
-          }, {
-            onConflict: "endpoint"
-          });
-
-        if (error) throw error;
-
-        alert("Phone notifications have been enabled successfully!");
-        return true;
-
-      } catch (error) {
-        console.error("Phone notification setup failed:", error);
-        alert(error.message || "Could not enable phone notifications.");
-        return false;
-      }
-    }
-
-    if (!("serviceWorker" in navigator)) return null;
-
-    try {
-      const registration = await navigator.serviceWorker.register("./sw.js");
-      await navigator.serviceWorker.ready;
-      return registration;
-    } catch (error) {
-      console.warn("Service worker registration failed:", error);
-      return null;
-    }
+  try {
+    const registration = await navigator.serviceWorker.register("./sw.js");
+    await navigator.serviceWorker.ready;
+    return registration;
+  } catch (error) {
+    console.warn("Service worker registration failed:", error);
+    return null;
   }
+}
 
 
-  async function initializeAuth() {
-    registerAppServiceWorker(); const notificationButton = document.getElementById("enable-phone-notifications");
+// Convert VAPID public key.
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - base64String.length % 4) % 4);
 
-    if (notificationButton) {
-      notificationButton.addEventListener("click", enablePhonePushNotifications);
+  const base64 = (base64String + padding)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+
+  return Uint8Array.from(
+    rawData,
+    (char) => char.charCodeAt(0)
+  );
+}
+
+
+// Enable phone push notifications.
+async function enablePhonePushNotifications() {
+  try {
+    if (!("PushManager" in window) || !("Notification" in window)) {
+      throw new Error("This browser does not support push notifications.");
     }
-    try {
-      initTheme();
-      $$(".auth-tab").forEach((button) => button.addEventListener("click", () => setAuthMode(button.dataset.authMode)));
-      const authForm = $("#auth-form");
-      if (authForm) authForm.addEventListener("submit", submitAuth);
-      const signOutButton = $("#sign-out");
-      if (signOutButton) signOutButton.addEventListener("click", signOut);
-      setAuthMode("signin");
-    } catch (error) {
-      console.error("Could not initialize auth UI:", error);
+
+    const permission = await Notification.requestPermission();
+
+    if (permission !== "granted") {
+      throw new Error("Please allow notifications in your phone settings.");
     }
 
     if (!supabaseClient) {
-      showAuthError(supabaseSetupError);
+      throw new Error("Supabase is not configured.");
+    }
+
+    const {
+      data: { user },
+      error: userError
+    } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      throw new Error("Please sign in to NexaTrade first.");
+    }
+
+    const registration = await registerAppServiceWorker();
+
+    if (!registration) {
+      throw new Error("Could not register the notification service worker.");
+    }
+
+    const publicKey =
+      "9cdc7e56b96dba9ee73f7df6e47ab542628e1f1ee2c8ced94e5dd1c7f33562fb";
+
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
+
+    const subscriptionJSON = subscription.toJSON();
+
+    const { error } = await supabaseClient
+      .from("nexatrade_push_subscriptions")
+      .upsert({
+        user_id: user.id,
+        endpoint: subscription.endpoint,
+        subscription: subscriptionJSON
+      }, {
+        onConflict: "endpoint"
+      });
+
+    if (error) throw error;
+
+    alert("Phone notifications have been enabled successfully!");
+
+    return true;
+
+  } catch (error) {
+    console.error("Phone notification setup failed:", error);
+
+    alert(
+      error.message || "Could not enable phone notifications."
+    );
+
+    return false;
+  }
+}
+
+
+// Initialize authentication and dashboard access.
+async function initializeAuth() {
+  registerAppServiceWorker();
+
+  const notificationButton = document.getElementById(
+    "enable-phone-notifications"
+  );
+
+  if (notificationButton) {
+    notificationButton.addEventListener(
+      "click",
+      enablePhonePushNotifications
+    );
+  }
+
+  try {
+    initTheme();
+
+    $$(".auth-tab").forEach((button) => {
+      button.addEventListener("click", () => {
+        setAuthMode(button.dataset.authMode);
+      });
+    });
+
+    const authForm = $("#auth-form");
+
+    if (authForm) {
+      authForm.addEventListener("submit", submitAuth);
+    }
+
+    const signOutButton = $("#sign-out");
+
+    if (signOutButton) {
+      signOutButton.addEventListener("click", signOut);
+    }
+
+    setAuthMode("signin");
+
+  } catch (error) {
+    console.error("Could not initialize auth UI:", error);
+  }
+
+  if (!supabaseClient) {
+    showAuthError(supabaseSetupError);
+    return;
+  }
+
+  try {
+    const { data, error } = await supabaseClient.auth.getSession();
+
+    if (error) {
+      showAuthError(`Could not restore your sign-in: ${error.message}`);
       return;
     }
 
-    try {
-      const { data, error } = await supabaseClient.auth.getSession();
-      if (error) {
-        showAuthError(`Could not restore your sign-in: ${error.message}`);
-        return;
-      }
-      if (data.session) await enterDashboard(data.session.user);
-    } catch (error) {
-      showAuthError(`Could not restore your sign-in: ${error instanceof Error ? error.message : "Supabase request failed."}`);
+    if (data.session) {
+      await enterDashboard(data.session.user);
     }
-  }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initializeAuth);
-  } else {
-    initializeAuth();
+  } catch (error) {
+    showAuthError(
+      `Could not restore your sign-in: ${error instanceof Error
+        ? error.message
+        : "Supabase request failed."
+      }`
+    );
   }
+}
+
+
+// Start authentication when the page is ready.
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeAuth);
+} else {
+  initializeAuth();
 }
