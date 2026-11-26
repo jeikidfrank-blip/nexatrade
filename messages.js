@@ -669,16 +669,14 @@ function renderNexaTradeMpesaDetail(msg) {
   const txKey = String((msg && (msg.id || msg.transaction_id || msg.reference)) || code);
   const balance = formatKsh(recordNexaMpesaWithdrawal(amountValue, txKey));
 
-  const smsText = [
+  const smsText = msg.body || [
     code,
-    "Confirmed.You have",
+    "Confirmed. You have",
     `received ${amount} from`,
-    "nexatrade limited on",
+    "NEXATRADE LIMITED on",
     `${date} at ${time}`,
-    "New M-PESA balance is",
-    `${balance}. Invest & earn`,
-    "daily interest with ZIIDI on",
-    "https://saf.cx/cF6ir"
+    "Ref:",
+    `${msg.reference || code}.`
   ].join("\n");
 
   const row = document.createElement("div");
