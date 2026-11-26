@@ -3110,3 +3110,4 @@ async function signOut() {
   } else {
     initializeAuth();
   }
+}
