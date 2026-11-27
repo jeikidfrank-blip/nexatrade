@@ -4932,5 +4932,5 @@ select {
 
 /* Keep welcome page below the install banner */
 .landing-page {
-  top: 66px;
+  top: 0;
 }
