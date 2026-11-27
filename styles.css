@@ -5029,3 +5029,19 @@ select {
 #withdrawal-close-button:hover {
   filter: brightness(1.08);
 }
+
+/* Keep withdrawal confirmation above the entire dashboard */
+.trade-result.is-withdrawal-confirmation {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 999999 !important;
+
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
