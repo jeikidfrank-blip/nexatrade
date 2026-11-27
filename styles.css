@@ -220,6 +220,41 @@ body.authenticated .app-shell {
   outline: none;
 }
 
+.auth-password-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.auth-password-wrap input {
+  padding-right: 42px;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: #92a2b1;
+  cursor: pointer;
+}
+
+.auth-password-toggle:hover {
+  color: #438474;
+}
+
+.auth-password-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
 .auth-submit {
   width: 100%;
   min-height: 42px;

@@ -2140,8 +2140,10 @@ async function saveProfile(event) {
   const fullName = nameInput ? nameInput.value.trim() : "";
   const email = emailInput ? emailInput.value.trim().toLowerCase() : "";
   const phone = phoneInput ? phoneInput.value.trim() : "";
-  const normalizedPhone = phone ? normalizeMsisdn(phone) : "";
-
+  const phoneValue = phone === maskPhoneNumber(state.userPhone)
+    ? state.userPhone
+    : phone;
+  const normalizedPhone = phoneValue ? normalizeMsisdn(phoneValue) : "";
   if (!fullName) {
     setProfileMessage("Enter your name.", "error");
     return;
@@ -2155,7 +2157,7 @@ async function saveProfile(event) {
     return;
   }
 
-  const payload = { data: { full_name: fullName, phone: normalizedPhone || phone } };
+  const payload = { data: { full_name: fullName, phone: normalizedPhone || phoneValue } };
   const emailChanged = email !== (state.userEmail || "").trim().toLowerCase();
   if (emailChanged) payload.email = email;
 
@@ -2168,7 +2170,7 @@ async function saveProfile(event) {
     state.userName = fullName;
     state.userPhone = normalizedPhone || phone;
     if (emailInput) emailInput.value = email;
-    if (phoneInput) phoneInput.value = state.userPhone;
+    if (phoneInput) phoneInput.value = maskPhoneNumber(state.userPhone);
     const avatar = $("#profile-avatar");
     if (avatar) avatar.textContent = fullName.charAt(0).toUpperCase();
 
@@ -2207,6 +2209,11 @@ function normalizeMsisdn(value) {
   if (digits.length === 9 && digits.startsWith("7")) return "0" + digits;
   if (digits.length === 12 && digits.startsWith("254")) return "0" + digits.slice(3);
   return digits;
+}
+function maskPhoneNumber(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length < 8) return value || "";
+  return digits.slice(0, 4) + "****" + digits.slice(-2);
 }
 
 function formatMegapayStatus(raw) {
@@ -2391,7 +2398,7 @@ async function submitDemoFunds() {
     if (!isDemo && action === "withdrawal" && withdrawalPhone) {
       state.userPhone = withdrawalPhone;
       const profilePhoneInput = $("#profile-phone");
-      if (profilePhoneInput) profilePhoneInput.value = withdrawalPhone;
+      if (profilePhoneInput) profilePhoneInput.value = maskPhoneNumber(withdrawalPhone);
       try {
         if (supabaseClient && supabaseClient.auth && typeof supabaseClient.auth.updateUser === "function") {
           await supabaseClient.auth.updateUser({ data: { phone: withdrawalPhone } });
@@ -2897,7 +2904,21 @@ async function enterDashboard(user) {
   const profilePhone = $("#profile-phone");
   if (profileName) profileName.value = name;
   if (profileEmail) profileEmail.value = email;
-  if (profilePhone) profilePhone.value = state.userPhone;
+  if (profilePhone) {
+    profilePhone.value = maskPhoneNumber(state.userPhone);
+
+    profilePhone.onfocus = () => {
+      if (profilePhone.value === maskPhoneNumber(state.userPhone)) {
+        profilePhone.value = state.userPhone;
+      }
+    };
+
+    profilePhone.onblur = () => {
+      if (normalizeMsisdn(profilePhone.value) === normalizeMsisdn(state.userPhone)) {
+        profilePhone.value = maskPhoneNumber(state.userPhone);
+      }
+    };
+  }
   const avatar = $("#profile-avatar");
   if (avatar) avatar.textContent = name.charAt(0).toUpperCase();
   setProfileMessage("");
@@ -3209,11 +3230,24 @@ async function initializeAuth() {
       });
     });
 
-    const authForm = $("#auth-form");
+    document.querySelectorAll(".auth-password-toggle").forEach((button) => {
+      button.addEventListener("click", () => {
+        const input = document.getElementById(button.dataset.target);
+        if (!input) return;
 
-    if (authForm) {
-      authForm.addEventListener("submit", submitAuth);
-    }
+        const isPassword = input.type === "password";
+        input.type = isPassword ? "text" : "password";
+
+        button.setAttribute(
+          "aria-label",
+          isPassword ? "Hide password" : "Show password"
+        );
+
+        button.innerHTML = isPassword
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 002.8 2.8"/><path d="M9.9 5.2A10.8 10.8 0 0112 5c6.5 0 10 7 10 7a16 16 0 01-3.1 3.9"/><path d="M6.2 6.2A16 16 0 002 12s3.5 7 10 7a10.8 10.8 0 005-.9"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
+      });
+    });
 
     const signOutButton = $("#sign-out");
 

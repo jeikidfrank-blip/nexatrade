@@ -118,12 +118,30 @@
         </label>
         <label class="auth-field">
           <span>PASSWORD <small>8 characters minimum</small></span>
-          <input id="auth-password" type="password" autocomplete="current-password" minlength="8"
-            placeholder="At least 8 characters" required />
+          <div class="auth-password-wrap">
+            <input id="auth-password" type="password" autocomplete="current-password" minlength="8"
+              placeholder="At least 8 characters" required />
+            <button type="button" class="auth-password-toggle" data-target="auth-password" aria-label="Show password">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
         </label>
         <label class="auth-field" id="auth-confirm-field" hidden>
           <span>CONFIRM PASSWORD</span>
-          <input id="auth-confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" />
+          <div class="auth-password-wrap">
+            <input id="auth-confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" />
+            <button type="button" class="auth-password-toggle" data-target="auth-confirm" aria-label="Show password">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
+          </div>
         </label>
         <p class="auth-error" id="auth-error" role="alert" hidden></p>
         <p class="auth-message" id="auth-message" role="status" hidden></p>
