@@ -2878,6 +2878,8 @@ async function enterDashboard(user) {
   await loadMyAccountProfile();
   renderAccountMode();
   document.body.classList.add("authenticated");
+  const landingPage = document.getElementById("landing-page");
+  if (landingPage) landingPage.style.display = "none";
   try {
     startDashboard();
   } catch (error) {
@@ -2951,6 +2953,38 @@ async function submitAuth(event) {
       $("#auth-password").value = "";
       $("#auth-confirm").value = "";
       setAuthMode("signin");
+      // Connect welcome page buttons to existing authentication.
+      function openLandingAuth(mode) {
+        const landingPage = document.getElementById("landing-page");
+        const authGate = document.getElementById("auth-gate");
+
+        if (landingPage) landingPage.style.display = "none";
+        if (authGate) authGate.style.display = "";
+
+        const authTab = document.querySelector(
+          `.auth-tab[data-auth-mode="${mode}"]`
+        );
+
+        if (authTab) authTab.click();
+      }
+
+      [
+        "landing-signup",
+        "hero-signup"
+      ].forEach((id) => {
+        document.getElementById(id)?.addEventListener("click", () => {
+          openLandingAuth("signup");
+        });
+      });
+
+      [
+        "landing-signin",
+        "hero-signin"
+      ].forEach((id) => {
+        document.getElementById(id)?.addEventListener("click", () => {
+          openLandingAuth("signin");
+        });
+      });
       showAuthMessage("Account created. Check your email to confirm it, then sign in.");
     } else {
       showAuthError("Sign-in completed without an active session. Check your Supabase auth settings and try again.");
