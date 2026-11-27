@@ -5100,3 +5100,40 @@ select {
     height: 190px !important;
   }
 }
+
+/* Internal transfer form alignment */
+.internal-transfer-form {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  width: 100%;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.internal-transfer-form label {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  gap: 7px;
+}
+
+.internal-transfer-form label>span {
+  display: block;
+  line-height: 1.4;
+  font-size: 12px;
+  letter-spacing: .5px;
+}
+
+.internal-transfer-form input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.internal-transfer-form button {
+  width: 100%;
+  min-height: 52px;
+}
