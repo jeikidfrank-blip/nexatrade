@@ -5045,3 +5045,58 @@ select {
   overflow-y: auto;
   box-sizing: border-box;
 }
+
+/* Compact mobile trading layout */
+@media (max-width: 740px) {
+  .dashboard-grid {
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+
+  .chart-panel {
+    padding: 8px 7px 7px;
+  }
+
+  .chart-container,
+  .im-chart-wrap {
+    height: 225px !important;
+  }
+
+  .order-panel {
+    padding: 7px;
+  }
+
+  .amount-presets {
+    margin-top: 4px;
+    margin-bottom: 5px;
+    gap: 3px;
+  }
+
+  .amount-presets button {
+    min-height: 32px;
+    padding: 3px 2px;
+  }
+
+  .order-summary {
+    margin-top: 6px;
+  }
+
+  .trade-actions {
+    gap: 6px;
+    margin-top: 6px;
+    margin-bottom: 4px;
+  }
+
+  .trade-actions .trade-submit {
+    min-height: 48px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 740px) and (max-height: 750px) {
+
+  .chart-container,
+  .im-chart-wrap {
+    height: 190px !important;
+  }
+}
