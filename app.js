@@ -3223,6 +3223,11 @@ async function initializeAuth() {
 
   try {
     initTheme();
+    const authForm = $("#auth-form");
+
+    if (authForm) {
+      authForm.addEventListener("submit", submitAuth);
+    }
 
     $$(".auth-tab").forEach((button) => {
       button.addEventListener("click", () => {
