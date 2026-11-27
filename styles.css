@@ -5140,3 +5140,27 @@ select {
   width: 100%;
   min-height: 52px;
 }
+
+/* Force internal transfer fields onto separate lines */
+section.internal-transfer-panel form#internal-transfer-form>label {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 0 16px !important;
+}
+
+section.internal-transfer-panel form#internal-transfer-form>label>span {
+  display: block !important;
+  width: 100% !important;
+  margin-bottom: 7px;
+}
+
+section.internal-transfer-panel form#internal-transfer-form>label>input {
+  display: block !important;
+  width: 100% !important;
+  min-height: 48px;
+  box-sizing: border-box !important;
+}
+
+section.internal-transfer-panel form#internal-transfer-form {
+  display: block !important;
+}
