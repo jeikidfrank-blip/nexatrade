@@ -4841,3 +4841,96 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+/* NEXATRADE INSTALL BANNER */
+.install-banner {
+  position: relative;
+  z-index: 1002;
+  width: 100%;
+  min-height: 66px;
+  padding: 10px 6%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  background: linear-gradient(110deg, #101d32, #172943);
+  border-bottom: 1px solid rgba(232, 189, 88, .35);
+  color: #fff;
+}
+
+.install-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.install-banner-info img {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+}
+
+.install-banner-info span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.install-banner-info strong {
+  color: #f0c45c;
+  font-size: 14px;
+}
+
+.install-banner-info small {
+  color: #c1cada;
+  font-size: 11px;
+}
+
+#install-app-button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 19px;
+  border: 1px solid #e4b74d;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f5d477, #c9932d);
+  color: #101827;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+#install-app-button:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 480px) {
+  .install-banner {
+    padding: 9px 12px;
+    gap: 8px;
+  }
+
+  .install-banner-info {
+    gap: 8px;
+  }
+
+  .install-banner-info img {
+    width: 36px;
+    height: 36px;
+  }
+
+  .install-banner-info small {
+    font-size: 9px;
+  }
+
+  #install-app-button {
+    padding: 10px 12px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+}
+
+/* Keep welcome page below the install banner */
+.landing-page {
+  top: 66px;
+}

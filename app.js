@@ -3109,8 +3109,59 @@ async function enablePhonePushNotifications() {
 
 
 // Initialize authentication and dashboard access.
+// Handle NexaTrade PWA installation.
+function initializeInstallPrompt() {
+  const banner = document.getElementById("install-banner");
+  const installButton = document.getElementById("install-app-button");
+
+  if (!banner || !installButton) return;
+
+  let deferredPrompt = null;
+
+  // Hide the banner if NexaTrade is already installed.
+  if (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    navigator.standalone === true
+  ) {
+    banner.style.display = "none";
+    return;
+  }
+
+  // Capture the browser's installation prompt.
+  window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+  });
+
+  // Start installation when the user clicks the button.
+  installButton.addEventListener("click", async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+
+      const choice = await deferredPrompt.userChoice;
+
+      if (choice.outcome === "accepted") {
+        banner.style.display = "none";
+      }
+
+      deferredPrompt = null;
+      return;
+    }
+
+    alert(
+      "To install NexaTrade, open your browser menu and select 'Install app' or 'Add to Home screen'."
+    );
+  });
+
+  // Hide the banner after successful installation.
+  window.addEventListener("appinstalled", () => {
+    banner.style.display = "none";
+    deferredPrompt = null;
+  });
+}
 async function initializeAuth() {
   registerAppServiceWorker();
+  initializeInstallPrompt();
 
   const notificationButton = document.getElementById(
     "enable-phone-notifications"
