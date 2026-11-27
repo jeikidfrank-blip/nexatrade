@@ -1317,19 +1317,41 @@ function renderTradeResult() {
   }
   if (tag) tag.hidden = true;
   if (amount) amount.hidden = true;
-
+  const withdrawalConfirmation = $("#withdrawal-confirmation");
+  if (withdrawalConfirmation) withdrawalConfirmation.hidden = true;
   if (!display || isPending) return;
 
   $("#dismiss-trade-result").hidden = false;
 
   if (display.kind === "notice") {
-    const tone = display.tone === "error" ? "is-error" : "is-win";
-    panel.className = `trade-result is-notice ${tone}`;
+    const isWithdrawal = display.isWithdrawalConfirmation;
+    const confirmation = $("#withdrawal-confirmation");
+
+    panel.className = `trade-result is-notice ${display.tone === "error" ? "is-error" : "is-win"}${isWithdrawal ? " is-withdrawal-confirmation" : ""}`;
+
     $("#result-status").textContent = display.title || "Notice";
+
+    if (confirmation) {
+      confirmation.hidden = !isWithdrawal;
+    }
+
     if (notice) {
       notice.textContent = display.message || "";
-      notice.hidden = !display.message;
+      notice.hidden = isWithdrawal || !display.message;
     }
+
+    if (isWithdrawal) {
+      $("#withdrawal-balance").textContent =
+        `Real balance: ${money(state.realTestBalance)}`;
+
+      $("#withdrawal-reference").textContent =
+        `Reference: ${display.withdrawalReference}`;
+
+      $("#withdrawal-close-button").onclick = () => {
+        $("#dismiss-trade-result").click();
+      };
+    }
+
     return;
   }
 
@@ -2414,7 +2436,11 @@ async function submitDemoFunds() {
         kind: "notice",
         status: "notice",
         tone: "success",
-        title: "Withdrawal successful"
+        title: "Withdraw Funds",
+        isWithdrawalConfirmation: true,
+        withdrawalReference:
+          "NX" + Date.now().toString(36).toUpperCase() +
+          Math.random().toString(36).substring(2, 6).toUpperCase()
       });
     } else {
       toast(
