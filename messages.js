@@ -963,8 +963,11 @@ function init() {
     }
   });
 
-  els.appLockForm?.addEventListener("submit", handleUnlockSubmit);
-  showAppLock();
+  if (els.appLock) els.appLock.hidden = true;
+  if (!state.appStarted) {
+    state.appStarted = true;
+    startApp();
+  }
 }
 
 init();
