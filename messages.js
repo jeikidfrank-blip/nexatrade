@@ -945,11 +945,11 @@ function init() {
   });
   els.refreshMpesaBtn?.addEventListener("click", async () => {
     els.refreshMpesaBtn.disabled = true;
-    setMenuStatus("Refreshing M-Pesa messages and balance...");
-    await refreshAll();
-    setMenuStatus("M-Pesa balance refreshed");
+    setMenuStatus(state.user ? "Refreshing M-Pesa balance..." : "Sign in to NexaTrade to refresh balance");
+    try { if (state.user) await loadBalance(); } catch (_) { setMenuStatus("Could not refresh balance"); }
+    if (state.user) setMenuStatus("Balance updated");
     els.refreshMpesaBtn.disabled = false;
-    setTimeout(() => setMenuStatus(""), 2000);
+    setTimeout(() => setMenuStatus(""), 1800);
   });
   els.refreshMsgsBtn?.addEventListener("click", () => refreshAll(true));
   els.enableNotificationsBtn?.addEventListener("click", async () => {
@@ -975,5 +975,3 @@ function init() {
 }
 
 init();
-
-
