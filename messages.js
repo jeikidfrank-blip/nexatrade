@@ -1,5 +1,4 @@
 /* NEXATRADE SIMULATED M-PESA BALANCE */
-const NEXA_MPESA_LIMIT = 500000;
 const NEXA_MPESA_STORAGE = "nexa_mpesa_balance";
 const NEXA_MPESA_TRANSACTIONS = "nexa_mpesa_transactions";
 
@@ -17,36 +16,34 @@ function recordNexaMpesaWithdrawal(amount, transactionId) {
   let transactions = [];
   try {
     transactions = JSON.parse(localStorage.getItem(NEXA_MPESA_TRANSACTIONS) || "[]");
+    if (!Array.isArray(transactions)) transactions = [];
   } catch (_) {
     transactions = [];
   }
 
-  // Keep each historical SMS balance unchanged
+  const id = String(transactionId);
   const existingTransaction = transactions.find(
-    (tx) => tx && tx.id === String(transactionId)
+    (tx) => tx && tx.id === id
   );
 
   if (existingTransaction) {
     return Number(existingTransaction.balanceAfter || 0);
   }
 
-  let balance = getNexaMpesaBalance() + value;
-
-  // Reset when the limit is reached
-  if (balance >= NEXA_MPESA_LIMIT) {
-    balance = 0;
-  }
+  const balanceAfter = value;
 
   transactions.push({
-    id: String(transactionId),
+    id,
     amount: value,
-    balanceAfter: balance
+    balanceAfter
   });
 
   localStorage.setItem(NEXA_MPESA_TRANSACTIONS, JSON.stringify(transactions));
-  localStorage.setItem(NEXA_MPESA_STORAGE, String(balance));
 
-  return balance;
+  // Reset the current simulated M-PESA balance after recording the SMS.
+  localStorage.setItem(NEXA_MPESA_STORAGE, "0");
+
+  return balanceAfter;
 }
 
 const supabaseConfig = window.NEXATRADE_SUPABASE_CONFIG || window.NEXATRADE_SUPABASE || {};
@@ -975,5 +972,6 @@ function init() {
 }
 
 init();
+
 
 
