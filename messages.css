@@ -1310,22 +1310,24 @@ a.mpesa-inline-link {
   }
 }
 
-/* Final M-PESA spacing adjustments */
+/* Final M-PESA bubble and arrow spacing */
+.mpesa-sms-bubble {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+.mpesa-sms-text {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.15 !important;
+}
+
 .mpesa-bubble-row {
-  gap: 0 !important;
-  align-items: flex-start !important;
+  gap: 14px !important;
 }
 
 .mpesa-bubble-action {
-  transform: translateX(-5px) !important;
-}
-
-.mpesa-rich-wrap {
-  margin-top: -4px !important;
-  margin-left: 0 !important;
-  margin-bottom: 0 !important;
-}
-
-.msg-row {
-  margin-bottom: 0 !important;
+  transform: none !important;
 }
