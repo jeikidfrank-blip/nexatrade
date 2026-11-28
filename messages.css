@@ -1312,16 +1312,19 @@ a.mpesa-inline-link {
 
 /* Final M-PESA bubble and arrow spacing */
 .mpesa-sms-bubble {
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
+  padding: 5px 7px !important;
   height: auto !important;
   min-height: 0 !important;
+  display: block !important;
 }
 
 .mpesa-sms-text {
   margin: 0 !important;
   padding: 0 !important;
-  line-height: 1.15 !important;
+  font-size: 17px !important;
+  line-height: 1.2 !important;
+  font-weight: 400 !important;
+  text-align: left !important;
 }
 
 .mpesa-bubble-row {
