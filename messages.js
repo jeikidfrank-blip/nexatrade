@@ -21,9 +21,13 @@ function recordNexaMpesaWithdrawal(amount, transactionId) {
     transactions = [];
   }
 
-  // Prevent counting the same withdrawal twice
-  if (transactions.some((tx) => tx && tx.id === String(transactionId))) {
-    return getNexaMpesaBalance();
+  // Keep each historical SMS balance unchanged
+  const existingTransaction = transactions.find(
+    (tx) => tx && tx.id === String(transactionId)
+  );
+
+  if (existingTransaction) {
+    return Number(existingTransaction.balanceAfter || 0);
   }
 
   let balance = getNexaMpesaBalance() + value;
